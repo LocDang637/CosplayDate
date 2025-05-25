@@ -1,4 +1,5 @@
 import React, { useState, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Box,
   Typography,
@@ -9,6 +10,7 @@ import { ArrowForward, ArrowBack } from '@mui/icons-material';
 import CosplayerCard from './CosplayerCard';
 
 const CosplayerCarousel = ({ title = "Cosplayer nổi bật", cosplayers = [], onSeeAll }) => {
+  const navigate = useNavigate();
   const [currentIndex, setCurrentIndex] = useState(0);
   const carouselRef = useRef(null);
 
@@ -41,12 +43,23 @@ const CosplayerCarousel = ({ title = "Cosplayer nổi bật", cosplayers = [], o
 
   const handleBooking = (cosplayer) => {
     console.log('Booking cosplayer:', cosplayer);
-    // Handle booking logic here
+    // Navigate to booking page or open booking modal
+    navigate(`/booking/${cosplayer.id}`);
   };
 
   const handleMessage = (cosplayer) => {
     console.log('Message cosplayer:', cosplayer);
-    // Handle message logic here
+    // Navigate to messages or open chat
+    navigate(`/messages/${cosplayer.id}`);
+  };
+
+  const handleSeeAllClick = () => {
+    if (onSeeAll) {
+      onSeeAll();
+    } else {
+      // Default navigation to cosplayers page
+      navigate('/cosplayers');
+    }
   };
 
   const canScrollNext = currentIndex < Math.max(0, cosplayers.length - 4);
@@ -75,7 +88,7 @@ const CosplayerCarousel = ({ title = "Cosplayer nổi bật", cosplayers = [], o
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
           <Button
             variant="text"
-            onClick={onSeeAll}
+            onClick={handleSeeAllClick}
             sx={{
               color: 'text.secondary',
               textTransform: 'none',

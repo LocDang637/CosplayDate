@@ -7,6 +7,10 @@ import ResetPasswordPage from "../pages/ResetPasswordPage";
 import ProfilePage from "../pages/ProfilePage";
 import ProtectedRoute from "../components/ProtectedRoute";
 import Cosplayers from "../pages/CosplayersPage";
+
+// ADD THIS IMPORT
+import CosplayerDetailsPage from "../pages/CosplayerDetailsPage";
+
 function AppRoutes() {
   return (
     <Routes>
@@ -16,6 +20,10 @@ function AppRoutes() {
       <Route path="/forgot-password" element={<ForgotPasswordPage />} />
       <Route path="/reset-password" element={<ResetPasswordPage />} />
       <Route path="/cosplayers" element={<Cosplayers />} />
+
+      {/* ADD THIS ROUTE */}
+      <Route path="/cosplayer/:id" element={<CosplayerDetailsPage />} />
+      
       <Route
         path="/profile"
         element={

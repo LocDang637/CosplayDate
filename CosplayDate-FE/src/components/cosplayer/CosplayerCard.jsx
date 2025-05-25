@@ -1,4 +1,5 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Card,
   CardContent,
@@ -11,18 +12,36 @@ import {
 import { Message } from '@mui/icons-material';
 
 const CosplayerCard = ({ cosplayer, onBooking, onMessage }) => {
+  const navigate = useNavigate();
+
   const formatPrice = (price) => {
     return new Intl.NumberFormat('vi-VN').format(price) + 'đ/giờ';
   };
 
+  const handleViewProfile = () => {
+    navigate(`/cosplayer/${cosplayer.id}`);
+  };
+
+  const handleBookingClick = (e) => {
+    e.stopPropagation(); // Prevent card click when booking button is clicked
+    onBooking?.(cosplayer);
+  };
+
+  const handleMessageClick = (e) => {
+    e.stopPropagation(); // Prevent card click when message button is clicked
+    onMessage?.(cosplayer);
+  };
+
   return (
     <Card
+      onClick={handleViewProfile}
       sx={{
         borderRadius: '16px',
         overflow: 'hidden',
         background: 'white',
         boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
         transition: 'all 0.3s ease',
+        cursor: 'pointer',
         '&:hover': {
           transform: 'translateY(-4px)',
           boxShadow: '0 8px 24px rgba(233, 30, 99, 0.15)',
@@ -96,7 +115,7 @@ const CosplayerCard = ({ cosplayer, onBooking, onMessage }) => {
             variant="outlined"
             size="small"
             startIcon={<Message />}
-            onClick={() => onMessage?.(cosplayer)}
+            onClick={handleMessageClick}
             sx={{
               borderColor: 'text.secondary',
               color: 'text.secondary',
@@ -118,7 +137,7 @@ const CosplayerCard = ({ cosplayer, onBooking, onMessage }) => {
         <Button
           variant="contained"
           fullWidth
-          onClick={() => onBooking?.(cosplayer)}
+          onClick={handleBookingClick}
           sx={{
             background: 'linear-gradient(45deg, #E91E63, #9C27B0)',
             color: 'white',

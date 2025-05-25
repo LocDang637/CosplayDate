@@ -309,6 +309,12 @@ const CosplayersPage = () => {
     setFavorites(newFavorites);
   };
 
+  // ADD THIS FUNCTION - Navigation to cosplayer details
+  const handleViewCosplayer = (cosplayerId) => {
+    console.log('Navigating to cosplayer:', cosplayerId);
+    navigate(`/cosplayer/${cosplayerId}`);
+  };
+
   const handleLogout = () => {
     setUser(null);
     localStorage.removeItem('user');
@@ -336,18 +342,34 @@ const CosplayersPage = () => {
     </Card>
   );
 
-  // Cosplayer Card Component
+  // Cosplayer Card Component - UPDATED WITH NAVIGATION
   const CosplayerCard = ({ cosplayer }) => {
     const isFavorite = favorites.has(cosplayer.id);
 
+    const handleCardClick = () => {
+      handleViewCosplayer(cosplayer.id);
+    };
+
+    const handleFavoriteClick = (e) => {
+      e.stopPropagation(); // Prevent card click when clicking favorite
+      handleFavorite(cosplayer.id);
+    };
+
+    const handleButtonClick = (e) => {
+      e.stopPropagation(); // Prevent card click when clicking button
+      handleViewCosplayer(cosplayer.id);
+    };
+
     return (
       <Card
+        onClick={handleCardClick}
         sx={{
           borderRadius: '16px',
           overflow: 'hidden',
           background: 'white',
           boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
           transition: 'all 0.3s ease',
+          cursor: 'pointer', // ADD CURSOR POINTER
           '&:hover': {
             transform: 'translateY(-4px)',
             boxShadow: '0 8px 24px rgba(233, 30, 99, 0.15)',
@@ -367,7 +389,7 @@ const CosplayersPage = () => {
             sx={{ objectFit: 'cover' }}
           />
           <IconButton
-            onClick={() => handleFavorite(cosplayer.id)}
+            onClick={handleFavoriteClick}
             sx={{
               position: 'absolute',
               top: 8,
@@ -418,7 +440,7 @@ const CosplayersPage = () => {
 
             <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', mb: 1 }}>
               <IconButton
-                onClick={() => handleFavorite(cosplayer.id)}
+                onClick={handleFavoriteClick}
                 sx={{
                   color: isFavorite ? '#D200C4' : 'text.secondary',
                   fontSize: '10px',
@@ -436,6 +458,7 @@ const CosplayersPage = () => {
           <Button
             variant="contained"
             fullWidth
+            onClick={handleButtonClick}
             sx={{
               background: '#D200C4',
               color: 'white',
