@@ -315,15 +315,20 @@ const Header = ({ user = null, onLogout }) => {
         open={Boolean(anchorEl)}
         onClose={handleProfileMenuClose}
         transformOrigin={{ horizontal: 'right', vertical: 'top' }}
-        anchorOrigin={{ horizontal: 'right', vertical: 'bottom' }}
-        PaperProps={{
-          sx: {
-            mt: 1,
-            minWidth: 200,
-            borderRadius: '12px',
-            border: '1px solid rgba(233, 30, 99, 0.1)',
-            boxShadow: '0 8px 24px rgba(233, 30, 99, 0.15)',
-          },
+        anchorOrigin={{ horizontal: 'left', vertical: 'bottom' }}
+        slotProps={{
+          paper: {
+            sx: {
+              mt: 1,
+              minWidth: 200,
+              borderRadius: '12px',
+              border: '1px solid rgba(233, 30, 99, 0.1)',
+              boxShadow: '0 8px 24px rgba(233, 30, 99, 0.15)',
+              // Force positioning to stay on right side
+              right: 0,
+              left: 'auto !important',
+            }
+          }
         }}
       >
         {isAuthenticated && (

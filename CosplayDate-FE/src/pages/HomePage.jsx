@@ -22,6 +22,10 @@ import { cosplayTheme } from '../theme/cosplayTheme';
 import Header from '../components/layout/Header';
 import CosplayerSearchFilters from '../components/cosplayer/CosplayerSearchFilters';
 import CosplayerCarousel from '../components/cosplayer/CosplayerCarousel';
+import CosplayerLeaderboard from '../components/common/CosplayerLeaderboard';
+import CosplayNews from '../components/common/CosplayNews';
+import UserComments from '../components/common/UserComments';
+import Footer from '../components/layout/Footer';
 
 const HomePage = () => {
   const location = useLocation();
@@ -47,7 +51,7 @@ const HomePage = () => {
     setUser(null);
     localStorage.removeItem('user');
     localStorage.removeItem('token');
-    setWelcomeMessage('You have been logged out successfully.');
+    setWelcomeMessage('Đã đăng xuất thành công.');
     setShowWelcomeMessage(true);
   };
 
@@ -192,7 +196,7 @@ const HomePage = () => {
                 mb: 2,
               }}
             >
-              Welcome to CosplayDate! 🎭
+              Chào mừng đến với CosplayDate! 🎭
             </Typography>
             <Typography
               variant="h5"
@@ -202,9 +206,10 @@ const HomePage = () => {
                 maxWidth: '600px',
                 mx: 'auto',
                 lineHeight: 1.6,
+                fontSize: '1.8rem',
               }}
             >
-              Connect with amazing cosplayers, find your perfect match, and share your passion for cosplay!
+              Kết nối với những Cosplayer tuyệt vời, tìm ra người phù hợp nhất và chia sẻ niềm đam mê cosplay của bạn!
             </Typography>
             
             {!user ? (
@@ -223,7 +228,7 @@ const HomePage = () => {
                     textTransform: 'none',
                   }}
                 >
-                  Join the Community
+                  Tham gia cộng đồng
                 </Button>
                 <Button
                   variant="outlined"
@@ -240,7 +245,7 @@ const HomePage = () => {
                     textTransform: 'none',
                   }}
                 >
-                  Sign In
+                  Đăng nhập
                 </Button>
               </Box>
             ) : (
@@ -265,7 +270,7 @@ const HomePage = () => {
                   Hello, {user?.firstName || 'User'}! 👋
                 </Typography>
                 <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-                  Ready to explore the cosplay community?
+                  Bạn đã sẵn sàng để khám phá thế giới cosplay chưa?
                 </Typography>
               </Box>
             )}
@@ -289,126 +294,31 @@ const HomePage = () => {
           />
         </Container>
 
-      
+        {/* Leaderboard and News Section */}
+        <Container maxWidth="lg" sx={{ py: 4 }}>
+          <Box sx={{ 
+            display: 'flex', 
+            gap: '10px',
+            flexDirection: { xs: 'column', md: 'row' },
+            justifyContent: 'flex-start',
+            alignItems: 'flex-start'
+          }}>
+            <CosplayerLeaderboard />
+            <CosplayNews />
+          </Box>
+        </Container>
 
-        {/* Call to Action Section */}
-        <Box
-          sx={{
-            background: 'linear-gradient(135deg, rgba(233, 30, 99, 0.05) 0%, rgba(156, 39, 176, 0.05) 100%)',
-            py: 8,
-            textAlign: 'center',
-          }}
-        >
-          <Container maxWidth="md">
-            <Typography
-              variant="h3"
-              sx={{
-                fontWeight: 700,
-                fontSize: { xs: '2rem', md: '2.5rem' },
-                color: 'primary.main',
-                mb: 3,
-              }}
-            >
-              Ready to Find Your Cosplay Match? 💕
-            </Typography>
-            <Typography
-              variant="h6"
-              sx={{
-                color: 'text.secondary',
-                mb: 4,
-                lineHeight: 1.6,
-              }}
-            >
-              Join thousands of cosplayers who have found friendship, love, and amazing collaborations through CosplayDate!
-            </Typography>
-            
-            {!user && (
-              <Button
-                variant="contained"
-                size="large"
-                href="/signup"
-                sx={{
-                  background: 'linear-gradient(45deg, #E91E63, #9C27B0)',
-                  px: 6,
-                  py: 2,
-                  fontSize: '18px',
-                  fontWeight: 600,
-                  borderRadius: '12px',
-                  textTransform: 'none',
-                  boxShadow: '0 8px 24px rgba(233, 30, 99, 0.3)',
-                }}
-              >
-                Start Your Journey Today! 🚀
-              </Button>
-            )}
-          </Container>
-        </Box>
+       
+
+        {/* User Comments Section */}
+        <Container maxWidth="lg" sx={{ py: 2 }}>
+          <UserComments />
+        </Container>
+
+        
 
         {/* Footer */}
-        <Box
-          sx={{
-            backgroundColor: 'rgba(255,255,255,0.8)',
-            borderTop: '1px solid rgba(233, 30, 99, 0.1)',
-            py: 4,
-            textAlign: 'center',
-          }}
-        >
-          <Container maxWidth="lg">
-            <Typography variant="body2" sx={{ color: 'text.secondary', mb: 2 }}>
-              © 2024 CosplayDate. Made with 💖 for the cosplay community.
-            </Typography>
-            <Box sx={{ display: 'flex', justifyContent: 'center', gap: 3, flexWrap: 'wrap' }}>
-              <Typography
-                variant="body2"
-                component="a"
-                href="#"
-                sx={{
-                  color: 'primary.main',
-                  textDecoration: 'none',
-                  '&:hover': { textDecoration: 'underline' },
-                }}
-              >
-                About Us
-              </Typography>
-              <Typography
-                variant="body2"
-                component="a"
-                href="#"
-                sx={{
-                  color: 'primary.main',
-                  textDecoration: 'none',
-                  '&:hover': { textDecoration: 'underline' },
-                }}
-              >
-                Privacy Policy
-              </Typography>
-              <Typography
-                variant="body2"
-                component="a"
-                href="#"
-                sx={{
-                  color: 'primary.main',
-                  textDecoration: 'none',
-                  '&:hover': { textDecoration: 'underline' },
-                }}
-              >
-                Terms of Service
-              </Typography>
-              <Typography
-                variant="body2"
-                component="a"
-                href="#"
-                sx={{
-                  color: 'primary.main',
-                  textDecoration: 'none',
-                  '&:hover': { textDecoration: 'underline' },
-                }}
-              >
-                Contact
-              </Typography>
-            </Box>
-          </Container>
-        </Box>
+        <Footer />
       </Box>
     </ThemeProvider>
   );

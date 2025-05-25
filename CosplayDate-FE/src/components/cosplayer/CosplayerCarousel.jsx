@@ -85,7 +85,7 @@ const CosplayerCarousel = ({ title = "Cosplayer nổi bật", cosplayers = [], o
               },
             }}
           >
-            See all
+            Xem tất cả
           </Button>
           
           <Box sx={{ display: 'flex', gap: 1 }}>
