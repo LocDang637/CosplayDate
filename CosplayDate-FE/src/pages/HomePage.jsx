@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { 
   Box, 
   Container, 
@@ -29,6 +29,7 @@ import Footer from '../components/layout/Footer';
 
 const HomePage = () => {
   const location = useLocation();
+  const navigate = useNavigate();
   const [user, setUser] = useState(null);
   const [showWelcomeMessage, setShowWelcomeMessage] = useState(false);
   const [welcomeMessage, setWelcomeMessage] = useState('');
@@ -150,6 +151,7 @@ const HomePage = () => {
 
   const handleSeeAll = () => {
     console.log('See all cosplayers');
+    navigate("/cosplayers");  // Assuming you have a route for cosplayers
     // Navigate to cosplayers page
   };
 
