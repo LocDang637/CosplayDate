@@ -7,8 +7,6 @@ import ResetPasswordPage from "../pages/ResetPasswordPage";
 import ProfilePage from "../pages/ProfilePage";
 import ProtectedRoute from "../components/ProtectedRoute";
 import Cosplayers from "../pages/CosplayersPage";
-
-// ADD THIS IMPORT
 import CosplayerDetailsPage from "../pages/CosplayerDetailsPage";
 
 function AppRoutes() {
@@ -20,15 +18,19 @@ function AppRoutes() {
       <Route path="/forgot-password" element={<ForgotPasswordPage />} />
       <Route path="/reset-password" element={<ResetPasswordPage />} />
       <Route path="/cosplayers" element={<Cosplayers />} />
-
-      {/* ADD THIS ROUTE */}
       <Route path="/cosplayer/:id" element={<CosplayerDetailsPage />} />
       
+      {/* Profile routes - both own profile and viewing others */}
+      <Route path="/profile" element={<ProfilePage />} /> {/* Own profile */}
+      <Route path="/profile/:userId" element={<ProfilePage />} /> {/* Other user's profile */}
+      
+      {/* Protected routes if you want to add any */}
       <Route
-        path="/profile"
+        path="/profile/edit"
         element={
           <ProtectedRoute>
-            <ProfilePage />
+            {/* Create ProfileEditPage component later */}
+            <div>Profile Edit Page - Coming Soon!</div>
           </ProtectedRoute>
         }
       />
