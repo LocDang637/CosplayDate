@@ -16,19 +16,22 @@ import {
   Favorite,
   Info,
   VideoLibrary,
-  EmojiEvents
+  EmojiEvents,
+  AccountBalanceWallet
 } from '@mui/icons-material';
 
 const ProfileTabs = ({ 
   activeTab, 
   onTabChange, 
   isOwnProfile = false,
-  counts = {}
+  counts = {},
+  customTabs = null // Allow custom tab configuration
 }) => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
 
-  const tabs = [
+  // Default tabs for cosplayer profiles
+  const defaultTabs = [
     {
       id: 'overview',
       label: 'Overview',
@@ -79,9 +82,28 @@ const ProfileTabs = ({
     }
   ];
 
+  // Use custom tabs if provided, otherwise use default tabs
+  const tabs = customTabs || defaultTabs;
   const visibleTabs = tabs.filter(tab => tab.show);
 
+  const getIcon = (iconName) => {
+    const iconMap = {
+      'Info': <Info />,
+      'PhotoLibrary': <PhotoLibrary />,
+      'VideoLibrary': <VideoLibrary />,
+      'Star': <Star />,
+      'Event': <Event />,
+      'Favorite': <Favorite />,
+      'EmojiEvents': <EmojiEvents />,
+      'AccountBalanceWallet': <AccountBalanceWallet />,
+      'GridView': <GridView />
+    };
+    return iconMap[iconName] || <Info />;
+  };
+
   const TabIcon = ({ tab }) => {
+    const icon = typeof tab.icon === 'string' ? getIcon(tab.icon) : tab.icon;
+    
     if (tab.count !== undefined && tab.count > 0) {
       return (
         <Badge 
@@ -96,11 +118,11 @@ const ProfileTabs = ({
             }
           }}
         >
-          {tab.icon}
+          {icon}
         </Badge>
       );
     }
-    return tab.icon;
+    return icon;
   };
 
   return (

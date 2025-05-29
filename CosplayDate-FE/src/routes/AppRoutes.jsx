@@ -8,7 +8,7 @@ import ProfilePage from "../pages/ProfilePage";
 import ProtectedRoute from "../components/ProtectedRoute";
 import Cosplayers from "../pages/CosplayersPage";
 import CosplayerDetailsPage from "../pages/CosplayerDetailsPage";
-
+import CustomerProfilePage from "../pages/CustomerProfilePage";
 function AppRoutes() {
   return (
     <Routes>
@@ -23,7 +23,8 @@ function AppRoutes() {
       {/* Profile routes - both own profile and viewing others */}
       <Route path="/profile" element={<ProfilePage />} /> {/* Own profile */}
       <Route path="/profile/:userId" element={<ProfilePage />} /> {/* Other user's profile */}
-      
+      <Route path="/customer-profile" element={<CustomerProfilePage />} />
+      <Route path="/customer-profile/:userId" element={<CustomerProfilePage />} />
       {/* Protected routes if you want to add any */}
       <Route
         path="/profile/edit"
