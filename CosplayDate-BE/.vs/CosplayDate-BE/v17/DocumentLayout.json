@@ -3,16 +3,12 @@
   "WorkspaceRootPath": "D:\\SU25\\CosplayDate\\CosplayDate-BE\\",
   "Documents": [
     {
-      "AbsoluteMoniker": "D:0:0:{3FCAF0A3-13FE-4BEE-9859-F69E32C65D41}|CosplayDate.Domain\\CosplayDate.Domain.csproj|d:\\su25\\cosplaydate\\cosplaydate-be\\cosplaydate.domain\\cosplaydate.domain.csproj||{FA3CD31E-987B-443A-9B81-186104E8DAC1}|",
-      "RelativeMoniker": "D:0:0:{3FCAF0A3-13FE-4BEE-9859-F69E32C65D41}|CosplayDate.Domain\\CosplayDate.Domain.csproj|solutionrelative:cosplaydate.domain\\cosplaydate.domain.csproj||{FA3CD31E-987B-443A-9B81-186104E8DAC1}|"
+      "AbsoluteMoniker": "D:0:0:{68F2A442-6C7C-49B5-BBB6-E36A79347656}|CosplayDate.API\\CosplayDate.API.csproj|d:\\su25\\cosplaydate\\cosplaydate-be\\cosplaydate.api\\appsettings.json||{90A6B3A7-C1A3-4009-A288-E2FF89E96FA0}",
+      "RelativeMoniker": "D:0:0:{68F2A442-6C7C-49B5-BBB6-E36A79347656}|CosplayDate.API\\CosplayDate.API.csproj|solutionrelative:cosplaydate.api\\appsettings.json||{90A6B3A7-C1A3-4009-A288-E2FF89E96FA0}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{4C71334F-6767-40E6-AA20-CFDF48198917}|CosplayDate.Application\\CosplayDate.Application.csproj|d:\\su25\\cosplaydate\\cosplaydate-be\\cosplaydate.application\\cosplaydate.application.csproj||{FA3CD31E-987B-443A-9B81-186104E8DAC1}|",
-      "RelativeMoniker": "D:0:0:{4C71334F-6767-40E6-AA20-CFDF48198917}|CosplayDate.Application\\CosplayDate.Application.csproj|solutionrelative:cosplaydate.application\\cosplaydate.application.csproj||{FA3CD31E-987B-443A-9B81-186104E8DAC1}|"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{68F2A442-6C7C-49B5-BBB6-E36A79347656}|CosplayDate.API\\CosplayDate.API.csproj|d:\\su25\\cosplaydate\\cosplaydate-be\\cosplaydate.api\\cosplaydate.api.csproj||{FA3CD31E-987B-443A-9B81-186104E8DAC1}|",
-      "RelativeMoniker": "D:0:0:{68F2A442-6C7C-49B5-BBB6-E36A79347656}|CosplayDate.API\\CosplayDate.API.csproj|solutionrelative:cosplaydate.api\\cosplaydate.api.csproj||{FA3CD31E-987B-443A-9B81-186104E8DAC1}|"
+      "AbsoluteMoniker": "D:0:0:{68F2A442-6C7C-49B5-BBB6-E36A79347656}|CosplayDate.API\\CosplayDate.API.csproj|d:\\su25\\cosplaydate\\cosplaydate-be\\cosplaydate.api\\program.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{68F2A442-6C7C-49B5-BBB6-E36A79347656}|CosplayDate.API\\CosplayDate.API.csproj|solutionrelative:cosplaydate.api\\program.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     }
   ],
   "DocumentGroupContainers": [
@@ -27,40 +23,27 @@
             {
               "$type": "Document",
               "DocumentIndex": 0,
-              "Title": "CosplayDate.Domain",
-              "DocumentMoniker": "D:\\SU25\\CosplayDate\\CosplayDate-BE\\CosplayDate.Domain\\CosplayDate.Domain.csproj",
-              "RelativeDocumentMoniker": "CosplayDate.Domain\\CosplayDate.Domain.csproj",
-              "ToolTip": "D:\\SU25\\CosplayDate\\CosplayDate-BE\\CosplayDate.Domain\\CosplayDate.Domain.csproj",
-              "RelativeToolTip": "CosplayDate.Domain\\CosplayDate.Domain.csproj",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000758|",
-              "WhenOpened": "2025-05-29T16:46:52.179Z",
+              "Title": "appsettings.json",
+              "DocumentMoniker": "D:\\SU25\\CosplayDate\\CosplayDate-BE\\CosplayDate.API\\appsettings.json",
+              "RelativeDocumentMoniker": "CosplayDate.API\\appsettings.json",
+              "ToolTip": "D:\\SU25\\CosplayDate\\CosplayDate-BE\\CosplayDate.API\\appsettings.json",
+              "RelativeToolTip": "CosplayDate.API\\appsettings.json",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAgAAABMAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.001642|",
+              "WhenOpened": "2025-05-29T17:24:58.272Z",
               "EditorCaption": ""
             },
             {
               "$type": "Document",
               "DocumentIndex": 1,
-              "Title": "CosplayDate.Application",
-              "DocumentMoniker": "D:\\SU25\\CosplayDate\\CosplayDate-BE\\CosplayDate.Application\\CosplayDate.Application.csproj",
-              "RelativeDocumentMoniker": "CosplayDate.Application\\CosplayDate.Application.csproj",
-              "ToolTip": "D:\\SU25\\CosplayDate\\CosplayDate-BE\\CosplayDate.Application\\CosplayDate.Application.csproj",
-              "RelativeToolTip": "CosplayDate.Application\\CosplayDate.Application.csproj",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000758|",
-              "WhenOpened": "2025-05-29T16:25:44.502Z",
-              "EditorCaption": ""
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 2,
-              "Title": "CosplayDate.API",
-              "DocumentMoniker": "D:\\SU25\\CosplayDate\\CosplayDate-BE\\CosplayDate.API\\CosplayDate.API.csproj",
-              "RelativeDocumentMoniker": "CosplayDate.API\\CosplayDate.API.csproj",
-              "ToolTip": "D:\\SU25\\CosplayDate\\CosplayDate-BE\\CosplayDate.API\\CosplayDate.API.csproj",
-              "RelativeToolTip": "CosplayDate.API\\CosplayDate.API.csproj",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAABoAAAAAAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000758|",
-              "WhenOpened": "2025-05-29T16:18:25.014Z",
+              "Title": "Program.cs",
+              "DocumentMoniker": "D:\\SU25\\CosplayDate\\CosplayDate-BE\\CosplayDate.API\\Program.cs",
+              "RelativeDocumentMoniker": "CosplayDate.API\\Program.cs",
+              "ToolTip": "D:\\SU25\\CosplayDate\\CosplayDate-BE\\CosplayDate.API\\Program.cs",
+              "RelativeToolTip": "CosplayDate.API\\Program.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAoAAAAhAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-05-29T17:24:36.804Z",
               "EditorCaption": ""
             },
             {

@@ -14,7 +14,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("CosplayDate.Infrastructure")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+4dd0b71a21742e831c4df051cc5e87bd553cf9cc")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+fc561f7877fae628f8ae4781385d287fa260f1a3")]
 [assembly: System.Reflection.AssemblyProductAttribute("CosplayDate.Infrastructure")]
 [assembly: System.Reflection.AssemblyTitleAttribute("CosplayDate.Infrastructure")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

@@ -1,0 +1,12 @@
+D:\SU25\CosplayDate\CosplayDate-BE\CosplayDate.Shared\bin\Debug\net8.0\CosplayDate.Shared.deps.json
+D:\SU25\CosplayDate\CosplayDate-BE\CosplayDate.Shared\bin\Debug\net8.0\CosplayDate.Shared.dll
+D:\SU25\CosplayDate\CosplayDate-BE\CosplayDate.Shared\bin\Debug\net8.0\CosplayDate.Shared.pdb
+D:\SU25\CosplayDate\CosplayDate-BE\CosplayDate.Shared\obj\Debug\net8.0\CosplayDate.Shared.GeneratedMSBuildEditorConfig.editorconfig
+D:\SU25\CosplayDate\CosplayDate-BE\CosplayDate.Shared\obj\Debug\net8.0\CosplayDate.Shared.AssemblyInfoInputs.cache
+D:\SU25\CosplayDate\CosplayDate-BE\CosplayDate.Shared\obj\Debug\net8.0\CosplayDate.Shared.AssemblyInfo.cs
+D:\SU25\CosplayDate\CosplayDate-BE\CosplayDate.Shared\obj\Debug\net8.0\CosplayDate.Shared.csproj.CoreCompileInputs.cache
+D:\SU25\CosplayDate\CosplayDate-BE\CosplayDate.Shared\obj\Debug\net8.0\CosplayDate.Shared.sourcelink.json
+D:\SU25\CosplayDate\CosplayDate-BE\CosplayDate.Shared\obj\Debug\net8.0\CosplayDate.Shared.dll
+D:\SU25\CosplayDate\CosplayDate-BE\CosplayDate.Shared\obj\Debug\net8.0\refint\CosplayDate.Shared.dll
+D:\SU25\CosplayDate\CosplayDate-BE\CosplayDate.Shared\obj\Debug\net8.0\CosplayDate.Shared.pdb
+D:\SU25\CosplayDate\CosplayDate-BE\CosplayDate.Shared\obj\Debug\net8.0\ref\CosplayDate.Shared.dll
