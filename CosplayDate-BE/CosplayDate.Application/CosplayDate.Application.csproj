@@ -1,0 +1,23 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\CosplayDate.Domain\CosplayDate.Domain.csproj" />
+    <ProjectReference Include="..\CosplayDate.Shared\CosplayDate.Shared.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="DTOs\" />
+    <Folder Include="Mappers\" />
+    <Folder Include="Common\" />
+    <Folder Include="Services\Interfaces\" />
+    <Folder Include="Services\Implementations\" />
+    <Folder Include="Validators\" />
+  </ItemGroup>
+
+</Project>
