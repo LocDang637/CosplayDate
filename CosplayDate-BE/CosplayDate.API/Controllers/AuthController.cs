@@ -41,6 +41,26 @@ namespace CosplayDate.API.Controllers
             return BadRequest(result);
         }
 
+        [HttpPost("login")]
+        [EnableRateLimiting("AuthPolicy")]
+        public async Task<IActionResult> Login([FromBody] LoginRequestDto request)
+        {
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(ModelState);
+            }
+
+            var result = await _authService.LoginAsync(request);
+
+            if (result.IsSuccess)
+            {
+                return Ok(result);
+            }
+
+            return BadRequest(result);
+        }
+
+
         /// <summary>
         /// Verify email address with OTP code
         /// </summary>

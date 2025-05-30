@@ -13,5 +13,6 @@ namespace CosplayDate.Application.Services.Interfaces
         Task<ApiResponse<VerifyEmailResponseDto>> VerifyEmailAsync(VerifyEmailRequestDto request);
         Task<ApiResponse<string>> ResendVerificationCodeAsync(ResendVerificationRequestDto request);
         Task<bool> IsEmailAvailableAsync(string email);
+        Task<ApiResponse<LoginResponseDto>> LoginAsync(LoginRequestDto request);
     }
 }

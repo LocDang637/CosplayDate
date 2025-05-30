@@ -15,16 +15,17 @@ namespace CosplayDate.Application.Services.Implementations
         private readonly IEmailService _emailService;
         //private readonly IMapper _mapper;
         private readonly ILogger<AuthService> _logger;
+        private readonly IJwtService _jwtService;
 
         public AuthService(
             IUnitOfWork unitOfWork,
             IEmailService emailService,
-            
+            IJwtService jwtService,
             ILogger<AuthService> logger)
         {
             _unitOfWork = unitOfWork;
             _emailService = emailService;
-            
+            _jwtService = jwtService;
             _logger = logger;
         }
 
@@ -235,6 +236,83 @@ namespace CosplayDate.Application.Services.Implementations
             {
                 _logger.LogError(ex, "Error resending verification code for: {Email}", request.Email);
                 return ApiResponse<string>.Error("Failed to resend verification code. Please try again.");
+            }
+        }
+
+        public async Task<ApiResponse<LoginResponseDto>> LoginAsync(LoginRequestDto request)
+        {
+            try
+            {
+                // Find user by email
+                var user = await _unitOfWork.Users.GetByEmailAsync(request.Email);
+                if (user == null)
+                {
+                    return ApiResponse<LoginResponseDto>.Error("Invalid email or password");
+                }
+
+                // Verify password
+                if (!BCrypt.Net.BCrypt.Verify(request.Password, user.PasswordHash))
+                {
+                    return ApiResponse<LoginResponseDto>.Error("Invalid email or password");
+                }
+
+                // Check if email is verified
+                if (!user.IsVerified)
+                {
+                    // Try to resend verification code
+                    var resendResult = await ResendVerificationCodeAsync(new ResendVerificationRequestDto
+                    {
+                        Email = user.Email
+                    });
+
+                    var unverifiedResponse = new UnverifiedAccountResponseDto
+                    {
+                        Email = user.Email,
+                        Message = "Account is not verified",
+                        CodeResent = resendResult.IsSuccess,
+                        ResendMessage = resendResult.IsSuccess
+                            ? "A new verification code has been sent to your email"
+                            : "Failed to resend verification code. Please try again later."
+                    };
+
+                    return ApiResponse<LoginResponseDto>.Error(
+                        "Account is not verified",
+                        new List<string> { unverifiedResponse.Message, unverifiedResponse.ResendMessage }
+                    );
+                }
+
+                // Update last login time and online status
+                user.LastLoginAt = DateTime.UtcNow;
+                user.IsOnline = true;
+                user.UpdatedAt = DateTime.UtcNow;
+
+                _unitOfWork.Users.Update(user);
+                await _unitOfWork.SaveChangesAsync();
+
+                // Generate JWT token using the JWT service
+                var token = _jwtService.GenerateToken(user);
+                var tokenExpiration = _jwtService.GetTokenExpiration();
+
+                var response = new LoginResponseDto
+                {
+                    UserId = user.Id,
+                    Email = user.Email,
+                    FirstName = user.FirstName,
+                    LastName = user.LastName,
+                    UserType = user.UserType,
+                    Token = token,
+                    ExpiresAt = tokenExpiration,
+                    Message = "Login successful"
+                };
+
+                _logger.LogInformation("User logged in successfully: {Email}", user.Email);
+                return ApiResponse<LoginResponseDto>.Success(response, "Login successful!");
+
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error during login for email: {Email}", request.Email);
+                return ApiResponse<LoginResponseDto>.Error("Login failed. Please try again.");
             }
         }
 
