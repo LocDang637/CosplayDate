@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Box, Typography, TextField, Button, IconButton } from '@mui/material';
+import { Box, Typography, TextField, Button, IconButton, Alert } from '@mui/material';
 import { ArrowBack, Email, Refresh } from '@mui/icons-material';
 import FormContainer from './FormContainer';
 import ActionButton from './ActionButton';
@@ -19,6 +19,8 @@ const CodeVerificationCard = ({
   const [error, setError] = useState('');
   const [resendTimer, setResendTimer] = useState(0);
   const [verifying, setVerifying] = useState(false);
+  const [resending, setResending] = useState(false);
+  const [successMessage, setSuccessMessage] = useState('');
   const inputRefs = useRef([]);
 
   // Initialize input refs
@@ -42,6 +44,7 @@ const CodeVerificationCard = ({
     newCode[index] = value;
     setCode(newCode);
     setError('');
+    setSuccessMessage('');
 
     // Auto-focus next input
     if (value && index < codeLength - 1) {
@@ -84,45 +87,78 @@ const CodeVerificationCard = ({
 
     setVerifying(true);
     setError('');
+    setSuccessMessage('');
 
     try {
-      // Mock API call for code verification
       console.log('Verifying code:', codeToVerify, 'for purpose:', purpose);
       
-      // Simulate API delay
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      // Call the parent component's verification handler
+      await onCodeVerified?.(codeToVerify);
       
-      // Mock verification - accept 123456 as valid code
-      const isValid = codeToVerify === '123456';
-      
-      if (isValid) {
-        console.log('✅ Code verified successfully!');
-        onCodeVerified?.(codeToVerify);
-      } else {
-        setError('Invalid verification code. Please try again. (Hint: Use 123456)');
-        setCode(new Array(codeLength).fill(''));
-        inputRefs.current[0]?.focus();
-      }
+      // If we reach here, verification was successful
+      setSuccessMessage('✅ Code verified successfully!');
       
     } catch (error) {
       console.error('Code verification failed:', error);
-      setError('Verification failed. Please try again.');
+      
+      // Handle different types of errors
+      let errorMessage = 'Verification failed. Please try again.';
+      
+      if (error.message) {
+        if (error.message.includes('expired')) {
+          errorMessage = 'Verification code has expired. Please request a new one.';
+        } else if (error.message.includes('invalid') || error.message.includes('incorrect')) {
+          errorMessage = 'Invalid verification code. Please check and try again.';
+        } else {
+          errorMessage = error.message;
+        }
+      }
+      
+      setError(errorMessage);
+      
+      // Clear the code inputs for retry
+      setCode(new Array(codeLength).fill(''));
+      inputRefs.current[0]?.focus();
+      
     } finally {
       setVerifying(false);
     }
   };
 
   const handleResendCode = async () => {
-    if (resendTimer > 0) return;
+    if (resendTimer > 0 || resending) return;
     
+    setResending(true);
     setResendTimer(60); // 60 second cooldown
     setCode(new Array(codeLength).fill(''));
     setError('');
+    setSuccessMessage('');
     
     try {
+      console.log('Resending verification code...');
+      
+      // Call the parent component's resend handler
       await onResendCode?.();
+      
+      // Show success message
+      setSuccessMessage('📧 New verification code sent successfully!');
+      
+      // Focus first input
+      inputRefs.current[0]?.focus();
+      
     } catch (error) {
-      setError('Failed to resend code. Please try again.');
+      console.error('Failed to resend code:', error);
+      
+      let errorMessage = 'Failed to resend code. Please try again.';
+      if (error.message) {
+        errorMessage = error.message;
+      }
+      
+      setError(errorMessage);
+      setResendTimer(0); // Reset timer on error
+      
+    } finally {
+      setResending(false);
     }
   };
 
@@ -145,6 +181,34 @@ const CodeVerificationCard = ({
       <Box sx={{ textAlign: 'center', mt: 3 }}>
         {/* Icon */}
         {getIcon()}
+
+        {/* Success Message */}
+        {successMessage && (
+          <Alert 
+            severity="success" 
+            sx={{ 
+              mb: 3, 
+              borderRadius: '12px',
+              '& .MuiAlert-message': { fontSize: '14px' }
+            }}
+          >
+            {successMessage}
+          </Alert>
+        )}
+
+        {/* Error Message */}
+        {error && (
+          <Alert 
+            severity="error" 
+            sx={{ 
+              mb: 3, 
+              borderRadius: '12px',
+              '& .MuiAlert-message': { fontSize: '14px' }
+            }}
+          >
+            {error}
+          </Alert>
+        )}
 
         {/* Code Input Fields */}
         <Box sx={{ display: 'flex', justifyContent: 'center', gap: 1, mb: 3 }}>
@@ -187,16 +251,6 @@ const CodeVerificationCard = ({
           ))}
         </Box>
 
-        {/* Error Message */}
-        {error && (
-          <Typography 
-            variant="body2" 
-            sx={{ color: 'error.main', mb: 2, fontSize: '14px' }}
-          >
-            {error}
-          </Typography>
-        )}
-
         {/* Verify Button */}
         <ActionButton
           onClick={() => handleVerifyCode()}
@@ -204,7 +258,7 @@ const CodeVerificationCard = ({
           disabled={verifying || code.some(digit => !digit)}
           sx={{ mb: 3 }}
         >
-          Verify Code
+          {verifying ? 'Verifying...' : 'Verify Code'}
         </ActionButton>
 
         {/* Resend Code */}
@@ -215,10 +269,10 @@ const CodeVerificationCard = ({
           <Button
             variant="text"
             onClick={handleResendCode}
-            disabled={resendTimer > 0}
+            disabled={resendTimer > 0 || resending}
             startIcon={<Refresh />}
             sx={{
-              color: 'primary.main',
+              color: resendTimer > 0 || resending ? 'text.disabled' : 'primary.main',
               fontWeight: 600,
               textTransform: 'none',
               '&:disabled': {
@@ -226,17 +280,23 @@ const CodeVerificationCard = ({
               },
             }}
           >
-            {resendTimer > 0 ? `Resend in ${resendTimer}s` : 'Resend Code'}
+            {resending 
+              ? 'Sending...' 
+              : resendTimer > 0 
+                ? `Resend in ${resendTimer}s` 
+                : 'Resend Code'
+            }
           </Button>
         </Box>
 
         {/* Back Button */}
         {onBack && (
-          <Box sx={{ textAlign: 'center' }}>
+          <Box sx={{ textAlign: 'center', mb: 3 }}>
             <Button
               variant="text"
               onClick={onBack}
               startIcon={<ArrowBack />}
+              disabled={verifying || resending}
               sx={{
                 color: 'text.secondary',
                 textTransform: 'none',
@@ -262,8 +322,8 @@ const CodeVerificationCard = ({
           <Typography variant="body2" sx={{ color: 'text.secondary', fontSize: '12px', mt: 0.5 }}>
             The code will expire in 10 minutes
           </Typography>
-          <Typography variant="body2" sx={{ color: 'primary.main', fontSize: '12px', mt: 1, fontWeight: 600 }}>
-            💡 Demo Code: 123456
+          <Typography variant="body2" sx={{ color: 'text.secondary', fontSize: '12px', mt: 1 }}>
+            💡 Check your spam folder if you don't see the email
           </Typography>
         </Box>
       </Box>
