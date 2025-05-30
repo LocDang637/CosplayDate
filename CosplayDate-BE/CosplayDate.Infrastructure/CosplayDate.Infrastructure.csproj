@@ -7,6 +7,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\CosplayDate.Application\CosplayDate.Application.csproj" />
     <ProjectReference Include="..\CosplayDate.Domain\CosplayDate.Domain.csproj" />
     <ProjectReference Include="..\CosplayDate.Shared\CosplayDate.Shared.csproj" />
   </ItemGroup>
@@ -14,9 +15,7 @@
   <ItemGroup>
     <Folder Include="Data\Context\" />
     <Folder Include="Data\Configurations\" />
-    <Folder Include="Data\Repositories\" />
     <Folder Include="Extensions\" />
-    <Folder Include="Services\" />
   </ItemGroup>
 
   <ItemGroup>

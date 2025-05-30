@@ -7,7 +7,6 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Folder Include="Interfaces\" />
     <Folder Include="Enums\" />
     <Folder Include="Constants\" />
     <Folder Include="Exceptions\" />

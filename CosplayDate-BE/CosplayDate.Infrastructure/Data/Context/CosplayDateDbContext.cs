@@ -1,6 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
-using CosplayDate.Infrastructure.Data.Entities;
+using CosplayDate.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
 
 namespace CosplayDate.Infrastructure.Data.Context;

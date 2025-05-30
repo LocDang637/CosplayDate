@@ -10,7 +10,6 @@
     <Folder Include="Constants\" />
     <Folder Include="Extensions\" />
     <Folder Include="Helpers\" />
-    <Folder Include="Models\" />
   </ItemGroup>
 
 </Project>
