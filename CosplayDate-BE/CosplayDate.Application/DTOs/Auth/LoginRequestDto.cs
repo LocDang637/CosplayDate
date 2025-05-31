@@ -9,11 +9,11 @@ namespace CosplayDate.Application.DTOs.Auth
 {
     public class LoginRequestDto
     {
-        [Required(ErrorMessage = "Email is required")]
-        [EmailAddress(ErrorMessage = "Invalid email format")]
+        [Required(ErrorMessage = "Yêu cầu email")]
+        [EmailAddress(ErrorMessage = "Email không đúng định dạng")]
         public string Email { get; set; } = string.Empty;
 
-        [Required(ErrorMessage = "Password is required")]
+        [Required(ErrorMessage = "Yêu cầu mật khẩu")]
         public string Password { get; set; } = string.Empty;
     }
 }

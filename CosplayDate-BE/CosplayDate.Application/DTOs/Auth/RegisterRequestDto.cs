@@ -9,35 +9,35 @@ namespace CosplayDate.Application.DTOs.Auth
 {
     public class RegisterRequestDto
     {
-        [Required(ErrorMessage = "First name is required")]
-        [StringLength(50, ErrorMessage = "First name cannot exceed 50 characters")]
+        [Required(ErrorMessage = "Yêu cầu tên")]
+        [StringLength(50, ErrorMessage = "Tên không được quá 50 ký tự")]
         public string FirstName { get; set; } = string.Empty;
 
-        [Required(ErrorMessage = "Last name is required")]
-        [StringLength(50, ErrorMessage = "Last name cannot exceed 50 characters")]
+        [Required(ErrorMessage = "Yêu cầu họ")]
+        [StringLength(50, ErrorMessage = "Họ không được quá 50 ký tự")]
         public string LastName { get; set; } = string.Empty;
 
-        [Required(ErrorMessage = "Email is required")]
-        [EmailAddress(ErrorMessage = "Invalid email format")]
-        [StringLength(255, ErrorMessage = "Email cannot exceed 255 characters")]
+        [Required(ErrorMessage = "Yêu cầu email")]
+        [EmailAddress(ErrorMessage = "Email không đúng định dạng")]
+        [StringLength(255, ErrorMessage = "Email không được quá 255 ký tự")]
         public string Email { get; set; } = string.Empty;
 
-        [Required(ErrorMessage = "Password is required")]
-        [StringLength(100, MinimumLength = 6, ErrorMessage = "Password must be between 6 and 100 characters")]
+        [Required(ErrorMessage = "Yêu cầu mật khẩu")]
+        [StringLength(100, MinimumLength = 6, ErrorMessage = "Mật khẩu phải từ 6 đến 100 ký tự")]
         public string Password { get; set; } = string.Empty;
 
-        [Required(ErrorMessage = "Date of birth is required")]
+        [Required(ErrorMessage = "Yêu cầu ngày sinh")]
         [DataType(DataType.Date)]
         public DateOnly DateOfBirth { get; set; }
 
         public string? Location { get; set; }
         public string? Bio { get; set; }
 
-        [Required(ErrorMessage = "You must accept the terms and conditions")]
+        [Required(ErrorMessage = "Bạn phải đồng ý với các điều khoản")]
         public bool AcceptTerms { get; set; }
 
-        [Required(ErrorMessage = "User type is required")]
-        [RegularExpression("Customer|Cosplayer", ErrorMessage = "User type must be either Customer or Cosplayer")]
-        public string UserType { get; set; } = "Customer";
+        [Required(ErrorMessage = "Yêu cầu loại người dùng")]
+        [RegularExpression("Khách hàng|Cosplayer", ErrorMessage = "Loại người dùng phải là 'Khách hàng' hoặc 'Cosplayer'")]
+        public string UserType { get; set; } = "Khách hàng";
     }
 }

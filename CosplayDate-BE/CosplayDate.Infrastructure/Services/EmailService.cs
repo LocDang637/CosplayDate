@@ -22,7 +22,7 @@ namespace CosplayDate.Infrastructure.Services
         {
             try
             {
-                var subject = "Verify Your CosplayDate Account";
+                var subject = "Xác thực tài khoản CosplayDate của bạn";
                 var htmlBody = GetVerificationEmailTemplate(firstName, verificationCode);
 
                 return await SendEmailAsync(email, subject, htmlBody);
@@ -38,7 +38,7 @@ namespace CosplayDate.Infrastructure.Services
         {
             try
             {
-                var subject = "Welcome to CosplayDate! 🎭";
+                var subject = "Chào mừng đến với CosplayDate! 🎭";
                 var htmlBody = GetWelcomeEmailTemplate(firstName);
 
                 return await SendEmailAsync(email, subject, htmlBody);
@@ -101,7 +101,7 @@ namespace CosplayDate.Infrastructure.Services
                 <head>
                     <meta charset='utf-8'>
                     <meta name='viewport' content='width=device-width, initial-scale=1.0'>
-                    <title>Verify Your CosplayDate Account</title>
+                    <title>Xác thực tài khoản CosplayDate của bạn</title>
                 </head>
                 <body style='font-family: Arial, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0; background-color: #FFE8F5;'>
                     <div style='max-width: 600px; margin: 0 auto; background-color: white; border-radius: 16px; overflow: hidden; margin-top: 20px; margin-bottom: 20px; box-shadow: 0 4px 12px rgba(233, 30, 99, 0.1);'>
@@ -109,19 +109,19 @@ namespace CosplayDate.Infrastructure.Services
                         <!-- Header -->
                         <div style='background: linear-gradient(135deg, #F8BBD9 0%, #E1BEE7 100%); padding: 30px; text-align: center;'>
                             <h1 style='color: #E91E63; margin: 0; font-size: 28px; font-weight: 700;'>🎭 CosplayDate</h1>
-                            <p style='color: #666; margin: 10px 0 0 0; font-size: 16px;'>Welcome to the Cosplay Community!</p>
+                            <p style='color: #666; margin: 10px 0 0 0; font-size: 16px;'>Chào mừng đến với cộng đồng Cosplay!</p>
                         </div>
                         
                         <!-- Content -->
                         <div style='padding: 40px 30px;'>
-                            <h2 style='color: #E91E63; margin-bottom: 20px; font-size: 24px;'>Hi {firstName}! 👋</h2>
+                            <h2 style='color: #E91E63; margin-bottom: 20px; font-size: 24px;'>Xin chào {firstName}! 👋</h2>
                             
                             <p style='margin-bottom: 20px; font-size: 16px; line-height: 1.6;'>
-                                Thank you for joining CosplayDate! We're excited to have you in our community of cosplay enthusiasts.
+                                Cảm ơn bạn đã tham gia CosplayDate! Chúng tôi rất vui khi có bạn trong cộng đồng những người đam mê cosplay.
                             </p>
                             
                             <p style='margin-bottom: 30px; font-size: 16px; line-height: 1.6;'>
-                                To complete your registration and start exploring, please verify your email address using the code below:
+                                Để hoàn tất đăng ký và bắt đầu khám phá, vui lòng xác thực địa chỉ email của bạn bằng mã dưới đây:
                             </p>
                             
                             <!-- Verification Code -->
@@ -132,29 +132,29 @@ namespace CosplayDate.Infrastructure.Services
                             </div>
                             
                             <p style='margin-bottom: 20px; font-size: 14px; color: #666; text-align: center;'>
-                                This code will expire in 24 hours for security reasons.
+                                Mã này sẽ hết hạn sau 24 giờ vì lý do bảo mật.
                             </p>
                             
                             <p style='margin-bottom: 30px; font-size: 16px; line-height: 1.6;'>
-                                Once verified, you'll be able to:
+                                Sau khi xác thực, bạn sẽ có thể:
                             </p>
                             
                             <ul style='margin-bottom: 30px; padding-left: 20px;'>
-                                <li style='margin-bottom: 10px;'>🎭 Connect with amazing cosplayers</li>
-                                <li style='margin-bottom: 10px;'>📸 Book photoshoots and events</li>
-                                <li style='margin-bottom: 10px;'>🌟 Share your cosplay journey</li>
-                                <li style='margin-bottom: 10px;'>🎉 Join cosplay events and conventions</li>
+                                <li style='margin-bottom: 10px;'>🎭 Kết nối với các cosplayer tuyệt vời</li>
+                                <li style='margin-bottom: 10px;'>📸 Đặt lịch chụp ảnh và sự kiện</li>
+                                <li style='margin-bottom: 10px;'>🌟 Chia sẻ hành trình cosplay của bạn</li>
+                                <li style='margin-bottom: 10px;'>🎉 Tham gia các sự kiện và hội chợ cosplay</li>
                             </ul>
                             
                             <p style='margin-bottom: 20px; font-size: 16px; line-height: 1.6;'>
-                                If you didn't create this account, please ignore this email.
+                                Nếu bạn không tạo tài khoản này, vui lòng bỏ qua email này.
                             </p>
                         </div>
                         
                         <!-- Footer -->
                         <div style='background-color: #F8BBD9; padding: 20px; text-align: center;'>
                             <p style='margin: 0; font-size: 14px; color: #666;'>
-                                © 2024 CosplayDate. Made with 💖 for the cosplay community.
+                                © 2024 CosplayDate. Được tạo với 💖 cho cộng đồng cosplay.
                             </p>
                         </div>
                     </div>
@@ -170,48 +170,48 @@ namespace CosplayDate.Infrastructure.Services
                 <head>
                     <meta charset='utf-8'>
                     <meta name='viewport' content='width=device-width, initial-scale=1.0'>
-                    <title>Welcome to CosplayDate!</title>
+                    <title>Chào mừng đến với CosplayDate!</title>
                 </head>
                 <body style='font-family: Arial, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0; background-color: #FFE8F5;'>
                     <div style='max-width: 600px; margin: 0 auto; background-color: white; border-radius: 16px; overflow: hidden; margin-top: 20px; margin-bottom: 20px; box-shadow: 0 4px 12px rgba(233, 30, 99, 0.1);'>
                         
                         <!-- Header -->
                         <div style='background: linear-gradient(135deg, #F8BBD9 0%, #E1BEE7 100%); padding: 30px; text-align: center;'>
-                            <h1 style='color: #E91E63; margin: 0; font-size: 28px; font-weight: 700;'>🎉 Welcome to CosplayDate!</h1>
-                            <p style='color: #666; margin: 10px 0 0 0; font-size: 16px;'>Your cosplay journey starts here!</p>
+                            <h1 style='color: #E91E63; margin: 0; font-size: 28px; font-weight: 700;'>🎉 Chào mừng đến với CosplayDate!</h1>
+                            <p style='color: #666; margin: 10px 0 0 0; font-size: 16px;'>Hành trình cosplay của bạn bắt đầu từ đây!</p>
                         </div>
                         
                         <!-- Content -->
                         <div style='padding: 40px 30px; text-align: center;'>
-                            <h2 style='color: #E91E63; margin-bottom: 20px; font-size: 24px;'>Congratulations, {firstName}! 🎭</h2>
+                            <h2 style='color: #E91E63; margin-bottom: 20px; font-size: 24px;'>Chúc mừng bạn, {firstName}! 🎭</h2>
                             
                             <p style='margin-bottom: 30px; font-size: 16px; line-height: 1.6;'>
-                                Your email has been verified and your account is now active! You're officially part of the CosplayDate community.
+                                Email của bạn đã được xác thực và tài khoản hiện đã hoạt động! Bạn chính thức là thành viên của cộng đồng CosplayDate.
                             </p>
                             
                             <div style='background: rgba(233, 30, 99, 0.05); border-radius: 12px; padding: 20px; margin: 30px 0;'>
-                                <h3 style='color: #E91E63; margin-top: 0; font-size: 20px;'>What's Next?</h3>
+                                <h3 style='color: #E91E63; margin-top: 0; font-size: 20px;'>Tiếp theo là gì?</h3>
                                 <ul style='text-align: left; margin-bottom: 0; padding-left: 20px;'>
-                                    <li style='margin-bottom: 10px;'>📝 Complete your profile to get better matches</li>
-                                    <li style='margin-bottom: 10px;'>🔍 Explore and discover amazing cosplayers</li>
-                                    <li style='margin-bottom: 10px;'>💰 Add funds to your wallet for easy bookings</li>
-                                    <li style='margin-bottom: 0;'>🎪 Check out upcoming cosplay events</li>
+                                    <li style='margin-bottom: 10px;'>📝 Hoàn thiện hồ sơ để có kết nối tốt hơn</li>
+                                    <li style='margin-bottom: 10px;'>🔍 Khám phá và tìm kiếm các cosplayer tuyệt vời</li>
+                                    <li style='margin-bottom: 10px;'>💰 Nạp tiền vào ví để dễ dàng đặt lịch</li>
+                                    <li style='margin-bottom: 0;'>🎪 Xem các sự kiện cosplay sắp tới</li>
                                 </ul>
                             </div>
                             
                             <a href='https://cosplaydate.com/profile' style='display: inline-block; background: linear-gradient(45deg, #E91E63, #9C27B0); color: white; padding: 15px 30px; text-decoration: none; border-radius: 12px; font-weight: 600; font-size: 16px; margin: 20px 0;'>
-                                Complete Your Profile →
+                                Hoàn thiện hồ sơ →
                             </a>
                             
                             <p style='margin-top: 30px; font-size: 14px; color: #666;'>
-                                Need help? Contact our support team at support@cosplaydate.com
+                                Cần hỗ trợ? Liên hệ với đội ngũ hỗ trợ tại support@cosplaydate.com
                             </p>
                         </div>
                         
                         <!-- Footer -->
                         <div style='background-color: #F8BBD9; padding: 20px; text-align: center;'>
                             <p style='margin: 0; font-size: 14px; color: #666;'>
-                                © 2024 CosplayDate. Made with 💖 for the cosplay community.
+                                © 2024 CosplayDate. Được tạo với 💖 cho cộng đồng cosplay.
                             </p>
                         </div>
                     </div>
