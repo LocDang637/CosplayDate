@@ -9,12 +9,12 @@ namespace CosplayDate.Application.DTOs.Auth
 {
     public class VerifyEmailRequestDto
     {
-        [Required(ErrorMessage = "Email is required")]
-        [EmailAddress(ErrorMessage = "Invalid email format")]
+        [Required(ErrorMessage = "Yeu cầu email")]
+        [EmailAddress(ErrorMessage = "Email không đúng định dạng")]
         public string Email { get; set; } = string.Empty;
 
-        [Required(ErrorMessage = "Verification code is required")]
-        [StringLength(6, MinimumLength = 6, ErrorMessage = "Verification code must be 6 digits")]
+        [Required(ErrorMessage = "Yêu cầu mã xác thực")]
+        [StringLength(6, MinimumLength = 6, ErrorMessage = "Mã xác thực phải có 6 ký tự")]
         public string Code { get; set; } = string.Empty;
     }
 }

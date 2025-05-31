@@ -113,12 +113,15 @@ namespace CosplayDate.API.Controllers
         {
             if (string.IsNullOrWhiteSpace(email))
             {
-                return BadRequest("Email is required");
+                return BadRequest("Email không được để trống");
             }
 
             var isAvailable = await _authService.IsEmailAvailableAsync(email);
 
-            return Ok(new { isAvailable, message = isAvailable ? "Email is available" : "Email is already taken" });
+            return Ok(new { 
+                isAvailable, 
+                message = isAvailable ? "Email có thể sử dụng" : "Email đã được sử dụng" 
+            });
         }
     }
 }

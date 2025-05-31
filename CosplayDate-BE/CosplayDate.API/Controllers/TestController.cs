@@ -15,7 +15,7 @@ namespace CosplayDate.API.Controllers
         [HttpGet("public")]
         public IActionResult PublicEndpoint()
         {
-            return Ok(new { message = "This is a public endpoint", timestamp = DateTime.UtcNow });
+            return Ok(new { message = "Đây là điểm truy cập công khai", timestamp = DateTime.UtcNow });
         }
 
         /// <summary>
@@ -32,7 +32,7 @@ namespace CosplayDate.API.Controllers
 
             return Ok(new
             {
-                message = "This is a protected endpoint",
+                message = "Đây là điểm truy cập được bảo vệ",
                 user = new
                 {
                     id = userId,
@@ -54,7 +54,7 @@ namespace CosplayDate.API.Controllers
             var email = User.FindFirst(ClaimTypes.Email)?.Value;
             return Ok(new
             {
-                message = "This endpoint is for verified users only",
+                message = "Điểm truy cập này chỉ dành cho người dùng đã xác thực",
                 email = email,
                 timestamp = DateTime.UtcNow
             });
@@ -70,7 +70,7 @@ namespace CosplayDate.API.Controllers
             var email = User.FindFirst(ClaimTypes.Email)?.Value;
             return Ok(new
             {
-                message = "This endpoint is for verified cosplayers only",
+                message = "Điểm truy cập này chỉ dành cho cosplayer đã xác thực",
                 email = email,
                 timestamp = DateTime.UtcNow
             });
@@ -86,7 +86,7 @@ namespace CosplayDate.API.Controllers
             var email = User.FindFirst(ClaimTypes.Email)?.Value;
             return Ok(new
             {
-                message = "This endpoint is for verified customers only",
+                message = "Điểm truy cập này chỉ dành cho khách hàng đã xác thực",
                 email = email,
                 timestamp = DateTime.UtcNow
             });

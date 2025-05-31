@@ -37,14 +37,14 @@ namespace CosplayDate.Application.Services.Implementations
                 var existingUser = await _unitOfWork.Users.GetByEmailAsync(request.Email);
                 if (existingUser != null)
                 {
-                    return ApiResponse<RegisterResponseDto>.Error("An account with this email already exists.");
+                    return ApiResponse<RegisterResponseDto>.Error("Email này đã được đăng ký.");
                 }
 
                 // Validate age (must be at least 18)
                 var age = CalculateAge(request.DateOfBirth);
                 if (age < 18)
                 {
-                    return ApiResponse<RegisterResponseDto>.Error("You must be at least 18 years old to register.");
+                    return ApiResponse<RegisterResponseDto>.Error("Bạn phải từ 18 tuổi trở lên để đăng ký.");
                 }
 
                 // Create new user
@@ -104,18 +104,18 @@ namespace CosplayDate.Application.Services.Implementations
                 {
                     UserId = user.Id,
                     Email = user.Email,
-                    Message = "Registration successful! Please check your email for verification code.",
+                    Message = "Đăng ký thành công! Vui lòng kiểm tra email để nhận mã xác thực.",
                     RequiresEmailVerification = true
                 };
 
                 _logger.LogInformation("User registered successfully: {Email}", user.Email);
-                return ApiResponse<RegisterResponseDto>.Success(response, "Registration successful!");
+                return ApiResponse<RegisterResponseDto>.Success(response, "Đăng ký thành công!");
 
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error during user registration for email: {Email}", request.Email);
-                return ApiResponse<RegisterResponseDto>.Error("Registration failed. Please try again.");
+                return ApiResponse<RegisterResponseDto>.Error("Đăng ký thất bại. Vui lòng thử lại.");
             }
         }
 
@@ -127,12 +127,12 @@ namespace CosplayDate.Application.Services.Implementations
                 var user = await _unitOfWork.Users.GetByEmailAsync(request.Email);
                 if (user == null)
                 {
-                    return ApiResponse<VerifyEmailResponseDto>.Error("User not found.");
+                    return ApiResponse<VerifyEmailResponseDto>.Error("Không tìm thấy người dùng.");
                 }
 
                 if (user.IsVerified)
                 {
-                    return ApiResponse<VerifyEmailResponseDto>.Error("Email is already verified.");
+                    return ApiResponse<VerifyEmailResponseDto>.Error("Email đã được xác thực.");
                 }
 
                 // Find valid verification token
@@ -141,7 +141,7 @@ namespace CosplayDate.Application.Services.Implementations
 
                 if (token == null)
                 {
-                    return ApiResponse<VerifyEmailResponseDto>.Error("Invalid or expired verification code.");
+                    return ApiResponse<VerifyEmailResponseDto>.Error("Mã xác thực không hợp lệ hoặc đã hết hạn.");
                 }
 
                 // Mark email as verified
@@ -163,18 +163,18 @@ namespace CosplayDate.Application.Services.Implementations
                 var response = new VerifyEmailResponseDto
                 {
                     IsVerified = true,
-                    Message = "Email verified successfully! Welcome to CosplayDate!",
+                    Message = "Xác thực email thành công! Chào mừng bạn đến với CosplayDate!",
                     VerifiedAt = user.UpdatedAt
                 };
 
                 _logger.LogInformation("Email verified successfully for user: {Email}", user.Email);
-                return ApiResponse<VerifyEmailResponseDto>.Success(response, "Email verified successfully!");
+                return ApiResponse<VerifyEmailResponseDto>.Success(response, "Xác thực email thành công!");
 
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error during email verification for: {Email}", request.Email);
-                return ApiResponse<VerifyEmailResponseDto>.Error("Email verification failed. Please try again.");
+                return ApiResponse<VerifyEmailResponseDto>.Error("Xác thực email thất bại. Vui lòng thử lại.");
             }
         }
 
@@ -185,12 +185,12 @@ namespace CosplayDate.Application.Services.Implementations
                 var user = await _unitOfWork.Users.GetByEmailAsync(request.Email);
                 if (user == null)
                 {
-                    return ApiResponse<string>.Error("User not found.");
+                    return ApiResponse<string>.Error("Không tìm thấy người dùng.");
                 }
 
                 if (user.IsVerified)
                 {
-                    return ApiResponse<string>.Error("Email is already verified.");
+                    return ApiResponse<string>.Error("Email đã được xác thực.");
                 }
 
                 // Check if there's a recent token (within last 2 minutes)
@@ -199,7 +199,7 @@ namespace CosplayDate.Application.Services.Implementations
 
                 if (recentToken != null)
                 {
-                    return ApiResponse<string>.Error("Please wait before requesting a new verification code.");
+                    return ApiResponse<string>.Error("Vui lòng đợi trước khi yêu cầu mã xác thực mới.");
                 }
 
                 // Generate new verification code
@@ -225,17 +225,17 @@ namespace CosplayDate.Application.Services.Implementations
 
                 if (!emailSent)
                 {
-                    return ApiResponse<string>.Error("Failed to send verification email. Please try again.");
+                    return ApiResponse<string>.Error("Không thể gửi email xác thực. Vui lòng thử lại.");
                 }
 
                 _logger.LogInformation("Verification code resent to: {Email}", user.Email);
-                return ApiResponse<string>.Success("", "Verification code sent successfully!");
+                return ApiResponse<string>.Success("", "Mã xác thực đã được gửi thành công!");
 
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error resending verification code for: {Email}", request.Email);
-                return ApiResponse<string>.Error("Failed to resend verification code. Please try again.");
+                return ApiResponse<string>.Error("Không thể gửi lại mã xác thực. Vui lòng thử lại.");
             }
         }
 
@@ -247,13 +247,13 @@ namespace CosplayDate.Application.Services.Implementations
                 var user = await _unitOfWork.Users.GetByEmailAsync(request.Email);
                 if (user == null)
                 {
-                    return ApiResponse<LoginResponseDto>.Error("Invalid email or password");
+                    return ApiResponse<LoginResponseDto>.Error("Email hoặc mật khẩu không đúng");
                 }
 
                 // Verify password
                 if (!BCrypt.Net.BCrypt.Verify(request.Password, user.PasswordHash))
                 {
-                    return ApiResponse<LoginResponseDto>.Error("Invalid email or password");
+                    return ApiResponse<LoginResponseDto>.Error("Email hoặc mật khẩu không đúng");
                 }
 
                 // Check if email is verified
@@ -268,15 +268,15 @@ namespace CosplayDate.Application.Services.Implementations
                     var unverifiedResponse = new UnverifiedAccountResponseDto
                     {
                         Email = user.Email,
-                        Message = "Account is not verified",
+                        Message = "Tài khoản chưa được xác thực",
                         CodeResent = resendResult.IsSuccess,
                         ResendMessage = resendResult.IsSuccess
-                            ? "A new verification code has been sent to your email"
-                            : "Failed to resend verification code. Please try again later."
+                            ? "Mã xác thực mới đã được gửi đến email của bạn"
+                            : "Không thể gửi lại mã xác thực. Vui lòng thử lại sau."
                     };
 
                     return ApiResponse<LoginResponseDto>.Error(
-                        "Account is not verified",
+                        "Tài khoản chưa được xác thực",
                         new List<string> { unverifiedResponse.Message, unverifiedResponse.ResendMessage }
                     );
                 }
@@ -302,17 +302,17 @@ namespace CosplayDate.Application.Services.Implementations
                     UserType = user.UserType,
                     Token = token,
                     ExpiresAt = tokenExpiration,
-                    Message = "Login successful"
+                    Message = "Đăng nhập thành công"
                 };
 
                 _logger.LogInformation("User logged in successfully: {Email}", user.Email);
-                return ApiResponse<LoginResponseDto>.Success(response, "Login successful!");
+                return ApiResponse<LoginResponseDto>.Success(response, "Đăng nhập thành công!");
 
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error during login for email: {Email}", request.Email);
-                return ApiResponse<LoginResponseDto>.Error("Login failed. Please try again.");
+                return ApiResponse<LoginResponseDto>.Error("Đăng nhập thất bại. Vui lòng thử lại.");
             }
         }
 

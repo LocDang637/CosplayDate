@@ -9,8 +9,8 @@ namespace CosplayDate.Application.DTOs.Auth
 {
     public class ResendVerificationRequestDto
     {
-        [Required(ErrorMessage = "Email is required")]
-        [EmailAddress(ErrorMessage = "Invalid email format")]
+        [Required(ErrorMessage = "Yêu cầu email")]
+        [EmailAddress(ErrorMessage = "Email không đúng định dạng")]
         public string Email { get; set; } = string.Empty;
     }
 }
