@@ -6,10 +6,12 @@ import PageLayout from '../components/layout/PageLayout';
 import FormContainer from '../components/common/FormContainer';
 import CosplayInput from '../components/common/CosplayInput';
 import ActionButton from '../components/common/ActionButton';
+import CodeVerificationCard from '../components/common/CodeVerificationCard';
 import { authAPI } from '../services/api';
 
 const LoginPage = () => {
   const navigate = useNavigate();
+  const [step, setStep] = useState('login'); // 'login' or 'verification'
   const [showPassword, setShowPassword] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -18,17 +20,48 @@ const LoginPage = () => {
   const [loading, setLoading] = useState(false);
   const [apiError, setApiError] = useState('');
   const [useMockApi, setUseMockApi] = useState(true); // Toggle for demo
+  const [pendingUser, setPendingUser] = useState(null); // Store user data for verification step
 
   // Mock account credentials (for demo purposes)
-  const MOCK_ACCOUNT = {
-    email: 'mai@cosplaydate.com',
-    password: 'cosplay123',
-    user: {
-      firstName: 'Mai',
-      lastName: 'Nguyen',
-      email: 'mai@cosplaydate.com',
-      id: 1,
-      avatar: null
+  const MOCK_ACCOUNTS = {
+    customer: {
+      email: 'customer@cosplaydate.com',
+      password: 'cosplay123',
+      user: {
+        id: 1,
+        firstName: 'Mai',
+        lastName: 'Nguyen',
+        email: 'customer@cosplaydate.com',
+        userType: 'Customer',
+        isVerified: true,
+        avatar: null
+      }
+    },
+    cosplayer: {
+      email: 'cosplayer@cosplaydate.com',
+      password: 'cosplay123',
+      user: {
+        id: 2,
+        firstName: 'Sakura',
+        lastName: 'Haruno',
+        email: 'cosplayer@cosplaydate.com',
+        userType: 'Cosplayer',
+        isVerified: true,
+        avatar: null
+      }
+    },
+    unverified: {
+      email: 'unverified@cosplaydate.com',
+      password: 'cosplay123',
+      user: {
+        id: 3,
+        firstName: 'Pending',
+        lastName: 'User',
+        email: 'unverified@cosplaydate.com',
+        userType: 'Customer',
+        isVerified: false,
+        avatar: null
+      }
     }
   };
 
@@ -48,33 +81,66 @@ const LoginPage = () => {
     if (apiError) setApiError(''); // Clear API error when user types
   };
 
+  const handleSuccessfulLogin = (userData, token = null) => {
+    console.log('✅ Login successful!', userData);
+    
+    // Store user data and token
+    localStorage.setItem('user', JSON.stringify(userData));
+    if (token) {
+      localStorage.setItem('token', token);
+    }
+    
+    // Navigate to home page with welcome message
+    navigate('/', { 
+      state: { 
+        message: `Chào mừng trở lại, ${userData.firstName}!`,
+        user: userData 
+      }
+    });
+  };
+
+  const handleUnverifiedUser = (userData) => {
+    console.log('⚠️ User not verified, redirecting to verification');
+    
+    // Store user data with email for verification step
+    const userWithEmail = {
+      ...userData,
+      email: userData.email || email // Ensure email is available
+    };
+    
+    setPendingUser(userWithEmail);
+    setStep('verification');
+  };
+
   const handleMockLogin = async () => {
     console.log('Using mock login...');
     
     // Simulate API delay
     await new Promise(resolve => setTimeout(resolve, 1500));
     
-    // Check mock credentials
-    if (email === MOCK_ACCOUNT.email && password === MOCK_ACCOUNT.password) {
-      console.log('✅ Mock login successful!');
+    // Find matching mock account
+    const mockAccount = Object.values(MOCK_ACCOUNTS).find(
+      account => account.email === email && account.password === password
+    );
+    
+    if (mockAccount) {
+      const { user } = mockAccount;
       
-      // Store user data in localStorage for persistence
-      localStorage.setItem('user', JSON.stringify(MOCK_ACCOUNT.user));
-      localStorage.setItem('token', 'mock-jwt-token-' + Date.now());
-      
-      // Navigate to home page
-      navigate('/', { 
-        state: { 
-          message: `Chào mừng trở lại, ${MOCK_ACCOUNT.user.firstName}!`,
-          user: MOCK_ACCOUNT.user 
-        }
-      });
-    } else {
-      // Invalid credentials
-      if (email !== MOCK_ACCOUNT.email) {
-        setEmailError('Không tìm thấy tài khoản. Thử: mai@cosplaydate.com');
+      if (user.isVerified) {
+        // Case 1: Login successful and verified
+        handleSuccessfulLogin(user, 'mock-jwt-token-' + Date.now());
       } else {
-        setPasswordError('Mật khẩu không đúng. Thử: cosplay123');
+        // Case 2: Login successful but not verified
+        handleUnverifiedUser(user);
+      }
+    } else {
+      // Case 3: Invalid credentials
+      const emailExists = Object.values(MOCK_ACCOUNTS).some(account => account.email === email);
+      
+      if (!emailExists) {
+        setEmailError('Không tìm thấy tài khoản với email này');
+      } else {
+        setPasswordError('Mật khẩu không đúng');
       }
     }
   };
@@ -88,28 +154,74 @@ const LoginPage = () => {
         password: password
       };
       
+      console.log('Sending login request with credentials:', { email: credentials.email, password: '***' });
+      
       const result = await authAPI.login(credentials);
       
+      console.log('Login API result:', {
+        success: result.success,
+        message: result.message,
+        hasUser: !!result.data?.user,
+        hasToken: !!result.data?.token,
+        isVerified: result.data?.isVerified,
+        userEmail: result.data?.user?.email
+      });
+      
       if (result.success) {
-        console.log('✅ API login successful!', result.data);
+        const { user, token, isVerified } = result.data;
         
-        // Navigate to home page
-        navigate('/', { 
-          state: { 
-            message: `Chào mừng trở lại, ${result.data.user.firstName}!`,
-            user: result.data.user 
-          }
+        console.log('Processing successful result:', {
+          isVerified,
+          hasToken: !!token,
+          userEmail: user?.email
         });
+        
+        if (isVerified && token) {
+          // Case 1: Login successful and verified
+          console.log('✅ Case 1: User is verified, proceeding to login');
+          handleSuccessfulLogin(user, token);
+        } else if (!isVerified) {
+          // Case 2: Login successful but not verified
+          console.log('⚠️ Case 2: User not verified, going to verification step');
+          
+          // Ensure we have the email for verification
+          const userWithEmail = {
+            ...user,
+            email: user?.email || email // Use form email as fallback
+          };
+          
+          handleUnverifiedUser(userWithEmail);
+        } else {
+          // Edge case: verified but no token
+          console.error('❌ Edge case: User verified but no token received');
+          setApiError('Lỗi xác thực. Vui lòng thử lại.');
+        }
       } else {
         console.error('❌ API login failed:', result.message);
         
-        // Handle specific errors
+        // Case 3: Invalid credentials or other errors
         if (result.errors && Object.keys(result.errors).length > 0) {
           // Handle field-specific errors
+          console.log('Field-specific errors:', result.errors);
           if (result.errors.email) setEmailError(result.errors.email);
           if (result.errors.password) setPasswordError(result.errors.password);
         } else {
-          setApiError(result.message || 'Đăng nhập thất bại. Vui lòng kiểm tra thông tin đăng nhập.');
+          // Handle different types of login errors based on message content
+          const message = result.message.toLowerCase();
+          
+          console.log('Processing error message:', message);
+          
+          if (message.includes('email') || message.includes('not found') || message.includes('không tìm thấy')) {
+            setEmailError(result.message);
+          } else if (message.includes('password') || message.includes('incorrect') || message.includes('wrong') || 
+                     message.includes('mật khẩu') || message.includes('không đúng') || message.includes('sai')) {
+            setPasswordError(result.message);
+          } else if (message.includes('invalid') && (message.includes('email') || message.includes('password'))) {
+            // Generic invalid credentials - could be either field
+            setPasswordError('Email hoặc mật khẩu không đúng');
+          } else {
+            setApiError(result.message || 'Đăng nhập thất bại. Vui lòng kiểm tra thông tin đăng nhập.');
+          }
         }
       }
       
@@ -151,15 +263,88 @@ const LoginPage = () => {
     }
   };
 
+  const handleEmailVerified = async (code) => {
+    console.log('Verifying email with code:', code);
+    
+    try {
+      const verificationData = {
+        email: pendingUser.email,
+        code: code
+      };
+      
+      if (useMockApi) {
+        // Mock verification - always successful
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        const verifiedUser = { ...pendingUser, isVerified: true };
+        handleSuccessfulLogin(verifiedUser, 'mock-jwt-token-' + Date.now());
+      } else {
+        const result = await authAPI.verifyEmail(verificationData);
+        
+        if (result.success) {
+          console.log('✅ Email verified successfully!');
+          const verifiedUser = { ...pendingUser, isVerified: true };
+          handleSuccessfulLogin(verifiedUser, result.data.token);
+        } else {
+          throw new Error(result.message || 'Xác thực email thất bại');
+        }
+      }
+      
+    } catch (error) {
+      console.error('Email verification error:', error);
+      throw error; // Re-throw to be handled by CodeVerificationCard
+    }
+  };
+
+  const handleResendVerificationCode = async () => {
+    try {
+      console.log('Resending verification code to:', pendingUser.email);
+      
+      if (useMockApi) {
+        // Mock resend
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        console.log('📧 Mock verification code resent: 123456');
+      } else {
+        const result = await authAPI.resendVerification(pendingUser.email);
+        
+        if (!result.success) {
+          throw new Error(result.message || 'Không thể gửi lại mã xác thực');
+        }
+      }
+      
+    } catch (error) {
+      console.error('Resend verification error:', error);
+      throw error;
+    }
+  };
+
   const handleKeyPress = (e) => e.key === 'Enter' && !loading && handleLogin();
 
-  const handleDemoLogin = () => {
-    setEmail(MOCK_ACCOUNT.email);
-    setPassword(MOCK_ACCOUNT.password);
+  const handleDemoLogin = (accountType) => {
+    const account = MOCK_ACCOUNTS[accountType];
+    setEmail(account.email);
+    setPassword(account.password);
     setEmailError('');
     setPasswordError('');
     setApiError('');
   };
+
+  // Email verification step
+  if (step === 'verification') {
+    return (
+      <PageLayout>
+        <CodeVerificationCard
+          title="Xác thực email để hoàn tất đăng nhập"
+          subtitle={`Chúng tôi đã gửi mã xác thực đến ${pendingUser?.email}. Vui lòng nhập mã bên dưới để hoàn tất đăng nhập.`}
+          email={pendingUser?.email}
+          onCodeVerified={handleEmailVerified}
+          onResendCode={handleResendVerificationCode}
+          onBack={() => setStep('login')}
+          loading={loading}
+          purpose="email-verification"
+        />
+      </PageLayout>
+    );
+  }
 
   return (
     <PageLayout>
@@ -205,25 +390,70 @@ const LoginPage = () => {
               <Typography variant="body2" sx={{ fontWeight: 600, mb: 1 }}>
                 🎭 Tài khoản Demo có sẵn
               </Typography>
-              <Typography variant="body2" sx={{ fontSize: '12px', mb: 1 }}>
-                Email: <strong>mai@cosplaydate.com</strong>
-              </Typography>
-              <Typography variant="body2" sx={{ fontSize: '12px', mb: 1 }}>
-                Mật khẩu: <strong>cosplay123</strong>
-              </Typography>
-              <Box sx={{ mt: 1 }}>
+              
+              <Box sx={{ mb: 1 }}>
+                <Typography variant="body2" sx={{ fontSize: '12px', fontWeight: 600 }}>
+                  👤 Khách hàng (Customer):
+                </Typography>
+                <Typography variant="body2" sx={{ fontSize: '11px' }}>
+                  Email: <strong>customer@cosplaydate.com</strong> | Mật khẩu: <strong>cosplay123</strong>
+                </Typography>
                 <Typography
                   variant="body2"
-                  onClick={handleDemoLogin}
+                  onClick={() => handleDemoLogin('customer')}
                   sx={{
-                    fontSize: '12px',
+                    fontSize: '11px',
                     color: 'primary.main',
                     cursor: 'pointer',
                     textDecoration: 'underline',
                     '&:hover': { color: 'primary.dark' }
                   }}
                 >
-                  Nhấn vào đây để tự động điền thông tin demo
+                  Nhấn để điền tự động
+                </Typography>
+              </Box>
+
+              <Box sx={{ mb: 1 }}>
+                <Typography variant="body2" sx={{ fontSize: '12px', fontWeight: 600 }}>
+                  🎭 Cosplayer:
+                </Typography>
+                <Typography variant="body2" sx={{ fontSize: '11px' }}>
+                  Email: <strong>cosplayer@cosplaydate.com</strong> | Mật khẩu: <strong>cosplay123</strong>
+                </Typography>
+                <Typography
+                  variant="body2"
+                  onClick={() => handleDemoLogin('cosplayer')}
+                  sx={{
+                    fontSize: '11px',
+                    color: 'primary.main',
+                    cursor: 'pointer',
+                    textDecoration: 'underline',
+                    '&:hover': { color: 'primary.dark' }
+                  }}
+                >
+                  Nhấn để điền tự động
+                </Typography>
+              </Box>
+
+              <Box>
+                <Typography variant="body2" sx={{ fontSize: '12px', fontWeight: 600 }}>
+                  ⚠️ Chưa xác thực (Unverified):
+                </Typography>
+                <Typography variant="body2" sx={{ fontSize: '11px' }}>
+                  Email: <strong>unverified@cosplaydate.com</strong> | Mật khẩu: <strong>cosplay123</strong>
+                </Typography>
+                <Typography
+                  variant="body2"
+                  onClick={() => handleDemoLogin('unverified')}
+                  sx={{
+                    fontSize: '11px',
+                    color: 'primary.main',
+                    cursor: 'pointer',
+                    textDecoration: 'underline',
+                    '&:hover': { color: 'primary.dark' }
+                  }}
+                >
+                  Nhấn để điền tự động
                 </Typography>
               </Box>
             </Alert>
@@ -324,7 +554,7 @@ const LoginPage = () => {
           }}>
             <Typography variant="body2" sx={{ fontSize: '11px', color: 'text.secondary' }}>
               {useMockApi 
-                ? '🔧 Chế độ phát triển: Sử dụng xác thực giả lập'
+                ? '🔧 Chế độ phát triển: Sử dụng xác thực giả lập với role-based navigation'
                 : `🌐 API Endpoint: ${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5068/api'}`
               }
             </Typography>

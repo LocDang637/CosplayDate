@@ -33,7 +33,9 @@ import {
   Message,
   Notifications,
   Menu as MenuIcon,
-  Close
+  Close,
+  Dashboard,
+  Person as PersonIcon
 } from '@mui/icons-material';
 
 const Header = ({ user = null, onLogout }) => {
@@ -69,14 +71,42 @@ const Header = ({ user = null, onLogout }) => {
     navigate('/');
   };
 
+  // Role-based profile navigation
+  const getProfilePath = () => {
+    if (!user) return '/login';
+    
+    const userType = user.userType || user.role; // Support both possible field names
+    
+    switch (userType) {
+      case 'Customer':
+        return `/customer-profile/${user.id}`;
+      case 'Cosplayer':
+        return `/profile/${user.id}`;
+      default:
+        // Fallback based on user properties or default to customer
+        console.warn('Unknown user type:', userType, 'Defaulting to customer profile');
+        return `/customer-profile/${user.id}`;
+    }
+  };
+
+  const handleProfileNavigation = () => {
+    const profilePath = getProfilePath();
+    handleNavigation(profilePath);
+  };
+
   const navigationItems = [
     { label: 'Trang chủ', path: '/', icon: <Home /> },
     { label: 'Cosplayer', path: '/cosplayers', icon: <Person /> },
     { label: 'Dịch vụ', path: '/services', icon: <Favorite /> },
   ];
 
+  // Updated auth menu items with role-based profile navigation
   const authMenuItems = isAuthenticated ? [
-    { label: 'Tài khoản', path: '/profile', icon: <AccountCircle /> },
+    { 
+      label: 'Tài khoản', 
+      action: handleProfileNavigation, 
+      icon: user?.userType === 'Cosplayer' ? <PersonIcon /> : <AccountCircle />
+    },
     { label: 'Tin nhắn', path: '/messages', icon: <Message /> },
     { label: 'Cài đặt', path: '/settings', icon: <Settings /> },
     { label: 'Đăng xuất', action: handleLogout, icon: <Logout /> },
@@ -340,6 +370,11 @@ const Header = ({ user = null, onLogout }) => {
               <Typography variant="body2" sx={{ color: 'text.secondary', fontSize: '12px' }}>
                 {user?.email}
               </Typography>
+              {user?.userType && (
+                <Typography variant="body2" sx={{ color: 'primary.main', fontSize: '11px', fontWeight: 500 }}>
+                  {user.userType === 'Customer' ? '👤 Khách hàng' : '🎭 Cosplayer'}
+                </Typography>
+              )}
             </Box>
             <Divider />
           </>
@@ -419,6 +454,11 @@ const Header = ({ user = null, onLogout }) => {
               <Typography variant="body2" sx={{ color: 'text.secondary', fontSize: '12px' }}>
                 {user?.email}
               </Typography>
+              {user?.userType && (
+                <Typography variant="body2" sx={{ color: 'primary.main', fontSize: '11px', fontWeight: 500, mt: 0.5 }}>
+                  {user.userType === 'Customer' ? '👤 Khách hàng' : '🎭 Cosplayer'}
+                </Typography>
+              )}
             </Box>
           </Box>
         )}
