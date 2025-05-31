@@ -5,7 +5,7 @@ import FormContainer from './FormContainer';
 import ActionButton from './ActionButton';
 
 const CodeVerificationCard = ({ 
-  title = "Verify Your Email",
+  title = "Xác thực Email của bạn",
   subtitle,
   email,
   onCodeVerified,
@@ -81,7 +81,7 @@ const CodeVerificationCard = ({
 
   const handleVerifyCode = async (codeToVerify = code.join('')) => {
     if (codeToVerify.length !== codeLength) {
-      setError(`Please enter all ${codeLength} digits`);
+      setError(`Vui lòng nhập đủ ${codeLength} chữ số`);
       return;
     }
 
@@ -96,19 +96,19 @@ const CodeVerificationCard = ({
       await onCodeVerified?.(codeToVerify);
       
       // If we reach here, verification was successful
-      setSuccessMessage('✅ Code verified successfully!');
+      setSuccessMessage('✅ Mã xác thực thành công!');
       
     } catch (error) {
       console.error('Code verification failed:', error);
       
       // Handle different types of errors
-      let errorMessage = 'Verification failed. Please try again.';
+      let errorMessage = 'Xác thực thất bại. Vui lòng thử lại.';
       
       if (error.message) {
         if (error.message.includes('expired')) {
-          errorMessage = 'Verification code has expired. Please request a new one.';
+          errorMessage = 'Mã xác thực đã hết hạn. Vui lòng yêu cầu mã mới.';
         } else if (error.message.includes('invalid') || error.message.includes('incorrect')) {
-          errorMessage = 'Invalid verification code. Please check and try again.';
+          errorMessage = 'Mã xác thực không hợp lệ. Vui lòng kiểm tra và thử lại.';
         } else {
           errorMessage = error.message;
         }
@@ -141,7 +141,7 @@ const CodeVerificationCard = ({
       await onResendCode?.();
       
       // Show success message
-      setSuccessMessage('📧 New verification code sent successfully!');
+      setSuccessMessage('📧 Mã xác thực mới đã được gửi thành công!');
       
       // Focus first input
       inputRefs.current[0]?.focus();
@@ -149,7 +149,7 @@ const CodeVerificationCard = ({
     } catch (error) {
       console.error('Failed to resend code:', error);
       
-      let errorMessage = 'Failed to resend code. Please try again.';
+      let errorMessage = 'Gửi lại mã thất bại. Vui lòng thử lại.';
       if (error.message) {
         errorMessage = error.message;
       }
@@ -258,13 +258,13 @@ const CodeVerificationCard = ({
           disabled={verifying || code.some(digit => !digit)}
           sx={{ mb: 3 }}
         >
-          {verifying ? 'Verifying...' : 'Verify Code'}
+          {verifying ? 'Đang xác thực...' : 'Xác thực mã'}
         </ActionButton>
 
         {/* Resend Code */}
         <Box sx={{ mb: 3 }}>
           <Typography variant="body2" sx={{ color: 'text.secondary', mb: 1 }}>
-            Didn't receive the code?
+            Bạn chưa nhận được mã?
           </Typography>
           <Button
             variant="text"
@@ -281,10 +281,10 @@ const CodeVerificationCard = ({
             }}
           >
             {resending 
-              ? 'Sending...' 
+              ? 'Đang gửi...' 
               : resendTimer > 0 
-                ? `Resend in ${resendTimer}s` 
-                : 'Resend Code'
+                ? `Gửi lại sau ${resendTimer}s` 
+                : 'Gửi lại mã'
             }
           </Button>
         </Box>
@@ -303,7 +303,7 @@ const CodeVerificationCard = ({
                 fontWeight: 500,
               }}
             >
-              Back
+              Quay lại
             </Button>
           </Box>
         )}
@@ -317,13 +317,13 @@ const CodeVerificationCard = ({
           border: '1px solid rgba(233, 30, 99, 0.1)'
         }}>
           <Typography variant="body2" sx={{ color: 'text.secondary', fontSize: '12px' }}>
-            Code sent to: <strong>{email}</strong>
+            Mã đã được gửi đến: <strong>{email}</strong>
           </Typography>
           <Typography variant="body2" sx={{ color: 'text.secondary', fontSize: '12px', mt: 0.5 }}>
-            The code will expire in 10 minutes
+            Mã sẽ hết hạn sau 10 phút
           </Typography>
           <Typography variant="body2" sx={{ color: 'text.secondary', fontSize: '12px', mt: 1 }}>
-            💡 Check your spam folder if you don't see the email
+            💡 Kiểm tra thư mục spam nếu bạn không thấy email
           </Typography>
         </Box>
       </Box>

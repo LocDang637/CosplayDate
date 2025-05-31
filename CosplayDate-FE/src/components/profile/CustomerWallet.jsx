@@ -63,13 +63,13 @@ const CustomerWallet = ({
   
   const transactionsPerPage = 10;
 
-  // Mock transaction data
+  // Mock transaction data with Vietnamese descriptions
   const mockTransactions = [
     {
       id: 1,
       type: 'booking_payment',
       amount: -450000,
-      description: 'Cosplay A - Photoshoot Session',
+      description: 'Cosplay A - Buổi chụp hình',
       date: '2024-01-15T10:30:00',
       status: 'completed',
       cosplayer: 'Cosplay A',
@@ -79,7 +79,7 @@ const CustomerWallet = ({
       id: 2,
       type: 'top_up',
       amount: 1000000,
-      description: 'Wallet Top Up - Credit Card',
+      description: 'Nạp tiền ví - Thẻ tín dụng',
       date: '2024-01-14T14:20:00',
       status: 'completed',
       reference: 'TP2024001'
@@ -88,7 +88,7 @@ const CustomerWallet = ({
       id: 3,
       type: 'refund',
       amount: 350000,
-      description: 'Booking Cancellation Refund',
+      description: 'Hoàn tiền hủy đặt lịch',
       date: '2024-01-13T09:15:00',
       status: 'completed',
       cosplayer: 'Cosplay B',
@@ -98,7 +98,7 @@ const CustomerWallet = ({
       id: 4,
       type: 'booking_payment',
       amount: -380000,
-      description: 'Cosplay C - Event Appearance',
+      description: 'Cosplay C - Tham dự sự kiện',
       date: '2024-01-12T16:45:00',
       status: 'completed',
       cosplayer: 'Cosplay C',
@@ -108,7 +108,7 @@ const CustomerWallet = ({
       id: 5,
       type: 'loyalty_cashback',
       amount: 25000,
-      description: 'Loyalty Points Cashback',
+      description: 'Hoàn tiền điểm thưởng',
       date: '2024-01-11T11:00:00',
       status: 'completed',
       reference: 'LC2024001'
@@ -117,7 +117,7 @@ const CustomerWallet = ({
       id: 6,
       type: 'booking_payment',
       amount: -500000,
-      description: 'Cosplay D - Convention Appearance',
+      description: 'Cosplay D - Tham dự hội chợ',
       date: '2024-01-10T13:30:00',
       status: 'completed',
       cosplayer: 'Cosplay D',
@@ -127,7 +127,7 @@ const CustomerWallet = ({
       id: 7,
       type: 'top_up',
       amount: 2000000,
-      description: 'Wallet Top Up - Bank Transfer',
+      description: 'Nạp tiền ví - Chuyển khoản',
       date: '2024-01-09T08:00:00',
       status: 'completed',
       reference: 'TP2024002'
@@ -136,7 +136,7 @@ const CustomerWallet = ({
       id: 8,
       type: 'gift_received',
       amount: 100000,
-      description: 'Gift from Friend - Birthday',
+      description: 'Quà từ bạn bè - Sinh nhật',
       date: '2024-01-08T12:00:00',
       status: 'completed',
       reference: 'GF2024001'
@@ -164,6 +164,15 @@ const CustomerWallet = ({
 
   const getTransactionColor = (amount) => {
     return amount >= 0 ? '#4caf50' : '#f44336';
+  };
+
+  const getStatusLabel = (status) => {
+    switch (status) {
+      case 'completed': return 'Hoàn thành';
+      case 'pending': return 'Đang xử lý';
+      case 'failed': return 'Thất bại';
+      default: return status;
+    }
   };
 
   const filterTransactions = () => {
@@ -235,7 +244,7 @@ const CustomerWallet = ({
               <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
                 <AccountBalanceWallet sx={{ fontSize: 32, mr: 2 }} />
                 <Typography variant="h6" sx={{ fontWeight: 600 }}>
-                  CosplayDate Wallet
+                  Ví CosplayDate
                 </Typography>
               </Box>
               
@@ -244,7 +253,7 @@ const CustomerWallet = ({
               </Typography>
               
               <Typography variant="body2" sx={{ opacity: 0.8, mb: 3 }}>
-                Available Balance
+                Số dư khả dụng
               </Typography>
 
               <Box sx={{ display: 'flex', gap: 2 }}>
@@ -261,7 +270,7 @@ const CustomerWallet = ({
                     },
                   }}
                 >
-                  Top Up
+                  Nạp tiền
                 </Button>
                 <Button
                   variant="outlined"
@@ -277,7 +286,7 @@ const CustomerWallet = ({
                     },
                   }}
                 >
-                  Withdraw
+                  Rút tiền
                 </Button>
               </Box>
             </CardContent>
@@ -299,7 +308,7 @@ const CustomerWallet = ({
               <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
                 <LocalOffer sx={{ fontSize: 28, mr: 1 }} />
                 <Typography variant="h6" sx={{ fontWeight: 600 }}>
-                  Loyalty Points
+                  Điểm thưởng
                 </Typography>
               </Box>
               
@@ -325,7 +334,7 @@ const CustomerWallet = ({
                 }}
               />
               <Typography variant="body2" sx={{ opacity: 0.8, mt: 1, fontSize: '12px' }}>
-                750 points to Gold tier
+                Còn 750 điểm để lên hạng Vàng
               </Typography>
             </CardContent>
           </Card>
@@ -344,25 +353,25 @@ const CustomerWallet = ({
         {/* Header */}
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
           <Typography variant="h6" sx={{ fontWeight: 700, color: 'text.primary' }}>
-            Transaction History
+            Lịch sử giao dịch
           </Typography>
 
           <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
             {/* Filter */}
             <FormControl size="small" sx={{ minWidth: 120 }}>
-              <InputLabel>Filter</InputLabel>
+              <InputLabel>Lọc</InputLabel>
               <Select
                 value={filterType}
                 onChange={(e) => setFilterType(e.target.value)}
-                label="Filter"
+                label="Lọc"
                 sx={{ borderRadius: '12px' }}
               >
-                <MenuItem value="all">All Types</MenuItem>
-                <MenuItem value="booking_payment">Bookings</MenuItem>
-                <MenuItem value="top_up">Top Ups</MenuItem>
-                <MenuItem value="refund">Refunds</MenuItem>
-                <MenuItem value="loyalty_cashback">Cashback</MenuItem>
-                <MenuItem value="gift_received">Gifts</MenuItem>
+                <MenuItem value="all">Tất cả</MenuItem>
+                <MenuItem value="booking_payment">Đặt lịch</MenuItem>
+                <MenuItem value="top_up">Nạp tiền</MenuItem>
+                <MenuItem value="refund">Hoàn tiền</MenuItem>
+                <MenuItem value="loyalty_cashback">Hoàn điểm</MenuItem>
+                <MenuItem value="gift_received">Quà tặng</MenuItem>
               </Select>
             </FormControl>
 
@@ -378,7 +387,7 @@ const CustomerWallet = ({
                 textTransform: 'none',
               }}
             >
-              {sortOrder === 'newest' ? 'Newest' : 'Oldest'}
+              {sortOrder === 'newest' ? 'Mới nhất' : 'Cũ nhất'}
             </Button>
           </Box>
         </Box>
@@ -416,7 +425,7 @@ const CustomerWallet = ({
                         {transaction.description}
                       </Typography>
                       <Chip
-                        label={transaction.status}
+                        label={getStatusLabel(transaction.status)}
                         size="small"
                         sx={{
                           backgroundColor: '#4CAF50',
@@ -438,7 +447,7 @@ const CustomerWallet = ({
                         </Typography>
                       )}
                       <Typography variant="body2" sx={{ color: 'text.secondary', fontSize: '11px' }}>
-                        Ref: {transaction.reference}
+                        Mã GD: {transaction.reference}
                       </Typography>
                     </Box>
                   }
@@ -484,10 +493,10 @@ const CustomerWallet = ({
           <Box sx={{ textAlign: 'center', py: 6 }}>
             <Receipt sx={{ fontSize: 64, color: 'text.secondary', mb: 2 }} />
             <Typography variant="h6" sx={{ color: 'text.secondary', mb: 1 }}>
-              No transactions found
+              Không tìm thấy giao dịch
             </Typography>
             <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-              Try adjusting your filters or make your first transaction
+              Thử điều chỉnh bộ lọc hoặc thực hiện giao dịch đầu tiên của bạn
             </Typography>
           </Box>
         )}
@@ -506,14 +515,14 @@ const CustomerWallet = ({
         <DialogTitle sx={{ textAlign: 'center', pb: 1 }}>
           <AccountBalanceWallet sx={{ fontSize: 32, color: 'primary.main', mb: 1 }} />
           <Typography variant="h6" sx={{ fontWeight: 700 }}>
-            Top Up Wallet
+            Nạp tiền vào ví
           </Typography>
         </DialogTitle>
         
         <DialogContent>
           {/* Quick Amount Buttons */}
           <Typography variant="subtitle2" sx={{ mb: 2, fontWeight: 600 }}>
-            Quick Select:
+            Chọn nhanh:
           </Typography>
           <Grid container spacing={1} sx={{ mb: 3 }}>
             {quickTopUpAmounts.map((amount) => (
@@ -538,7 +547,7 @@ const CustomerWallet = ({
           {/* Custom Amount */}
           <TextField
             fullWidth
-            label="Enter Amount"
+            label="Nhập số tiền"
             value={topUpAmount}
             onChange={(e) => setTopUpAmount(e.target.value)}
             type="number"
@@ -548,41 +557,41 @@ const CustomerWallet = ({
                 borderRadius: '12px',
               }
             }}
-            helperText="Minimum: 100,000đ"
+            helperText="Tối thiểu: 100.000đ"
           />
 
           {/* Payment Method */}
           <FormControl fullWidth sx={{ mb: 2 }}>
-            <InputLabel>Payment Method</InputLabel>
+            <InputLabel>Phương thức thanh toán</InputLabel>
             <Select
               value={paymentMethod}
               onChange={(e) => setPaymentMethod(e.target.value)}
-              label="Payment Method"
+              label="Phương thức thanh toán"
               sx={{ borderRadius: '12px' }}
             >
               <MenuItem value="credit_card">
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                   <CreditCard sx={{ fontSize: 20 }} />
-                  Credit/Debit Card
+                  Thẻ tín dụng/Ghi nợ
                 </Box>
               </MenuItem>
               <MenuItem value="bank_transfer">
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                   <AccountBalance sx={{ fontSize: 20 }} />
-                  Bank Transfer
+                  Chuyển khoản ngân hàng
                 </Box>
               </MenuItem>
               <MenuItem value="momo">
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                   <Phone sx={{ fontSize: 20 }} />
-                  MoMo E-Wallet
+                  Ví điện tử MoMo
                 </Box>
               </MenuItem>
             </Select>
           </FormControl>
 
           <Alert severity="info" sx={{ borderRadius: '12px' }}>
-            Processing fee: Free for amounts above 500,000đ
+            Phí xử lý: Miễn phí cho số tiền trên 500.000đ
           </Alert>
         </DialogContent>
         
@@ -591,7 +600,7 @@ const CustomerWallet = ({
             onClick={() => setTopUpDialog(false)}
             sx={{ borderRadius: '12px' }}
           >
-            Cancel
+            Hủy
           </Button>
           <Button
             variant="contained"
@@ -603,7 +612,7 @@ const CustomerWallet = ({
               px: 3,
             }}
           >
-            Top Up {topUpAmount && formatCurrency(parseFloat(topUpAmount))}
+            Nạp {topUpAmount && formatCurrency(parseFloat(topUpAmount))}
           </Button>
         </DialogActions>
       </Dialog>
@@ -621,18 +630,18 @@ const CustomerWallet = ({
         <DialogTitle sx={{ textAlign: 'center', pb: 1 }}>
           <Download sx={{ fontSize: 32, color: 'warning.main', mb: 1 }} />
           <Typography variant="h6" sx={{ fontWeight: 700 }}>
-            Withdraw Funds
+            Rút tiền
           </Typography>
         </DialogTitle>
         
         <DialogContent>
           <Alert severity="warning" sx={{ mb: 3, borderRadius: '12px' }}>
-            Available balance: {formatCurrency(balance)}
+            Số dư khả dụng: {formatCurrency(balance)}
           </Alert>
 
           <TextField
             fullWidth
-            label="Withdrawal Amount"
+            label="Số tiền rút"
             value={withdrawAmount}
             onChange={(e) => setWithdrawAmount(e.target.value)}
             type="number"
@@ -642,11 +651,11 @@ const CustomerWallet = ({
                 borderRadius: '12px',
               }
             }}
-            helperText="Minimum: 100,000đ | Processing time: 1-3 business days"
+            helperText="Tối thiểu: 100.000đ | Thời gian xử lý: 1-3 ngày làm việc"
           />
 
           <Alert severity="info" sx={{ borderRadius: '12px' }}>
-            Withdrawal fee: 15,000đ per transaction
+            Phí rút tiền: 15.000đ mỗi giao dịch
           </Alert>
         </DialogContent>
         
@@ -655,7 +664,7 @@ const CustomerWallet = ({
             onClick={() => setWithdrawDialog(false)}
             sx={{ borderRadius: '12px' }}
           >
-            Cancel
+            Hủy
           </Button>
           <Button
             variant="contained"
@@ -670,7 +679,7 @@ const CustomerWallet = ({
               },
             }}
           >
-            Withdraw {withdrawAmount && formatCurrency(parseFloat(withdrawAmount))}
+            Rút {withdrawAmount && formatCurrency(parseFloat(withdrawAmount))}
           </Button>
         </DialogActions>
       </Dialog>

@@ -57,7 +57,7 @@ const CustomerProfileHeader = ({
   const handleShare = () => {
     if (navigator.share) {
       navigator.share({
-        title: `${user.firstName} ${user.lastName} - CosplayDate Customer`,
+        title: `${user.firstName} ${user.lastName} - Khách hàng CosplayDate`,
         url: window.location.href,
       });
     } else {
@@ -90,6 +90,17 @@ const CustomerProfileHeader = ({
       case 'Gold': return '🥇';
       case 'Platinum': return '💎';
       default: return '🥉';
+    }
+  };
+
+  // Vietnamese tier names
+  const getTierNameVN = (tier) => {
+    switch (tier) {
+      case 'Bronze': return 'Đồng';
+      case 'Silver': return 'Bạc';
+      case 'Gold': return 'Vàng';
+      case 'Platinum': return 'Bạch kim';
+      default: return 'Đồng';
     }
   };
 
@@ -201,7 +212,7 @@ const CustomerProfileHeader = ({
               
               {user.isOnline && (
                 <Chip
-                  label="Online"
+                  label="Đang hoạt động"
                   size="small"
                   sx={{
                     backgroundColor: '#4CAF50',
@@ -214,7 +225,7 @@ const CustomerProfileHeader = ({
 
               {/* Membership Tier */}
               <Chip
-                label={`${getTierIcon(membershipTier)} ${membershipTier} Member`}
+                label={`${getTierIcon(membershipTier)} Thành viên ${getTierNameVN(membershipTier)}`}
                 sx={{
                   backgroundColor: getTierColor(membershipTier),
                   color: 'white',
@@ -232,7 +243,7 @@ const CustomerProfileHeader = ({
                   {user.totalBookings || 0}
                 </Typography>
                 <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-                  bookings
+                  lượt đặt
                 </Typography>
               </Box>
               
@@ -242,7 +253,7 @@ const CustomerProfileHeader = ({
                   {user.favoriteCosplayers || 0}
                 </Typography>
                 <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-                  favorites
+                  yêu thích
                 </Typography>
               </Box>
 
@@ -252,7 +263,7 @@ const CustomerProfileHeader = ({
                   {user.reviewsGiven || 0}
                 </Typography>
                 <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-                  reviews given
+                  đánh giá
                 </Typography>
               </Box>
             </Box>
@@ -303,7 +314,7 @@ const CustomerProfileHeader = ({
                     },
                   }}
                 >
-                  Edit Profile
+                  Chỉnh sửa hồ sơ
                 </Button>
                 <IconButton
                   onClick={handleMenuOpen}
@@ -335,7 +346,7 @@ const CustomerProfileHeader = ({
                     },
                   }}
                 >
-                  {isFollowing ? 'Following' : 'Follow'}
+                  {isFollowing ? 'Đang theo dõi' : 'Theo dõi'}
                 </Button>
                 <IconButton
                   onClick={handleMenuOpen}
@@ -380,7 +391,7 @@ const CustomerProfileHeader = ({
                     {formatCurrency(walletBalance)}
                   </Typography>
                   <Typography variant="body2" sx={{ color: 'text.secondary', fontSize: '12px' }}>
-                    Wallet Balance
+                    Số dư ví
                   </Typography>
                 </CardContent>
               </Card>
@@ -412,7 +423,7 @@ const CustomerProfileHeader = ({
                     {user.activeBookings || 2}
                   </Typography>
                   <Typography variant="body2" sx={{ color: 'text.secondary', fontSize: '12px' }}>
-                    Active Bookings
+                    Đặt chỗ đang hoạt động
                   </Typography>
                 </CardContent>
               </Card>
@@ -444,7 +455,7 @@ const CustomerProfileHeader = ({
                     {user.loyaltyPoints || 1250}
                   </Typography>
                   <Typography variant="body2" sx={{ color: 'text.secondary', fontSize: '12px' }}>
-                    Loyalty Points
+                    Điểm tích lũy
                   </Typography>
                 </CardContent>
               </Card>
@@ -476,7 +487,7 @@ const CustomerProfileHeader = ({
                     2023
                   </Typography>
                   <Typography variant="body2" sx={{ color: 'text.secondary', fontSize: '12px' }}>
-                    Member Since
+                    Thành viên từ
                   </Typography>
                 </CardContent>
               </Card>
@@ -488,7 +499,7 @@ const CustomerProfileHeader = ({
         {user.interests && user.interests.length > 0 && (
           <Box sx={{ mt: 3, display: 'flex', flexWrap: 'wrap', gap: 1 }}>
             <Typography variant="subtitle2" sx={{ width: '100%', mb: 1, fontWeight: 600 }}>
-              Interests:
+              Sở thích:
             </Typography>
             {user.interests.map((interest, index) => (
               <Chip
@@ -527,14 +538,14 @@ const CustomerProfileHeader = ({
           <ListItemIcon>
             <Share fontSize="small" />
           </ListItemIcon>
-          <ListItemText primary="Share Profile" />
+          <ListItemText primary="Chia sẻ hồ sơ" />
         </MenuItem>
         {isOwnProfile && (
           <MenuItem onClick={() => { handleMenuClose(); /* Handle settings */ }}>
             <ListItemIcon>
               <Settings fontSize="small" />
             </ListItemIcon>
-            <ListItemText primary="Settings" />
+            <ListItemText primary="Cài đặt" />
           </MenuItem>
         )}
       </Menu>

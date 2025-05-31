@@ -37,14 +37,14 @@ const LoginPage = () => {
   const handleEmailChange = (e) => {
     const value = e.target.value;
     setEmail(value);
-    setEmailError(value && !validateEmail(value) ? 'Please enter a valid email address' : '');
+    setEmailError(value && !validateEmail(value) ? 'Vui lòng nhập địa chỉ email hợp lệ' : '');
     if (apiError) setApiError(''); // Clear API error when user types
   };
 
   const handlePasswordChange = (e) => {
     const value = e.target.value;
     setPassword(value);
-    setPasswordError(value && value.length < 6 ? 'Password must be at least 6 characters' : '');
+    setPasswordError(value && value.length < 6 ? 'Mật khẩu phải có ít nhất 6 ký tự' : '');
     if (apiError) setApiError(''); // Clear API error when user types
   };
 
@@ -65,16 +65,16 @@ const LoginPage = () => {
       // Navigate to home page
       navigate('/', { 
         state: { 
-          message: `Welcome back, ${MOCK_ACCOUNT.user.firstName}!`,
+          message: `Chào mừng trở lại, ${MOCK_ACCOUNT.user.firstName}!`,
           user: MOCK_ACCOUNT.user 
         }
       });
     } else {
       // Invalid credentials
       if (email !== MOCK_ACCOUNT.email) {
-        setEmailError('Account not found. Try: mai@cosplaydate.com');
+        setEmailError('Không tìm thấy tài khoản. Thử: mai@cosplaydate.com');
       } else {
-        setPasswordError('Incorrect password. Try: cosplay123');
+        setPasswordError('Mật khẩu không đúng. Thử: cosplay123');
       }
     }
   };
@@ -96,7 +96,7 @@ const LoginPage = () => {
         // Navigate to home page
         navigate('/', { 
           state: { 
-            message: `Welcome back, ${result.data.user.firstName}!`,
+            message: `Chào mừng trở lại, ${result.data.user.firstName}!`,
             user: result.data.user 
           }
         });
@@ -109,28 +109,28 @@ const LoginPage = () => {
           if (result.errors.email) setEmailError(result.errors.email);
           if (result.errors.password) setPasswordError(result.errors.password);
         } else {
-          setApiError(result.message || 'Login failed. Please check your credentials.');
+          setApiError(result.message || 'Đăng nhập thất bại. Vui lòng kiểm tra thông tin đăng nhập.');
         }
       }
       
     } catch (error) {
       console.error('Login API error:', error);
-      setApiError('Network error. Please check your connection and try again.');
+      setApiError('Lỗi kết nối. Vui lòng kiểm tra kết nối mạng và thử lại.');
     }
   };
 
   const handleLogin = async () => {
     // Validation
     if (!email) { 
-      setEmailError('Email is required'); 
+      setEmailError('Email là bắt buộc'); 
       return; 
     }
     if (!password) { 
-      setPasswordError('Password is required'); 
+      setPasswordError('Mật khẩu là bắt buộc'); 
       return; 
     }
     if (!validateEmail(email)) { 
-      setEmailError('Please enter a valid email address'); 
+      setEmailError('Vui lòng nhập địa chỉ email hợp lệ'); 
       return; 
     }
 
@@ -145,7 +145,7 @@ const LoginPage = () => {
       }
     } catch (error) {
       console.error('Login failed:', error);
-      setApiError('An unexpected error occurred. Please try again.');
+      setApiError('Đã xảy ra lỗi không mong muốn. Vui lòng thử lại.');
     } finally {
       setLoading(false);
     }
@@ -164,8 +164,8 @@ const LoginPage = () => {
   return (
     <PageLayout>
       <FormContainer 
-        title="COSPLAYDATE LOGIN"
-        subtitle="Cosplay theo cách của bạn, lưu nhận vật yêu thích và tìm kết nối gỡ & tuyệt tập nhập vào cùng nhau!"
+        title="ĐĂNG NHẬP COSPLAYDATE"
+        subtitle="Cosplay theo cách của bạn, lưu giữ nhân vật yêu thích và tìm kiếm kết nối để gặp gỡ & cùng nhau cosplay!"
       >
         <Box component="form" sx={{ mt: 3 }}>
           {/* API Mode Toggle (for development) */}
@@ -180,14 +180,14 @@ const LoginPage = () => {
               }
               label={
                 <Typography variant="body2" sx={{ fontSize: '12px' }}>
-                  {useMockApi ? '🎭 Demo Mode (Mock API)' : '🌐 Real API Mode'}
+                  {useMockApi ? '🎭 Chế độ Demo (Mock API)' : '🌐 Chế độ API thực'}
                 </Typography>
               }
             />
             <Typography variant="body2" sx={{ fontSize: '11px', color: 'text.secondary', mt: 0.5 }}>
               {useMockApi 
-                ? 'Using mock authentication for demo purposes' 
-                : 'Using real backend API for authentication'
+                ? 'Sử dụng xác thực giả lập cho mục đích demo' 
+                : 'Sử dụng API backend thực để xác thực'
               }
             </Typography>
           </Box>
@@ -203,13 +203,13 @@ const LoginPage = () => {
               }}
             >
               <Typography variant="body2" sx={{ fontWeight: 600, mb: 1 }}>
-                🎭 Demo Account Available
+                🎭 Tài khoản Demo có sẵn
               </Typography>
               <Typography variant="body2" sx={{ fontSize: '12px', mb: 1 }}>
                 Email: <strong>mai@cosplaydate.com</strong>
               </Typography>
               <Typography variant="body2" sx={{ fontSize: '12px', mb: 1 }}>
-                Password: <strong>cosplay123</strong>
+                Mật khẩu: <strong>cosplay123</strong>
               </Typography>
               <Box sx={{ mt: 1 }}>
                 <Typography
@@ -223,7 +223,7 @@ const LoginPage = () => {
                     '&:hover': { color: 'primary.dark' }
                   }}
                 >
-                  Click here to auto-fill demo credentials
+                  Nhấn vào đây để tự động điền thông tin demo
                 </Typography>
               </Box>
             </Alert>
@@ -241,7 +241,7 @@ const LoginPage = () => {
           )}
 
           <CosplayInput
-            label="Email address"
+            label="Địa chỉ email"
             type="email"
             value={email}
             onChange={handleEmailChange}
@@ -251,11 +251,11 @@ const LoginPage = () => {
             disabled={loading}
             icon={<Email sx={{ color: 'primary.main', fontSize: 20 }} />}
             sx={{ mb: 3 }}
-            placeholder="Enter your email address"
+            placeholder="Nhập địa chỉ email của bạn"
           />
 
           <CosplayInput
-            label="Password"
+            label="Mật khẩu"
             type={showPassword ? 'text' : 'password'}
             value={password}
             onChange={handlePasswordChange}
@@ -267,7 +267,7 @@ const LoginPage = () => {
             onTogglePassword={() => setShowPassword(!showPassword)}
             icon={<Lock sx={{ color: 'primary.main', fontSize: 20 }} />}
             sx={{ mb: 2 }}
-            placeholder="Enter your password"
+            placeholder="Nhập mật khẩu của bạn"
           />
 
           <Box sx={{ textAlign: 'right', mb: 3 }}>
@@ -283,7 +283,7 @@ const LoginPage = () => {
                 '&:hover': { textDecoration: 'underline' },
               }}
             >
-              Forgot password?
+              Quên mật khẩu?
             </Typography>
           </Box>
 
@@ -293,12 +293,12 @@ const LoginPage = () => {
             disabled={loading}
             sx={{ mb: 3 }}
           >
-            {loading ? (useMockApi ? 'Signing in...' : 'Authenticating...') : 'LOG IN'}
+            {loading ? (useMockApi ? 'Đang đăng nhập...' : 'Đang xác thực...') : 'ĐĂNG NHẬP'}
           </ActionButton>
 
           <Box sx={{ textAlign: 'center' }}>
             <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-              Don't have an account?{' '}
+              Chưa có tài khoản?{' '}
               <Typography
                 component={Link}
                 to="/signup"
@@ -309,7 +309,7 @@ const LoginPage = () => {
                   '&:hover': { textDecoration: 'underline' },
                 }}
               >
-                Sign up
+                Đăng ký
               </Typography>
             </Typography>
           </Box>
@@ -324,7 +324,7 @@ const LoginPage = () => {
           }}>
             <Typography variant="body2" sx={{ fontSize: '11px', color: 'text.secondary' }}>
               {useMockApi 
-                ? '🔧 Development Mode: Using mock authentication'
+                ? '🔧 Chế độ phát triển: Sử dụng xác thực giả lập'
                 : `🌐 API Endpoint: ${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5068/api'}`
               }
             </Typography>

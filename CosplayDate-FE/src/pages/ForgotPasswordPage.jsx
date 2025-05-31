@@ -20,16 +20,16 @@ const ForgotPasswordPage = () => {
   const handleEmailChange = (e) => {
     const value = e.target.value;
     setEmail(value);
-    setEmailError(value && !validateEmail(value) ? 'Please enter a valid email address' : '');
+    setEmailError(value && !validateEmail(value) ? 'Vui lòng nhập địa chỉ email hợp lệ' : '');
   };
 
   const handleSendCode = async () => {
     if (!email) {
-      setEmailError('Email is required');
+      setEmailError('Email là bắt buộc');
       return;
     }
     if (!validateEmail(email)) {
-      setEmailError('Please enter a valid email address');
+      setEmailError('Vui lòng nhập địa chỉ email hợp lệ');
       return;
     }
 
@@ -47,7 +47,7 @@ const ForgotPasswordPage = () => {
       
     } catch (error) {
       console.error('Failed to send reset code:', error);
-      setEmailError('Failed to send reset code. Please try again.');
+      setEmailError('Không thể gửi mã đặt lại. Vui lòng thử lại.');
     } finally {
       setLoading(false);
     }
@@ -80,8 +80,8 @@ const ForgotPasswordPage = () => {
     return (
       <PageLayout>
         <CodeVerificationCard
-          title="Check Your Email"
-          subtitle={`We've sent a verification code to ${email}. Please enter the code below to reset your password.`}
+          title="Kiểm tra email của bạn"
+          subtitle={`Chúng tôi đã gửi mã xác thực đến ${email}. Vui lòng nhập mã bên dưới để đặt lại mật khẩu của bạn.`}
           email={email}
           onCodeVerified={handleCodeVerified}
           onResendCode={handleResendCode}
@@ -96,8 +96,8 @@ const ForgotPasswordPage = () => {
   return (
     <PageLayout>
       <FormContainer 
-        title="FORGOT PASSWORD"
-        subtitle="Enter your email address and we'll send you a code to reset your password."
+        title="QUÊN MẬT KHẨU"
+        subtitle="Nhập địa chỉ email của bạn và chúng tôi sẽ gửi cho bạn mã để đặt lại mật khẩu."
       >
         <Box component="form" sx={{ mt: 3 }}>
           {/* Back to Login */}
@@ -117,12 +117,12 @@ const ForgotPasswordPage = () => {
               }}
             >
               <ArrowBack sx={{ fontSize: 16, mr: 0.5 }} />
-              Back to Login
+              Quay lại đăng nhập
             </Typography>
           </Box>
 
           <CosplayInput
-            label="Email address"
+            label="Địa chỉ email"
             type="email"
             value={email}
             onChange={handleEmailChange}
@@ -132,7 +132,7 @@ const ForgotPasswordPage = () => {
             disabled={loading}
             icon={<Email sx={{ color: 'primary.main', fontSize: 20 }} />}
             sx={{ mb: 3 }}
-            placeholder="Enter your email address"
+            placeholder="Nhập địa chỉ email của bạn"
           />
 
           <ActionButton 
@@ -141,12 +141,12 @@ const ForgotPasswordPage = () => {
             disabled={loading || !email}
             sx={{ mb: 3 }}
           >
-            Send Reset Code
+            Gửi mã đặt lại
           </ActionButton>
 
           <Box sx={{ textAlign: 'center' }}>
             <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-              Remember your password?{' '}
+              Bạn nhớ mật khẩu?{' '}
               <Typography
                 component={Link}
                 to="/login"
@@ -157,7 +157,7 @@ const ForgotPasswordPage = () => {
                   '&:hover': { textDecoration: 'underline' },
                 }}
               >
-                Sign in
+                Đăng nhập
               </Typography>
             </Typography>
           </Box>

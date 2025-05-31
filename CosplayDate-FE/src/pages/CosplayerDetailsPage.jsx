@@ -317,7 +317,7 @@ const CosplayerDetailsPage = ({ user, onLogout }) => {
                       {cosplayer.name}
                     </Typography>
                     <Chip
-                      label={cosplayer.isOnline ? 'Online' : 'Offline'}
+                      label={cosplayer.isOnline ? 'Đang hoạt động' : 'Ngoại tuyến'}
                       size="small"
                       sx={{
                         backgroundColor: cosplayer.isOnline ? '#4CAF50' : '#9E9E9E',
@@ -452,7 +452,7 @@ const CosplayerDetailsPage = ({ user, onLogout }) => {
                   color: 'text.primary',
                 }}
               >
-                Bio
+                Giới thiệu
               </Typography>
               <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
                 <Typography variant="body2" sx={{ color: 'text.secondary' }}>

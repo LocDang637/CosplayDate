@@ -49,7 +49,7 @@ const SignUpPage = () => {
       if (!result.success || !result.isAvailable) {
         setErrors(prev => ({ 
           ...prev, 
-          email: result.message || 'This email is already registered' 
+          email: result.message || 'Email này đã được đăng ký' 
         }));
       } else {
         // Clear email error if email is available
@@ -103,37 +103,37 @@ const SignUpPage = () => {
     const newErrors = {};
     
     if (!formData.firstName.trim()) {
-      newErrors.firstName = 'First name is required';
+      newErrors.firstName = 'Tên là bắt buộc';
     } else if (formData.firstName.trim().length < 2) {
-      newErrors.firstName = 'First name must be at least 2 characters';
+      newErrors.firstName = 'Tên phải có ít nhất 2 ký tự';
     }
     
     if (!formData.lastName.trim()) {
-      newErrors.lastName = 'Last name is required';
+      newErrors.lastName = 'Họ là bắt buộc';
     } else if (formData.lastName.trim().length < 2) {
-      newErrors.lastName = 'Last name must be at least 2 characters';
+      newErrors.lastName = 'Họ phải có ít nhất 2 ký tự';
     }
     
     if (!formData.dateOfBirth) {
-      newErrors.dateOfBirth = 'Date of birth is required';
+      newErrors.dateOfBirth = 'Ngày sinh là bắt buộc';
     } else if (!validateAge(formData.dateOfBirth)) {
-      newErrors.dateOfBirth = 'You must be at least 18 years old';
+      newErrors.dateOfBirth = 'Bạn phải ít nhất 18 tuổi';
     }
     
     if (!formData.email) {
-      newErrors.email = 'Email is required';
+      newErrors.email = 'Email là bắt buộc';
     } else if (!validateEmail(formData.email)) {
-      newErrors.email = 'Please enter a valid email address';
+      newErrors.email = 'Vui lòng nhập địa chỉ email hợp lệ';
     }
     
     if (!formData.password) {
-      newErrors.password = 'Password is required';
+      newErrors.password = 'Mật khẩu là bắt buộc';
     } else if (formData.password.length < 6) {
-      newErrors.password = 'Password must be at least 6 characters';
+      newErrors.password = 'Mật khẩu phải có ít nhất 6 ký tự';
     }
     
     if (!formData.acceptTerms) {
-      newErrors.acceptTerms = 'You must accept the terms and conditions';
+      newErrors.acceptTerms = 'Bạn phải chấp nhận điều khoản và điều kiện';
     }
     
     setErrors(newErrors);
@@ -172,13 +172,13 @@ const SignUpPage = () => {
         if (result.errors && Object.keys(result.errors).length > 0) {
           setErrors(result.errors);
         } else {
-          setApiError(result.message || 'Registration failed. Please try again.');
+          setApiError(result.message || 'Đăng ký thất bại. Vui lòng thử lại.');
         }
       }
       
     } catch (error) {
       console.error('Registration error:', error);
-      setApiError('Network error. Please check your connection and try again.');
+      setApiError('Lỗi kết nối. Vui lòng kiểm tra kết nối mạng và thử lại.');
     } finally {
       setLoading(false);
     }
@@ -201,13 +201,13 @@ const SignUpPage = () => {
         // Navigate to login with success message
         navigate('/login', { 
           state: { 
-            message: 'Account created and verified successfully! Please log in.',
+            message: 'Tài khoản đã được tạo và xác thực thành công! Vui lòng đăng nhập.',
             email: formData.email 
           }
         });
       } else {
         console.error('❌ Email verification failed:', result.message);
-        throw new Error(result.message || 'Email verification failed');
+        throw new Error(result.message || 'Xác thực email thất bại');
       }
       
     } catch (error) {
@@ -227,7 +227,7 @@ const SignUpPage = () => {
         return result;
       } else {
         console.error('❌ Failed to resend verification code:', result.message);
-        throw new Error(result.message || 'Failed to resend verification code');
+        throw new Error(result.message || 'Không thể gửi lại mã xác thực');
       }
       
     } catch (error) {
@@ -243,8 +243,8 @@ const SignUpPage = () => {
     return (
       <PageLayout showSidebar>
         <CodeVerificationCard
-          title="Verify Your Email"
-          subtitle={`Welcome to CosplayDate! We've sent a verification code to ${formData.email}. Please enter the code below to complete your registration.`}
+          title="Xác thực email của bạn"
+          subtitle={`Chào mừng đến với CosplayDate! Chúng tôi đã gửi mã xác thực đến ${formData.email}. Vui lòng nhập mã bên dưới để hoàn tất đăng ký.`}
           email={formData.email}
           onCodeVerified={handleEmailVerified}
           onResendCode={handleResendVerificationCode}
@@ -260,7 +260,7 @@ const SignUpPage = () => {
   return (
     <PageLayout showSidebar>
       <FormContainer 
-        title="COSPLAYDATE SIGNUP"
+        title="ĐĂNG KÝ COSPLAYDATE"
         subtitle="Mở tài khoản cho mọi ứng dụng, để mọi thứ đơn giản hơn."
       >
         <Box component="form" sx={{ mt: 3 }}>
@@ -278,7 +278,7 @@ const SignUpPage = () => {
           <Grid container spacing={2}>
             <Grid item xs={12} sm={6}>
               <CosplayInput
-                label="First Name"
+                label="Tên"
                 value={formData.firstName}
                 onChange={handleInputChange('firstName')}
                 onKeyPress={handleKeyPress}
@@ -286,12 +286,12 @@ const SignUpPage = () => {
                 required
                 disabled={loading}
                 icon={<Person sx={{ color: 'primary.main', fontSize: 20 }} />}
-                placeholder="Enter your first name"
+                placeholder="Nhập tên của bạn"
               />
             </Grid>
             <Grid item xs={12} sm={6}>
               <CosplayInput
-                label="Last Name"
+                label="Họ"
                 value={formData.lastName}
                 onChange={handleInputChange('lastName')}
                 onKeyPress={handleKeyPress}
@@ -299,13 +299,13 @@ const SignUpPage = () => {
                 required
                 disabled={loading}
                 icon={<Person sx={{ color: 'primary.main', fontSize: 20 }} />}
-                placeholder="Enter your last name"
+                placeholder="Nhập họ của bạn"
               />
             </Grid>
           </Grid>
 
           <CosplayInput
-            label="Date of Birth"
+            label="Ngày sinh"
             type="date"
             value={formData.dateOfBirth}
             onChange={handleInputChange('dateOfBirth')}
@@ -315,11 +315,11 @@ const SignUpPage = () => {
             icon={<CalendarToday sx={{ color: 'primary.main', fontSize: 20 }} />}
             sx={{ mt: 2 }}
             InputLabelProps={{ shrink: true }}
-            helperText="You must be at least 18 years old to register"
+            helperText="Bạn phải ít nhất 18 tuổi để đăng ký"
           />
 
           <CosplayInput
-            label="Email address"
+            label="Địa chỉ email"
             type="email"
             value={formData.email}
             onChange={handleInputChange('email')}
@@ -329,12 +329,12 @@ const SignUpPage = () => {
             disabled={loading || emailCheckLoading}
             icon={<Email sx={{ color: 'primary.main', fontSize: 20 }} />}
             sx={{ mt: 2 }}
-            placeholder="Enter your email address"
-            helperText={emailCheckLoading ? "Checking email availability..." : ""}
+            placeholder="Nhập địa chỉ email của bạn"
+            helperText={emailCheckLoading ? "Đang kiểm tra email..." : ""}
           />
 
           <CosplayInput
-            label="Password"
+            label="Mật khẩu"
             type={showPassword ? 'text' : 'password'}
             value={formData.password}
             onChange={handleInputChange('password')}
@@ -346,8 +346,8 @@ const SignUpPage = () => {
             onTogglePassword={() => setShowPassword(!showPassword)}
             icon={<Lock sx={{ color: 'primary.main', fontSize: 20 }} />}
             sx={{ mt: 2 }}
-            placeholder="Create a secure password"
-            helperText="Password must be at least 6 characters long"
+            placeholder="Tạo mật khẩu bảo mật"
+            helperText="Mật khẩu phải có ít nhất 6 ký tự"
           />
 
           <FormControlLabel
@@ -364,21 +364,21 @@ const SignUpPage = () => {
             }
             label={
               <Typography variant="body2" sx={{ fontSize: '12px', color: 'text.secondary' }}>
-                I agree to receive emails about products, updates, events, and promotional content. I have read and accept the{' '}
+                Tôi đồng ý nhận email về sản phẩm, cập nhật, sự kiện và nội dung khuyến mãi. Tôi đã đọc và chấp nhận{' '}
                 <Typography 
                   component={Link} 
                   to="/terms-of-service"
                   sx={{ color: 'primary.main', fontWeight: 600, textDecoration: 'none' }}
                 >
-                  Terms of Service
+                  Điều khoản dịch vụ
                 </Typography>
-                {' '}and{' '}
+                {' '}và{' '}
                 <Typography 
                   component={Link} 
                   to="/privacy-policy"
                   sx={{ color: 'primary.main', fontWeight: 600, textDecoration: 'none' }}
                 >
-                  Privacy Policy
+                  Chính sách bảo mật
                 </Typography>
                 .
               </Typography>
@@ -398,12 +398,12 @@ const SignUpPage = () => {
             disabled={loading || emailCheckLoading}
             sx={{ mt: 3 }}
           >
-            {loading ? 'Creating Account...' : 'Create Account'}
+            {loading ? 'Đang tạo tài khoản...' : 'Tạo tài khoản'}
           </ActionButton>
 
           <Box sx={{ textAlign: 'center', mt: 2 }}>
             <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-              Already have an account?{' '}
+              Đã có tài khoản?{' '}
               <Typography
                 component={Link}
                 to="/login"
@@ -414,7 +414,7 @@ const SignUpPage = () => {
                   '&:hover': { textDecoration: 'underline' },
                 }}
               >
-                Log in
+                Đăng nhập
               </Typography>
             </Typography>
           </Box>

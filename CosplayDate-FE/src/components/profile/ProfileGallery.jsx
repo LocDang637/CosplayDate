@@ -50,11 +50,11 @@ const ProfileGallery = ({
 
   // Mock categories for filtering
   const categories = [
-    { id: 'all', label: 'All', count: photos.length },
+    { id: 'all', label: 'Tất cả', count: photos.length },
     { id: 'anime', label: 'Anime', count: 12 },
     { id: 'game', label: 'Game', count: 8 },
-    { id: 'original', label: 'Original', count: 5 },
-    { id: 'event', label: 'Events', count: 3 },
+    { id: 'original', label: 'Gốc', count: 5 },
+    { id: 'event', label: 'Sự kiện', count: 3 },
   ];
 
   // Filter photos based on search and category
@@ -226,7 +226,7 @@ const ProfileGallery = ({
                   textShadow: '1px 1px 2px rgba(0,0,0,0.5)',
                 }}
               >
-                {photo.likes} likes
+                {photo.likes} lượt thích
               </Typography>
             )}
           </Box>
@@ -272,7 +272,7 @@ const ProfileGallery = ({
           mb: 2
         }}>
           <Typography variant="h6" sx={{ fontWeight: 700, color: 'text.primary', flex: 1 }}>
-            Photo Gallery ({filteredPhotos.length})
+            Bộ sưu tập ảnh ({filteredPhotos.length})
           </Typography>
           
           {/* View Mode Toggle */}
@@ -303,7 +303,7 @@ const ProfileGallery = ({
                 fontWeight: 600,
               }}
             >
-              Add Photos
+              Thêm ảnh
             </Button>
           )}
         </Box>
@@ -311,7 +311,7 @@ const ProfileGallery = ({
         {/* Search Bar */}
         <TextField
           fullWidth
-          placeholder="Search photos by title or tags..."
+          placeholder="Tìm kiếm ảnh theo tiêu đề hoặc thẻ..."
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
           size="small"
@@ -386,12 +386,12 @@ const ProfileGallery = ({
           }}
         >
           <Typography variant="h6" sx={{ color: 'text.secondary', mb: 2 }}>
-            No photos found
+            Không tìm thấy ảnh nào
           </Typography>
           <Typography variant="body2" sx={{ color: 'text.secondary', mb: 3 }}>
             {searchTerm || selectedCategory !== 'all' 
-              ? 'Try adjusting your search or filters'
-              : 'No photos have been uploaded yet'
+              ? 'Hãy thử điều chỉnh tìm kiếm hoặc bộ lọc của bạn'
+              : 'Chưa có ảnh nào được tải lên'
             }
           </Typography>
           {isOwnProfile && (
@@ -406,7 +406,7 @@ const ProfileGallery = ({
                 fontWeight: 600,
               }}
             >
-              Upload Your First Photo
+              Tải lên ảnh đầu tiên của bạn
             </Button>
           )}
         </Paper>

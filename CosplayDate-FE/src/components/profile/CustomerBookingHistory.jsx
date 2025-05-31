@@ -65,13 +65,13 @@ const CustomerBookingHistory = () => {
         name: 'Cosplay A',
         avatar: '/src/assets/cosplayer1.png',
         rating: 4.9,
-        specialty: 'Anime Cosplay'
+        specialty: 'Cosplay Anime'
       },
-      service: 'Photoshoot Session',
+      service: 'Buổi chụp ảnh',
       date: '2024-01-15',
       time: '14:00 - 16:00',
       duration: 2,
-      location: 'Studio ABC, District 1, HCMC',
+      location: 'Studio ABC, Quận 1, TP.HCM',
       price: 450000,
       status: 'completed',
       paymentStatus: 'paid',
@@ -79,10 +79,10 @@ const CustomerBookingHistory = () => {
       hasReview: true,
       myReview: {
         rating: 5,
-        comment: 'Amazing photoshoot! Very professional and creative.',
+        comment: 'Buổi chụp tuyệt vời! Rất chuyên nghiệp và sáng tạo.',
         date: '2024-01-16'
       },
-      notes: 'Anime character theme - Naruto cosplay requested'
+      notes: 'Chủ đề nhân vật Anime - Yêu cầu cosplay Naruto'
     },
     {
       id: 'BK2024002',
@@ -91,19 +91,19 @@ const CustomerBookingHistory = () => {
         name: 'Cosplay B',
         avatar: '/src/assets/cosplayer2.png',
         rating: 4.8,
-        specialty: 'Game Characters'
+        specialty: 'Nhân vật Game'
       },
-      service: 'Event Appearance',
+      service: 'Tham dự sự kiện',
       date: '2024-01-20',
       time: '10:00 - 18:00',
       duration: 8,
-      location: 'Saigon Exhibition Center',
+      location: 'Trung tâm Triển lãm Sài Gòn',
       price: 1200000,
       status: 'confirmed',
       paymentStatus: 'paid',
       bookingDate: '2024-01-05T15:20:00',
       hasReview: false,
-      notes: 'Gaming convention appearance - League of Legends character'
+      notes: 'Tham dự hội chợ game - Nhân vật League of Legends'
     },
     {
       id: 'BK2024003',
@@ -112,13 +112,13 @@ const CustomerBookingHistory = () => {
         name: 'Cosplay C',
         avatar: '/src/assets/cosplayer3.png',
         rating: 4.7,
-        specialty: 'Movie Characters'
+        specialty: 'Nhân vật Phim'
       },
-      service: 'Private Session',
+      service: 'Buổi gặp riêng',
       date: '2024-01-12',
       time: '19:00 - 21:00',
       duration: 2,
-      location: 'Coffee Shop XYZ, District 3',
+      location: 'Coffee Shop XYZ, Quận 3',
       price: 380000,
       status: 'completed',
       paymentStatus: 'paid',
@@ -126,10 +126,10 @@ const CustomerBookingHistory = () => {
       hasReview: true,
       myReview: {
         rating: 4,
-        comment: 'Good service, punctual and friendly.',
+        comment: 'Dịch vụ tốt, đúng giờ và thân thiện.',
         date: '2024-01-13'
       },
-      notes: 'Casual meetup - Marvel character theme'
+      notes: 'Gặp gỡ thông thường - Chủ đề nhân vật Marvel'
     },
     {
       id: 'BK2024004',
@@ -138,19 +138,19 @@ const CustomerBookingHistory = () => {
         name: 'Cosplay D',
         avatar: '/src/assets/cosplayer4.png',
         rating: 4.9,
-        specialty: 'Original Characters'
+        specialty: 'Nhân vật Sáng tạo'
       },
-      service: 'Convention Appearance',
+      service: 'Tham dự hội nghị',
       date: '2024-01-25',
       time: '09:00 - 17:00',
       duration: 8,
-      location: 'Hanoi Convention Center',
+      location: 'Trung tâm Hội nghị Hà Nội',
       price: 1500000,
       status: 'upcoming',
       paymentStatus: 'paid',
       bookingDate: '2024-01-15T14:45:00',
       hasReview: false,
-      notes: 'Anime convention - Original character design requested'
+      notes: 'Hội nghị Anime - Yêu cầu thiết kế nhân vật gốc'
     },
     {
       id: 'BK2024005',
@@ -159,20 +159,20 @@ const CustomerBookingHistory = () => {
         name: 'Cosplay E',
         avatar: '/src/assets/cosplayer5.png',
         rating: 4.6,
-        specialty: 'Historical Characters'
+        specialty: 'Nhân vật Lịch sử'
       },
-      service: 'Photoshoot Session',
+      service: 'Buổi chụp ảnh',
       date: '2024-01-08',
       time: '16:00 - 18:00',
       duration: 2,
-      location: 'Outdoor Location - Nguyen Hue',
+      location: 'Địa điểm ngoài trời - Nguyễn Huệ',
       price: 350000,
       status: 'cancelled',
       paymentStatus: 'refunded',
       bookingDate: '2024-01-03T10:15:00',
       hasReview: false,
-      notes: 'Weather cancellation - Traditional Vietnamese costume',
-      cancellationReason: 'Bad weather conditions'
+      notes: 'Hủy do thời tiết - Trang phục truyền thống Việt Nam',
+      cancellationReason: 'Điều kiện thời tiết xấu'
     },
     {
       id: 'BK2024006',
@@ -181,19 +181,19 @@ const CustomerBookingHistory = () => {
         name: 'Cosplay F',
         avatar: '/src/assets/cosplayer6.png',
         rating: 4.8,
-        specialty: 'Anime Characters'
+        specialty: 'Nhân vật Anime'
       },
-      service: 'Workshop Session',
+      service: 'Buổi workshop',
       date: '2024-02-01',
       time: '14:00 - 17:00',
       duration: 3,
-      location: 'Cosplay Studio, District 7',
+      location: 'Cosplay Studio, Quận 7',
       price: 600000,
       status: 'pending',
       paymentStatus: 'pending',
       bookingDate: '2024-01-18T16:30:00',
       hasReview: false,
-      notes: 'Makeup and costume design workshop'
+      notes: 'Workshop trang điểm và thiết kế trang phục'
     }
   ];
 
@@ -207,7 +207,7 @@ const CustomerBookingHistory = () => {
   const getStatusColor = (status) => {
     switch (status) {
       case 'completed': return '#4CAF50';
-      case 'confirmed': 
+      case 'confirmed':
       case 'upcoming': return '#2196F3';
       case 'pending': return '#FF9800';
       case 'cancelled': return '#F44336';
@@ -226,18 +226,29 @@ const CustomerBookingHistory = () => {
     }
   };
 
+  const getStatusLabel = (status) => {
+    switch (status) {
+      case 'completed': return 'Hoàn thành';
+      case 'confirmed': return 'Đã xác nhận';
+      case 'upcoming': return 'Sắp tới';
+      case 'pending': return 'Chờ xử lý';
+      case 'cancelled': return 'Đã hủy';
+      default: return status;
+    }
+  };
+
   const filterBookings = () => {
     let filtered = mockBookings;
-    
+
     if (filterStatus !== 'all') {
       filtered = filtered.filter(booking => booking.status === filterStatus);
     }
-    
+
     // Sort bookings
     filtered.sort((a, b) => {
       const dateA = new Date(a.date);
       const dateB = new Date(b.date);
-      
+
       switch (sortBy) {
         case 'date_desc':
           return dateB - dateA;
@@ -251,7 +262,7 @@ const CustomerBookingHistory = () => {
           return dateB - dateA;
       }
     });
-    
+
     return filtered;
   };
 
@@ -287,7 +298,7 @@ const CustomerBookingHistory = () => {
     const now = new Date();
     const timeDiff = bookingDate - now;
     const hoursDiff = timeDiff / (1000 * 60 * 60);
-    
+
     return hoursDiff > 24 && (booking.status === 'confirmed' || booking.status === 'upcoming');
   };
 
@@ -331,11 +342,11 @@ const CustomerBookingHistory = () => {
               </Box>
             </Box>
           </Box>
-          
+
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
             <Chip
               icon={getStatusIcon(booking.status)}
-              label={booking.status}
+              label={getStatusLabel(booking.status)}
               sx={{
                 backgroundColor: getStatusColor(booking.status),
                 color: 'white',
@@ -354,7 +365,7 @@ const CustomerBookingHistory = () => {
           <Typography variant="h6" sx={{ fontWeight: 600, mb: 1, color: 'primary.main' }}>
             {booking.service}
           </Typography>
-          
+
           <Grid container spacing={2}>
             <Grid item xs={12} sm={6}>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
@@ -387,10 +398,10 @@ const CustomerBookingHistory = () => {
 
         {/* Notes */}
         {booking.notes && (
-          <Alert 
-            severity="info" 
-            sx={{ 
-              mb: 2, 
+          <Alert
+            severity="info"
+            sx={{
+              mb: 2,
               borderRadius: '8px',
               '& .MuiAlert-message': { fontSize: '12px' }
             }}
@@ -401,15 +412,15 @@ const CustomerBookingHistory = () => {
 
         {/* Cancellation Reason */}
         {booking.cancellationReason && (
-          <Alert 
-            severity="warning" 
-            sx={{ 
-              mb: 2, 
+          <Alert
+            severity="warning"
+            sx={{
+              mb: 2,
               borderRadius: '8px',
               '& .MuiAlert-message': { fontSize: '12px' }
             }}
           >
-            Cancelled: {booking.cancellationReason}
+            Lý do hủy: {booking.cancellationReason}
           </Alert>
         )}
 
@@ -430,7 +441,7 @@ const CustomerBookingHistory = () => {
               textTransform: 'none',
             }}
           >
-            Details
+            Chi tiết
           </Button>
 
           {booking.status === 'completed' && !booking.hasReview && (
@@ -448,7 +459,7 @@ const CustomerBookingHistory = () => {
                 textTransform: 'none',
               }}
             >
-              Review
+              Đánh giá
             </Button>
           )}
 
@@ -464,7 +475,7 @@ const CustomerBookingHistory = () => {
                 textTransform: 'none',
               }}
             >
-              Reviewed
+              Đã đánh giá
             </Button>
           )}
 
@@ -481,7 +492,7 @@ const CustomerBookingHistory = () => {
                 textTransform: 'none',
               }}
             >
-              Cancel
+              Hủy đặt
             </Button>
           )}
 
@@ -497,7 +508,7 @@ const CustomerBookingHistory = () => {
               textTransform: 'none',
             }}
           >
-            Rebook
+            Đặt lại
           </Button>
         </Box>
 
@@ -505,7 +516,7 @@ const CustomerBookingHistory = () => {
         {booking.status === 'upcoming' && (
           <Box sx={{ mt: 2 }}>
             <Typography variant="body2" sx={{ color: 'text.secondary', mb: 1, fontSize: '12px' }}>
-              {Math.ceil((new Date(booking.date) - new Date()) / (1000 * 60 * 60 * 24))} days until booking
+              Còn {Math.ceil((new Date(booking.date) - new Date()) / (1000 * 60 * 60 * 24))} ngày nữa
             </Typography>
             <LinearProgress
               variant="determinate"
@@ -540,43 +551,43 @@ const CustomerBookingHistory = () => {
       >
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
           <Typography variant="h6" sx={{ fontWeight: 700, color: 'text.primary' }}>
-            Booking History ({filteredBookings.length})
+            Lịch sử đặt chỗ ({filteredBookings.length})
           </Typography>
         </Box>
 
         <Grid container spacing={2} alignItems="center">
           <Grid item xs={12} sm={6} md={3}>
             <FormControl fullWidth size="small">
-              <InputLabel>Status Filter</InputLabel>
+              <InputLabel>Lọc trạng thái</InputLabel>
               <Select
                 value={filterStatus}
                 onChange={(e) => setFilterStatus(e.target.value)}
-                label="Status Filter"
+                label="Lọc trạng thái"
                 sx={{ borderRadius: '12px' }}
               >
-                <MenuItem value="all">All Status</MenuItem>
-                <MenuItem value="upcoming">Upcoming</MenuItem>
-                <MenuItem value="completed">Completed</MenuItem>
-                <MenuItem value="confirmed">Confirmed</MenuItem>
-                <MenuItem value="pending">Pending</MenuItem>
-                <MenuItem value="cancelled">Cancelled</MenuItem>
+                <MenuItem value="all">Tất cả</MenuItem>
+                <MenuItem value="upcoming">Sắp tới</MenuItem>
+                <MenuItem value="completed">Hoàn thành</MenuItem>
+                <MenuItem value="confirmed">Đã xác nhận</MenuItem>
+                <MenuItem value="pending">Chờ xử lý</MenuItem>
+                <MenuItem value="cancelled">Đã hủy</MenuItem>
               </Select>
             </FormControl>
           </Grid>
 
           <Grid item xs={12} sm={6} md={3}>
             <FormControl fullWidth size="small">
-              <InputLabel>Sort By</InputLabel>
+              <InputLabel>Sắp xếp theo</InputLabel>
               <Select
                 value={sortBy}
                 onChange={(e) => setSortBy(e.target.value)}
-                label="Sort By"
+                label="Sắp xếp theo"
                 sx={{ borderRadius: '12px' }}
               >
-                <MenuItem value="date_desc">Date (Newest)</MenuItem>
-                <MenuItem value="date_asc">Date (Oldest)</MenuItem>
-                <MenuItem value="price_desc">Price (High to Low)</MenuItem>
-                <MenuItem value="price_asc">Price (Low to High)</MenuItem>
+                <MenuItem value="date_desc">Ngày (Mới nhất)</MenuItem>
+                <MenuItem value="date_asc">Ngày (Cũ nhất)</MenuItem>
+                <MenuItem value="price_desc">Giá (Cao đến thấp)</MenuItem>
+                <MenuItem value="price_asc">Giá (Thấp đến cao)</MenuItem>
               </Select>
             </FormControl>
           </Grid>
@@ -588,7 +599,7 @@ const CustomerBookingHistory = () => {
                 return (
                   <Chip
                     key={status}
-                    label={`${status} (${count})`}
+                    label={`${getStatusLabel(status)} (${count})`}
                     onClick={() => setFilterStatus(filterStatus === status ? 'all' : status)}
                     variant={filterStatus === status ? 'filled' : 'outlined'}
                     sx={{
@@ -630,21 +641,21 @@ const CustomerBookingHistory = () => {
         >
           <Event sx={{ fontSize: 64, color: 'text.secondary', mb: 2 }} />
           <Typography variant="h6" sx={{ color: 'text.secondary', mb: 2 }}>
-            No bookings found
+            Không tìm thấy đặt chỗ nào
           </Typography>
           <Typography variant="body2" sx={{ color: 'text.secondary', mb: 3 }}>
-            {filterStatus !== 'all' 
-              ? `No bookings with status "${filterStatus}"`
-              : 'You haven\'t made any bookings yet'
+            {filterStatus !== 'all'
+              ? `Không có đặt chỗ nào với trạng thái "${getStatusLabel(filterStatus)}"`
+              : 'Bạn chưa có lịch sử đặt chỗ nào'
             }
           </Typography>
           {filterStatus !== 'all' && (
-            <Button 
-              variant="outlined" 
+            <Button
+              variant="outlined"
               onClick={() => setFilterStatus('all')}
               sx={{ borderRadius: '12px' }}
             >
-              Clear Filter
+              Xóa bộ lọc
             </Button>
           )}
         </Paper>
@@ -681,7 +692,7 @@ const CustomerBookingHistory = () => {
         <DialogTitle sx={{ textAlign: 'center', pb: 1 }}>
           <Star sx={{ fontSize: 32, color: '#FFD700', mb: 1 }} />
           <Typography variant="h6" sx={{ fontWeight: 700 }}>
-            Review Your Experience
+            Đánh giá trải nghiệm của bạn
           </Typography>
           {selectedBooking && (
             <Typography variant="body2" sx={{ color: 'text.secondary' }}>
@@ -689,12 +700,12 @@ const CustomerBookingHistory = () => {
             </Typography>
           )}
         </DialogTitle>
-        
+
         <DialogContent sx={{ textAlign: 'center' }}>
           <Typography variant="subtitle1" sx={{ mb: 2, fontWeight: 600 }}>
-            How was your experience?
+            Trải nghiệm của bạn như thế nào?
           </Typography>
-          
+
           <Rating
             value={reviewRating}
             onChange={(e, newValue) => setReviewRating(newValue)}
@@ -706,10 +717,10 @@ const CustomerBookingHistory = () => {
             fullWidth
             multiline
             rows={4}
-            label="Share your experience"
+            label="Chia sẻ trải nghiệm của bạn"
             value={reviewComment}
             onChange={(e) => setReviewComment(e.target.value)}
-            placeholder="Tell others about your experience with this cosplayer..."
+            placeholder="Hãy cho mọi người biết về trải nghiệm của bạn với cosplayer này..."
             sx={{
               '& .MuiOutlinedInput-root': {
                 borderRadius: '12px',
@@ -717,13 +728,13 @@ const CustomerBookingHistory = () => {
             }}
           />
         </DialogContent>
-        
+
         <DialogActions sx={{ p: 3, pt: 1 }}>
-          <Button 
+          <Button
             onClick={() => setReviewDialog(false)}
             sx={{ borderRadius: '12px' }}
           >
-            Cancel
+            Hủy
           </Button>
           <Button
             variant="contained"
@@ -735,7 +746,7 @@ const CustomerBookingHistory = () => {
               px: 3,
             }}
           >
-            Submit Review
+            Gửi đánh giá
           </Button>
         </DialogActions>
       </Dialog>
@@ -760,7 +771,7 @@ const CustomerBookingHistory = () => {
                 />
                 <Box>
                   <Typography variant="h6" sx={{ fontWeight: 700 }}>
-                    Booking Details
+                    Chi tiết đặt chỗ
                   </Typography>
                   <Typography variant="body2" sx={{ color: 'text.secondary' }}>
                     {selectedBooking.id}
@@ -768,12 +779,12 @@ const CustomerBookingHistory = () => {
                 </Box>
               </Box>
             </DialogTitle>
-            
+
             <DialogContent>
               <Grid container spacing={3}>
                 <Grid item xs={12} md={6}>
                   <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1 }}>
-                    Cosplayer Information
+                    Thông tin Cosplayer
                   </Typography>
                   <Box sx={{ p: 2, backgroundColor: 'rgba(233, 30, 99, 0.05)', borderRadius: '12px', mb: 2 }}>
                     <Typography variant="body1" sx={{ fontWeight: 600 }}>
@@ -791,7 +802,7 @@ const CustomerBookingHistory = () => {
                   </Box>
 
                   <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1 }}>
-                    Service Details
+                    Chi tiết dịch vụ
                   </Typography>
                   <Box sx={{ p: 2, backgroundColor: 'rgba(233, 30, 99, 0.05)', borderRadius: '12px' }}>
                     <Typography variant="body1" sx={{ fontWeight: 600, mb: 1 }}>
@@ -814,7 +825,7 @@ const CustomerBookingHistory = () => {
 
                 <Grid item xs={12} md={6}>
                   <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1 }}>
-                    Booking Status
+                    Trạng thái booking
                   </Typography>
                   <Box sx={{ mb: 2 }}>
                     <Chip
@@ -829,14 +840,14 @@ const CustomerBookingHistory = () => {
                       }}
                     />
                     <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-                      Payment: {selectedBooking.paymentStatus}
+                      Thanh toán: {selectedBooking.paymentStatus}
                     </Typography>
                   </Box>
 
                   {selectedBooking.notes && (
                     <>
                       <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1 }}>
-                        Special Notes
+                        Lưu ý đặc biệt
                       </Typography>
                       <Alert severity="info" sx={{ mb: 2, borderRadius: '8px' }}>
                         {selectedBooking.notes}
@@ -847,7 +858,7 @@ const CustomerBookingHistory = () => {
                   {selectedBooking.hasReview && selectedBooking.myReview && (
                     <>
                       <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1 }}>
-                        Your Review
+                        Đánh giá của bạn
                       </Typography>
                       <Box sx={{ p: 2, backgroundColor: 'rgba(255, 193, 7, 0.1)', borderRadius: '12px' }}>
                         <Rating value={selectedBooking.myReview.rating} size="small" readOnly sx={{ mb: 1 }} />
@@ -855,7 +866,7 @@ const CustomerBookingHistory = () => {
                           "{selectedBooking.myReview.comment}"
                         </Typography>
                         <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-                          Reviewed on {new Date(selectedBooking.myReview.date).toLocaleDateString('vi-VN')}
+                          Đã đánh giá vào ngày {new Date(selectedBooking.myReview.date).toLocaleDateString('vi-VN')}
                         </Typography>
                       </Box>
                     </>
@@ -863,13 +874,13 @@ const CustomerBookingHistory = () => {
                 </Grid>
               </Grid>
             </DialogContent>
-            
+
             <DialogActions sx={{ p: 3, pt: 1 }}>
-              <Button 
+              <Button
                 onClick={() => setDetailDialog(false)}
                 sx={{ borderRadius: '12px' }}
               >
-                Close
+                Đóng
               </Button>
               {selectedBooking.status === 'completed' && !selectedBooking.hasReview && (
                 <Button
@@ -884,7 +895,7 @@ const CustomerBookingHistory = () => {
                     borderRadius: '12px',
                   }}
                 >
-                  Write Review
+                  Viết đánh giá
                 </Button>
               )}
             </DialogActions>

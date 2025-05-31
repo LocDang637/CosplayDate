@@ -186,7 +186,7 @@ const ProfileReviews = ({
               </Typography>
               {review.user.verified && (
                 <Chip
-                  label="Verified"
+                  label="Đã xác thực"
                   size="small"
                   sx={{
                     backgroundColor: '#4CAF50',
@@ -260,7 +260,7 @@ const ProfileReviews = ({
               },
             }}
           >
-            Helpful ({review.helpfulCount + (isHelpful ? 1 : 0)})
+            Hữu ích ({review.helpfulCount + (isHelpful ? 1 : 0)})
           </Button>
           
           <Button
@@ -275,7 +275,7 @@ const ProfileReviews = ({
               },
             }}
           >
-            Reply
+            Phản hồi
           </Button>
         </Box>
 
@@ -290,7 +290,7 @@ const ProfileReviews = ({
             borderColor: 'primary.main'
           }}>
             <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1, color: 'primary.main' }}>
-              Response from Owner
+              Phản hồi từ chủ sở hữu
             </Typography>
             <Typography variant="body2" sx={{ color: 'text.primary' }}>
               {review.response}
@@ -321,7 +321,7 @@ const ProfileReviews = ({
             </Typography>
             <Rating value={overallRating} size="large" readOnly />
             <Typography variant="body1" sx={{ color: 'text.secondary', mt: 1 }}>
-              Based on {totalReviews} reviews
+              Dựa trên {totalReviews} đánh giá
             </Typography>
           </Paper>
         </Grid>
@@ -337,7 +337,7 @@ const ProfileReviews = ({
             }}
           >
             <Typography variant="h6" sx={{ fontWeight: 700, mb: 2, color: 'text.primary' }}>
-              Rating Distribution
+              Phân bố đánh giá
             </Typography>
             
             {[5, 4, 3, 2, 1].map((stars) => (
@@ -366,7 +366,7 @@ const ProfileReviews = ({
           <Grid item xs={12} md={4}>
             <TextField
               fullWidth
-              placeholder="Search reviews..."
+              placeholder="Tìm kiếm đánh giá..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               size="small"
@@ -387,37 +387,37 @@ const ProfileReviews = ({
           
           <Grid item xs={12} sm={6} md={4}>
             <FormControl fullWidth size="small">
-              <InputLabel>Sort by</InputLabel>
+              <InputLabel>Sắp xếp theo</InputLabel>
               <Select
                 value={sortBy}
                 onChange={(e) => setSortBy(e.target.value)}
-                label="Sort by"
+                label="Sắp xếp theo"
                 sx={{ borderRadius: '12px' }}
               >
-                <MenuItem value="newest">Newest First</MenuItem>
-                <MenuItem value="oldest">Oldest First</MenuItem>
-                <MenuItem value="highest">Highest Rating</MenuItem>
-                <MenuItem value="lowest">Lowest Rating</MenuItem>
-                <MenuItem value="helpful">Most Helpful</MenuItem>
+                <MenuItem value="newest">Mới nhất</MenuItem>
+                <MenuItem value="oldest">Cũ nhất</MenuItem>
+                <MenuItem value="highest">Đánh giá cao nhất</MenuItem>
+                <MenuItem value="lowest">Đánh giá thấp nhất</MenuItem>
+                <MenuItem value="helpful">Hữu ích nhất</MenuItem>
               </Select>
             </FormControl>
           </Grid>
           
           <Grid item xs={12} sm={6} md={4}>
             <FormControl fullWidth size="small">
-              <InputLabel>Filter by Rating</InputLabel>
+              <InputLabel>Lọc theo đánh giá</InputLabel>
               <Select
                 value={filterRating}
                 onChange={(e) => setFilterRating(e.target.value)}
-                label="Filter by Rating"
+                label="Lọc theo đánh giá"
                 sx={{ borderRadius: '12px' }}
               >
-                <MenuItem value="all">All Ratings</MenuItem>
-                <MenuItem value="5">5 Stars</MenuItem>
-                <MenuItem value="4">4 Stars</MenuItem>
-                <MenuItem value="3">3 Stars</MenuItem>
-                <MenuItem value="2">2 Stars</MenuItem>
-                <MenuItem value="1">1 Star</MenuItem>
+                <MenuItem value="all">Tất cả đánh giá</MenuItem>
+                <MenuItem value="5">5 Sao</MenuItem>
+                <MenuItem value="4">4 Sao</MenuItem>
+                <MenuItem value="3">3 Sao</MenuItem>
+                <MenuItem value="2">2 Sao</MenuItem>
+                <MenuItem value="1">1 Sao</MenuItem>
               </Select>
             </FormControl>
           </Grid>
@@ -427,7 +427,7 @@ const ProfileReviews = ({
       {/* Reviews List */}
       <Box sx={{ mb: 4 }}>
         <Typography variant="h6" sx={{ fontWeight: 700, mb: 3, color: 'text.primary' }}>
-          Reviews ({sortedReviews.length})
+          Đánh giá ({sortedReviews.length})
         </Typography>
         
         {currentReviews.length > 0 ? (
@@ -445,12 +445,12 @@ const ProfileReviews = ({
             }}
           >
             <Typography variant="h6" sx={{ color: 'text.secondary', mb: 2 }}>
-              No reviews found
+              Không tìm thấy đánh giá nào
             </Typography>
             <Typography variant="body2" sx={{ color: 'text.secondary' }}>
               {searchTerm || filterRating !== 'all' 
-                ? 'Try adjusting your search or filters'
-                : 'No reviews have been submitted yet'
+                ? 'Hãy thử điều chỉnh tìm kiếm hoặc bộ lọc của bạn'
+                : 'Chưa có đánh giá nào được gửi'
               }
             </Typography>
           </Paper>
@@ -494,14 +494,14 @@ const ProfileReviews = ({
           <ListItemIcon>
             <Flag fontSize="small" />
           </ListItemIcon>
-          <ListItemText primary="Report Review" />
+          <ListItemText primary="Báo cáo đánh giá" />
         </MenuItem>
         {isOwnProfile && selectedReview && (
           <MenuItem onClick={handleMenuClose}>
             <ListItemIcon>
               <Reply fontSize="small" />
             </ListItemIcon>
-            <ListItemText primary="Respond to Review" />
+            <ListItemText primary="Phản hồi đánh giá" />
           </MenuItem>
         )}
       </Menu>

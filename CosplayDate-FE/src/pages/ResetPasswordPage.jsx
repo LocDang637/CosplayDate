@@ -28,10 +28,10 @@ const ResetPasswordPage = () => {
   }, [email, code, navigate]);
 
   const validatePassword = (password) => {
-    if (password.length < 8) return 'Password must be at least 8 characters';
-    if (!/(?=.*[a-z])/.test(password)) return 'Password must contain at least one lowercase letter';
-    if (!/(?=.*[A-Z])/.test(password)) return 'Password must contain at least one uppercase letter';
-    if (!/(?=.*\d)/.test(password)) return 'Password must contain at least one number';
+    if (password.length < 8) return 'Mật khẩu phải có ít nhất 8 ký tự';
+    if (!/(?=.*[a-z])/.test(password)) return 'Mật khẩu phải chứa ít nhất một chữ thường';
+    if (!/(?=.*[A-Z])/.test(password)) return 'Mật khẩu phải chứa ít nhất một chữ hoa';
+    if (!/(?=.*\d)/.test(password)) return 'Mật khẩu phải chứa ít nhất một số';
     return '';
   };
 
@@ -42,7 +42,7 @@ const ResetPasswordPage = () => {
     
     // Check confirm password match if it's already filled
     if (confirmPassword && value !== confirmPassword) {
-      setConfirmPasswordError('Passwords do not match');
+      setConfirmPasswordError('Mật khẩu không khớp');
     } else if (confirmPassword && value === confirmPassword) {
       setConfirmPasswordError('');
     }
@@ -53,7 +53,7 @@ const ResetPasswordPage = () => {
     setConfirmPassword(value);
     
     if (value && value !== password) {
-      setConfirmPasswordError('Passwords do not match');
+      setConfirmPasswordError('Mật khẩu không khớp');
     } else {
       setConfirmPasswordError('');
     }
@@ -62,7 +62,7 @@ const ResetPasswordPage = () => {
   const handleResetPassword = async () => {
     // Validation
     if (!password) {
-      setPasswordError('Password is required');
+      setPasswordError('Mật khẩu là bắt buộc');
       return;
     }
     
@@ -73,12 +73,12 @@ const ResetPasswordPage = () => {
     }
     
     if (!confirmPassword) {
-      setConfirmPasswordError('Please confirm your password');
+      setConfirmPasswordError('Vui lòng xác nhận mật khẩu của bạn');
       return;
     }
     
     if (password !== confirmPassword) {
-      setConfirmPasswordError('Passwords do not match');
+      setConfirmPasswordError('Mật khẩu không khớp');
       return;
     }
 
@@ -94,14 +94,14 @@ const ResetPasswordPage = () => {
       // Navigate to login with success message
       navigate('/login', { 
         state: { 
-          message: 'Password reset successfully! Please log in with your new password.',
+          message: 'Đặt lại mật khẩu thành công! Vui lòng đăng nhập với mật khẩu mới.',
           email: email
         }
       });
       
     } catch (error) {
       console.error('Password reset failed:', error);
-      setPasswordError('Failed to reset password. Please try again.');
+      setPasswordError('Không thể đặt lại mật khẩu. Vui lòng thử lại.');
     } finally {
       setLoading(false);
     }
@@ -116,8 +116,8 @@ const ResetPasswordPage = () => {
   return (
     <PageLayout>
       <FormContainer 
-        title="RESET PASSWORD"
-        subtitle="Enter your new password below. Make sure it's strong and secure."
+        title="ĐẶT LẠI MẬT KHẨU"
+        subtitle="Nhập mật khẩu mới của bạn bên dưới. Hãy đảm bảo mật khẩu mạnh và bảo mật."
       >
         <Box component="form" sx={{ mt: 3 }}>
           {/* Email Display */}
@@ -129,12 +129,12 @@ const ResetPasswordPage = () => {
             border: '1px solid rgba(233, 30, 99, 0.1)'
           }}>
             <Typography variant="body2" sx={{ color: 'text.secondary', fontSize: '12px' }}>
-              Resetting password for: <strong>{email}</strong>
+              Đặt lại mật khẩu cho: <strong>{email}</strong>
             </Typography>
           </Box>
 
           <CosplayInput
-            label="New Password"
+            label="Mật khẩu mới"
             type={showPassword ? 'text' : 'password'}
             value={password}
             onChange={handlePasswordChange}
@@ -146,11 +146,11 @@ const ResetPasswordPage = () => {
             onTogglePassword={() => setShowPassword(!showPassword)}
             icon={<Lock sx={{ color: 'primary.main', fontSize: 20 }} />}
             sx={{ mb: 3 }}
-            placeholder="Enter your new password"
+            placeholder="Nhập mật khẩu mới của bạn"
           />
 
           <CosplayInput
-            label="Confirm New Password"
+            label="Xác nhận mật khẩu mới"
             type={showConfirmPassword ? 'text' : 'password'}
             value={confirmPassword}
             onChange={handleConfirmPasswordChange}
@@ -162,22 +162,22 @@ const ResetPasswordPage = () => {
             onTogglePassword={() => setShowConfirmPassword(!showConfirmPassword)}
             icon={<Lock sx={{ color: 'primary.main', fontSize: 20 }} />}
             sx={{ mb: 3 }}
-            placeholder="Confirm your new password"
+            placeholder="Xác nhận mật khẩu mới của bạn"
           />
 
           {/* Password Requirements */}
           <Box sx={{ mb: 3, p: 2, backgroundColor: 'rgba(0,0,0,0.02)', borderRadius: '8px' }}>
             <Typography variant="body2" sx={{ fontWeight: 600, mb: 1, fontSize: '12px' }}>
-              Password Requirements:
+              Yêu cầu mật khẩu:
             </Typography>
             <Typography variant="body2" sx={{ fontSize: '11px', color: 'text.secondary', mb: 0.5 }}>
-              • At least 8 characters long
+              • Ít nhất 8 ký tự
             </Typography>
             <Typography variant="body2" sx={{ fontSize: '11px', color: 'text.secondary', mb: 0.5 }}>
-              • Contains uppercase and lowercase letters
+              • Chứa chữ hoa và chữ thường
             </Typography>
             <Typography variant="body2" sx={{ fontSize: '11px', color: 'text.secondary' }}>
-              • Contains at least one number
+              • Chứa ít nhất một số
             </Typography>
           </Box>
 
@@ -187,12 +187,12 @@ const ResetPasswordPage = () => {
             disabled={loading || !password || !confirmPassword || !!passwordError || !!confirmPasswordError}
             sx={{ mb: 3 }}
           >
-            Reset Password
+            Đặt lại mật khẩu
           </ActionButton>
 
           <Box sx={{ textAlign: 'center' }}>
             <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-              Remember your password?{' '}
+              Bạn nhớ mật khẩu?{' '}
               <Typography
                 component={Link}
                 to="/login"
@@ -203,7 +203,7 @@ const ResetPasswordPage = () => {
                   '&:hover': { textDecoration: 'underline' },
                 }}
               >
-                Sign in
+                Đăng nhập
               </Typography>
             </Typography>
           </Box>

@@ -27,18 +27,18 @@ import {
 
 const Footer = () => {
   const handleEmailSignup = () => {
-    console.log('Email signup clicked');
-    // Handle email signup logic
+    console.log('Đã nhấn đăng ký email');
+    // Xử lý logic đăng ký email
   };
 
   const handleSocialClick = (platform) => {
-    console.log(`${platform} clicked`);
-    // Handle social media links
+    console.log(`Đã nhấn ${platform}`);
+    // Xử lý liên kết mạng xã hội
   };
 
   const handleLinkClick = (page) => {
-    console.log(`${page} page clicked`);
-    // Handle page navigation
+    console.log(`Đã nhấn trang ${page}`);
+    // Xử lý điều hướng trang
   };
 
   return (
@@ -53,7 +53,7 @@ const Footer = () => {
       <Container maxWidth="lg">
         <Box sx={{ py: 6 }}>
           <Grid container spacing={4}>
-            {/* Help Section */}
+            {/* Phần Trợ giúp */}
             <Grid item xs={12} sm={6} md={3}>
               <Typography
                 variant="h6"
@@ -68,13 +68,13 @@ const Footer = () => {
                 }}
               >
                 <Help sx={{ fontSize: 20, color: 'primary.main' }} />
-                Help
+                Trợ giúp
               </Typography>
               
               <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
                 <Link
                   component="button"
-                  onClick={() => handleLinkClick('FAQ')}
+                  onClick={() => handleLinkClick('Câu hỏi thường gặp')}
                   sx={{
                     color: 'text.secondary',
                     textDecoration: 'none',
@@ -87,11 +87,11 @@ const Footer = () => {
                     },
                   }}
                 >
-                  FAQ
+                  Câu hỏi thường gặp
                 </Link>
                 <Link
                   component="button"
-                  onClick={() => handleLinkClick('Policy')}
+                  onClick={() => handleLinkClick('Chính sách bảo mật')}
                   sx={{
                     color: 'text.secondary',
                     textDecoration: 'none',
@@ -104,11 +104,11 @@ const Footer = () => {
                     },
                   }}
                 >
-                  Privacy Policy
+                  Chính sách bảo mật
                 </Link>
                 <Link
                   component="button"
-                  onClick={() => handleLinkClick('Orders')}
+                  onClick={() => handleLinkClick('Điều khoản dịch vụ')}
                   sx={{
                     color: 'text.secondary',
                     textDecoration: 'none',
@@ -121,12 +121,12 @@ const Footer = () => {
                     },
                   }}
                 >
-                  Terms of Service
+                  Điều khoản dịch vụ
                 </Link>
               </Box>
             </Grid>
 
-            {/* Pages Section */}
+            {/* Phần Trang */}
             <Grid item xs={12} sm={6} md={3}>
               <Typography
                 variant="h6"
@@ -141,13 +141,13 @@ const Footer = () => {
                 }}
               >
                 <Info sx={{ fontSize: 20, color: 'primary.main' }} />
-                Pages
+                Trang
               </Typography>
               
               <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
                 <Link
                   component="button"
-                  onClick={() => handleLinkClick('About Us')}
+                  onClick={() => handleLinkClick('Về chúng tôi')}
                   sx={{
                     color: 'text.secondary',
                     textDecoration: 'none',
@@ -160,11 +160,11 @@ const Footer = () => {
                     },
                   }}
                 >
-                  About Us
+                  Về chúng tôi
                 </Link>
                 <Link
                   component="button"
-                  onClick={() => handleLinkClick('Contact Us')}
+                  onClick={() => handleLinkClick('Liên hệ')}
                   sx={{
                     color: 'text.secondary',
                     textDecoration: 'none',
@@ -177,11 +177,11 @@ const Footer = () => {
                     },
                   }}
                 >
-                  Contact Us
+                  Liên hệ
                 </Link>
                 <Link
                   component="button"
-                  onClick={() => handleLinkClick('Events')}
+                  onClick={() => handleLinkClick('Sự kiện')}
                   sx={{
                     color: 'text.secondary',
                     textDecoration: 'none',
@@ -194,7 +194,7 @@ const Footer = () => {
                     },
                   }}
                 >
-                  Events
+                  Sự kiện
                 </Link>
                 <Link
                   component="button"
@@ -216,7 +216,7 @@ const Footer = () => {
               </Box>
             </Grid>
 
-            {/* More About CosplayDate Section */}
+            {/* Phần Thêm về CosplayDate */}
             <Grid item xs={12} md={6}>
               <Typography
                 variant="h6"
@@ -228,7 +228,7 @@ const Footer = () => {
                   textAlign: { xs: 'left', md: 'center' },
                 }}
               >
-                MORE ABOUT COSPLAYDATE
+                THÊM VỀ COSPLAYDATE
               </Typography>
 
               <Box sx={{ 
@@ -241,7 +241,7 @@ const Footer = () => {
               }}>
               
 
-                {/* Email Signup */}
+                {/* Đăng ký Email */}
                 <Box sx={{ 
                   display: 'flex',
                   flexDirection: 'column',
@@ -250,7 +250,7 @@ const Footer = () => {
                   minWidth: '200px'
                 }}>
                   <TextField
-                    placeholder="Enter your email"
+                    placeholder="Nhập email của bạn"
                     size="small"
                     sx={{
                       '& .MuiOutlinedInput-root': {
@@ -285,7 +285,7 @@ const Footer = () => {
                       textAlign: 'center',
                     }}
                   >
-                    Get updates & cosplay news
+                    Nhận cập nhật & tin tức cosplay
                   </Typography>
                 </Box>
               </Box>
@@ -295,7 +295,7 @@ const Footer = () => {
 
         <Divider sx={{ borderColor: 'rgba(233, 30, 99, 0.2)' }} />
 
-        {/* Bottom Section */}
+        {/* Phần Dưới cùng */}
         <Box sx={{ 
           py: 3,
           display: 'flex',
@@ -306,7 +306,7 @@ const Footer = () => {
         }}>
           
 
-          {/* Social Media Icons */}
+          {/* Biểu tượng Mạng xã hội */}
           <Box sx={{ display: 'flex', gap: 1 }}>
             <IconButton
               onClick={() => handleSocialClick('Twitch')}
@@ -398,7 +398,7 @@ const Footer = () => {
           </Box>
         </Box>
 
-        {/* Copyright */}
+        {/* Bản quyền */}
         <Box sx={{ 
           textAlign: 'center',
           pb: 2,
@@ -412,7 +412,7 @@ const Footer = () => {
               fontSize: '12px',
             }}
           >
-            © 2024 CosplayDate. Made with 💖 for the cosplay community. All rights reserved.
+            © 2024 CosplayDate. Được tạo với 💖 cho cộng đồng cosplay. Mọi quyền được bảo lưu.
           </Typography>
         </Box>
       </Container>
