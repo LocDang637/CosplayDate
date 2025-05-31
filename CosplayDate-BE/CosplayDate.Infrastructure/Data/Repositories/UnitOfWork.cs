@@ -1,11 +1,7 @@
-﻿using CosplayDate.Domain.Interfaces;
+﻿using CosplayDate.Domain.Entities;
+using CosplayDate.Domain.Interfaces;
 using CosplayDate.Infrastructure.Data.Context;
 using Microsoft.EntityFrameworkCore.Storage;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace CosplayDate.Infrastructure.Data.Repositories
 {
@@ -19,10 +15,26 @@ namespace CosplayDate.Infrastructure.Data.Repositories
             _context = context;
             Users = new UserRepository(_context);
             EmailVerificationTokens = new EmailVerificationTokenRepository(_context);
+
+            Bookings = new Repository<Booking>(_context);
+            Reviews = new Repository<Review>(_context);
+            WalletTransactions = new Repository<WalletTransaction>(_context);
+            UserFollows = new Repository<UserFollow>(_context);
+            UserInterests = new Repository<UserInterest>(_context);
+            Favorites = new Repository<Favorite>(_context);
+            Cosplayers = new Repository<Cosplayer>(_context);
         }
 
         public IUserRepository Users { get; private set; }
         public IEmailVerificationTokenRepository EmailVerificationTokens { get; private set; }
+
+        public IRepository<Booking> Bookings { get; private set; }
+        public IRepository<Review> Reviews { get; private set; }
+        public IRepository<WalletTransaction> WalletTransactions { get; private set; }
+        public IRepository<UserFollow> UserFollows { get; private set; }
+        public IRepository<UserInterest> UserInterests { get; private set; }
+        public IRepository<Favorite> Favorites { get; private set; }
+        public IRepository<Cosplayer> Cosplayers { get; private set; }
 
         public async Task<int> SaveChangesAsync()
         {
