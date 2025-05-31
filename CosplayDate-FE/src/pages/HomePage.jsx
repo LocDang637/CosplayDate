@@ -60,7 +60,7 @@ const HomePage = () => {
   const cosplayers = [
     {
       id: 1,
-      name: 'Cosplay A',
+      name: 'Cosplayer A',
       price: 400000,
       category: 'Anime',
       image: '/src/assets/cosplayer1.png',
@@ -69,34 +69,34 @@ const HomePage = () => {
     },
     {
       id: 2,
-      name: 'Cosplay B',
+      name: 'Cosplayer B',
       price: 450000,
-      category: 'Game',
+      category: 'Trò chơi',
       image: '/src/assets/cosplayer2.png',
       location: 'TP.HCM',
       rating: 4.8
     },
     {
       id: 3,
-      name: 'Cosplay C',
+      name: 'Cosplayer C',
       price: 350000,
-      category: 'Movie',
+      category: 'Phim ảnh',
       image: '/src/assets/cosplayer3.png',
       location: 'Đà Nẵng',
       rating: 4.7
     },
     {
       id: 4,
-      name: 'Cosplay D',
+      name: 'Cosplayer D',
       price: 500000,
-      category: 'Original',
+      category: 'Nguyên bản',
       image: '/src/assets/cosplayer4.png',
       location: 'Cần Thơ',
       rating: 4.9
     },
     {
       id: 5,
-      name: 'Cosplay E',
+      name: 'Cosplayer E',
       price: 380000,
       category: 'Anime',
       image: '/src/assets/cosplayer5.png',
@@ -105,25 +105,25 @@ const HomePage = () => {
     },
     {
       id: 6,
-      name: 'Cosplay F',
+      name: 'Cosplayer F',
       price: 420000,
-      category: 'Game',
+      category: 'Trò chơi',
       image: '/src/assets/cosplayer6.png',
       location: 'Hà Nội',
       rating: 4.8
     },
     {
       id: 7,
-      name: 'Cosplay G',
+      name: 'Cosplayer G',
       price: 460000,
-      category: 'Historical',
+      category: 'Lịch sử',
       image: '/src/assets/cosplayer7.png',
       location: 'TP.HCM',
       rating: 4.7
     },
     {
       id: 8,
-      name: 'Cosplay H',
+      name: 'Cosplayer H',
       price: 390000,
       category: 'Anime',
       image: '/src/assets/cosplayer8.png',
@@ -133,24 +133,24 @@ const HomePage = () => {
   ];
 
   const stats = [
-    { icon: <People />, label: 'Active Cosplayers', value: '10K+' },
-    { icon: <Event />, label: 'Events This Month', value: '150+' },
-    { icon: <PhotoCamera />, label: 'Photos Shared', value: '50K+' },
-    { icon: <TrendingUp />, label: 'Connections Made', value: '2.5K+' }
+    { icon: <People />, label: 'Cosplayer Hoạt Động', value: '10K+' },
+    { icon: <Event />, label: 'Sự Kiện Tháng Này', value: '150+' },
+    { icon: <PhotoCamera />, label: 'Ảnh Được Chia Sẻ', value: '50K+' },
+    { icon: <TrendingUp />, label: 'Kết Nối Được Tạo', value: '2.5K+' }
   ];
 
   const handleSearch = (filters) => {
-    console.log('Search with filters:', filters);
+    console.log('Tìm kiếm với bộ lọc:', filters);
     // Handle search logic here
   };
 
   const handleFiltersChange = (filters) => {
-    console.log('Filters changed:', filters);
+    console.log('Bộ lọc đã thay đổi:', filters);
     // Handle filter change logic here
   };
 
   const handleSeeAll = () => {
-    console.log('See all cosplayers');
+    console.log('Xem tất cả cosplayer');
     navigate("/cosplayers");  // Assuming you have a route for cosplayers
     // Navigate to cosplayers page
   };
@@ -266,10 +266,10 @@ const HomePage = () => {
                   mb: 2,
                   fontSize: '24px'
                 }}>
-                  {user?.firstName?.[0] || 'U'}
+                  {user?.firstName?.[0] || 'N'}
                 </Avatar>
                 <Typography variant="h6" sx={{ fontWeight: 600, mb: 1 }}>
-                  Hello, {user?.firstName || 'User'}! 👋
+                  Xin chào, {user?.firstName || 'Người dùng'}! 👋
                 </Typography>
                 <Typography variant="body2" sx={{ color: 'text.secondary' }}>
                   Bạn đã sẵn sàng để khám phá thế giới cosplay chưa?

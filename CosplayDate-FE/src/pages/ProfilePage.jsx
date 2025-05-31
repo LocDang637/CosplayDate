@@ -47,23 +47,23 @@ const ProfilePage = () => {
   // Mock data for demonstration
   const mockProfileUser = {
     id: userId ? parseInt(userId) : user?.id || 1,
-    firstName: userId ? 'Other User' : user?.firstName || 'Mai',
-    lastName: userId ? 'Profile' : user?.lastName || 'Nguyen',
+    firstName: userId ? 'Người dùng khác' : user?.firstName || 'Mai',
+    lastName: userId ? 'Hồ sơ' : user?.lastName || 'Nguyen',
     email: userId ? 'other@cosplaydate.com' : user?.email || 'mai@cosplaydate.com',
     avatar: '/src/assets/cosplayer1.png',
     isVerified: true,
     isOnline: true,
-    location: 'Ho Chi Minh City, Vietnam',
-    bio: 'Professional cosplayer specializing in anime and game characters. I love bringing fictional characters to life through detailed costumes and authentic portrayals. Available for events, photoshoots, and collaborations.',
+    location: 'Thành phố Hồ Chí Minh, Việt Nam',
+    bio: 'Cosplayer chuyên nghiệp chuyên về các nhân vật anime và game. Tôi yêu thích việc tái hiện các nhân vật hư cấu thông qua những bộ trang phục chi tiết và diễn xuất chân thực. Có thể tham gia sự kiện, chụp ảnh và hợp tác.',
     rating: 4.9,
     reviewCount: 127,
     followersCount: 2453,
     followingCount: 892,
-    responseTime: '< 1 hour',
-    startingPrice: '500,000đ/hour',
+    responseTime: '< 1 giờ',
+    startingPrice: '500.000đ/giờ',
     successRate: '98%',
-    specialties: ['Anime', 'Game', 'Original Characters', 'Historical'],
-    services: ['Photoshoots', 'Events', 'Conventions', 'Private Sessions', 'Tutorials'],
+    specialties: ['Anime', 'Game', 'Nhân vật gốc', 'Lịch sử'],
+    services: ['Chụp ảnh', 'Sự kiện', 'Hội nghị', 'Phiên riêng tư', 'Hướng dẫn'],
   };
 
   const mockStats = {
@@ -76,63 +76,63 @@ const ProfilePage = () => {
   };
 
   const mockSkills = [
-    { name: 'Costume Design', level: 95, color: '#E91E63' },
-    { name: 'Makeup Artistry', level: 88, color: '#9C27B0' },
-    { name: 'Character Acting', level: 92, color: '#673AB7' },
-    { name: 'Photography', level: 75, color: '#3F51B5' },
-    { name: 'Prop Making', level: 82, color: '#2196F3' },
+    { name: 'Thiết kế trang phục', level: 95, color: '#E91E63' },
+    { name: 'Nghệ thuật trang điểm', level: 88, color: '#9C27B0' },
+    { name: 'Diễn xuất nhân vật', level: 92, color: '#673AB7' },
+    { name: 'Chụp ảnh', level: 75, color: '#3F51B5' },
+    { name: 'Làm đạo cụ', level: 82, color: '#2196F3' },
   ];
 
   const mockRecentActivity = [
     {
       icon: '📸',
-      title: 'New photo uploaded',
-      description: 'Added 5 new cosplay photos to gallery',
-      time: '2 hours ago'
+      title: 'Đã tải ảnh mới',
+      description: 'Đã thêm 5 ảnh cosplay mới vào thư viện',
+      time: '2 giờ trước'
     },
     {
       icon: '⭐',
-      title: 'Received 5-star review',
-      description: 'Great feedback from recent photoshoot client',
-      time: '1 day ago'
+      title: 'Nhận được đánh giá 5 sao',
+      description: 'Phản hồi tuyệt vời từ khách hàng chụp ảnh gần đây',
+      time: '1 ngày trước'
     },
     {
       icon: '🎭',
-      title: 'Event completed',
-      description: 'Successfully completed Anime Festival appearance',
-      time: '3 days ago'
+      title: 'Hoàn thành sự kiện',
+      description: 'Đã hoàn thành thành công việc tham gia Lễ hội Anime',
+      time: '3 ngày trước'
     },
     {
       icon: '🏆',
-      title: 'Award received',
-      description: 'Best Costume Design at Vietnam Comic Con',
-      time: '1 week ago'
+      title: 'Nhận giải thưởng',
+      description: 'Thiết kế trang phục xuất sắc nhất tại Vietnam Comic Con',
+      time: '1 tuần trước'
     },
   ];
 
   const mockPhotos = Array.from({ length: 24 }, (_, index) => ({
     id: index + 1,
     url: `/src/assets/cosplayer${(index % 8) + 1}.png`,
-    title: `Cosplay Photo ${index + 1}`,
-    description: `Amazing cosplay photoshoot #${index + 1}`,
-    category: ['anime', 'game', 'original', 'event'][index % 4],
+    title: `Ảnh Cosplay ${index + 1}`,
+    description: `Buổi chụp ảnh cosplay tuyệt vời #${index + 1}`,
+    category: ['anime', 'game', 'gốc', 'sự kiện'][index % 4],
     likes: Math.floor(Math.random() * 500) + 50,
-    tags: ['cosplay', 'anime', 'photoshoot', 'character'],
+    tags: ['cosplay', 'anime', 'chụp ảnh', 'nhân vật'],
   }));
 
   const mockReviews = Array.from({ length: 15 }, (_, index) => ({
     id: index + 1,
     user: {
-      name: `User ${index + 1}`,
+      name: `Người dùng ${index + 1}`,
       avatar: `/src/assets/cosplayer${(index % 8) + 1}.png`,
       verified: Math.random() > 0.5,
     },
     rating: Math.floor(Math.random() * 2) + 4, // 4-5 stars
-    comment: `Amazing cosplayer! Very professional and talented. The attention to detail in the costume was incredible. Would definitely book again for future events. ${index % 3 === 0 ? 'The photoshoot exceeded all my expectations and the final results were stunning.' : ''}`,
-    date: `${Math.floor(Math.random() * 30) + 1} days ago`,
+    comment: `Cosplayer tuyệt vời! Rất chuyên nghiệp và tài năng. Sự chú ý đến từng chi tiết trong trang phục thật đáng kinh ngạc. Chắc chắn sẽ đặt lại cho các sự kiện trong tương lai. ${index % 3 === 0 ? 'Buổi chụp ảnh vượt quá mọi mong đợi của tôi và kết quả cuối cùng thật tuyệt đẹp.' : ''}`,
+    date: `${Math.floor(Math.random() * 30) + 1} ngày trước`,
     helpfulCount: Math.floor(Math.random() * 20),
-    tags: ['Professional', 'Creative', 'Punctual', 'Talented'][Math.floor(Math.random() * 4)] ? ['Professional'] : [],
-    response: index % 5 === 0 ? 'Thank you so much for the wonderful review! It was a pleasure working with you.' : null,
+    tags: ['Chuyên nghiệp', 'Sáng tạo', 'Đúng giờ', 'Tài năng'][Math.floor(Math.random() * 4)] ? ['Chuyên nghiệp'] : [],
+    response: index % 5 === 0 ? 'Cảm ơn bạn rất nhiều vì đánh giá tuyệt vời! Thật vui khi được làm việc cùng bạn.' : null,
   }));
 
   // Load profile data
@@ -149,7 +149,7 @@ const ProfilePage = () => {
         setIsFollowing(Math.random() > 0.5); // Random follow status
 
       } catch (err) {
-        setError('Failed to load profile. Please try again.');
+        setError('Không thể tải hồ sơ. Vui lòng thử lại.');
         console.error('Profile loading error:', err);
       } finally {
         setLoading(false);
@@ -173,25 +173,25 @@ const ProfilePage = () => {
 
   const handleEditProfile = () => {
     console.log('Edit profile clicked');
-    showSnackbar('Edit profile functionality coming soon!', 'info');
+    showSnackbar('Tính năng chỉnh sửa hồ sơ sắp ra mắt!', 'info');
   };
 
   const handleEditAvatar = () => {
     console.log('Edit avatar clicked');
-    showSnackbar('Avatar upload functionality coming soon!', 'info');
+    showSnackbar('Tính năng tải lên ảnh đại diện sắp ra mắt!', 'info');
   };
 
   const handleFollowToggle = () => {
     setIsFollowing(!isFollowing);
     showSnackbar(
-      isFollowing ? 'Unfollowed successfully' : 'Following successfully', 
+      isFollowing ? 'Đã bỏ theo dõi thành công' : 'Đã theo dõi thành công', 
       'success'
     );
   };
 
   const handleAddPhoto = () => {
     console.log('Add photo clicked');
-    showSnackbar('Photo upload functionality coming soon!', 'info');
+    showSnackbar('Tính năng tải lên ảnh sắp ra mắt!', 'info');
   };
 
   const showSnackbar = (message, severity = 'success') => {
@@ -232,8 +232,8 @@ const ProfilePage = () => {
             borderRadius: '16px',
             border: '1px solid rgba(233, 30, 99, 0.1)',
           }}>
-            <h3>Videos Section</h3>
-            <p>Video content coming soon!</p>
+            <h3>Phần Video</h3>
+            <p>Nội dung video sắp ra mắt!</p>
           </Box>
         );
       case 'reviews':
@@ -254,8 +254,8 @@ const ProfilePage = () => {
             borderRadius: '16px',
             border: '1px solid rgba(233, 30, 99, 0.1)',
           }}>
-            <h3>Events Section</h3>
-            <p>Events content coming soon!</p>
+            <h3>Phần Sự kiện</h3>
+            <p>Nội dung sự kiện sắp ra mắt!</p>
           </Box>
         );
       case 'achievements':
@@ -267,8 +267,8 @@ const ProfilePage = () => {
             borderRadius: '16px',
             border: '1px solid rgba(233, 30, 99, 0.1)',
           }}>
-            <h3>Achievements Section</h3>
-            <p>Awards and achievements coming soon!</p>
+            <h3>Phần Thành tích</h3>
+            <p>Giải thưởng và thành tích sắp ra mắt!</p>
           </Box>
         );
       case 'favorites':
@@ -280,8 +280,8 @@ const ProfilePage = () => {
             borderRadius: '16px',
             border: '1px solid rgba(233, 30, 99, 0.1)',
           }}>
-            <h3>Favorites Section</h3>
-            <p>Your favorite content will appear here!</p>
+            <h3>Phần Yêu thích</h3>
+            <p>Nội dung yêu thích của bạn sẽ xuất hiện ở đây!</p>
           </Box>
         );
       default:
@@ -298,7 +298,7 @@ const ProfilePage = () => {
           <Container maxWidth="lg" sx={{ py: 8, textAlign: 'center' }}>
             <CircularProgress size={60} sx={{ color: 'primary.main' }} />
             <Box sx={{ mt: 2 }}>
-              <h3>Loading profile...</h3>
+              <h3>Đang tải hồ sơ...</h3>
             </Box>
           </Container>
           <Footer />
@@ -319,7 +319,7 @@ const ProfilePage = () => {
               sx={{ mb: 4, borderRadius: '12px' }}
               action={
                 <Button color="inherit" onClick={() => window.location.reload()}>
-                  Retry
+                  Thử lại
                 </Button>
               }
             >

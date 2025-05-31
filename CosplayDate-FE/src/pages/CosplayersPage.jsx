@@ -51,9 +51,9 @@ const CosplayersPage = () => {
     priceRange: []
   });
   
-  const itemsPerPage = 12; // 3 per row, 4 rows
+  const itemsPerPage = 12; // 3 trên mỗi hàng, 4 hàng
 
-  // Load user from localStorage
+  // Tải người dùng từ localStorage
   useEffect(() => {
     const storedUser = localStorage.getItem('user');
     if (storedUser) {
@@ -61,7 +61,7 @@ const CosplayersPage = () => {
     }
   }, []);
 
-  // Mock cosplayers data (expanded)
+  // Dữ liệu cosplayer mẫu (mở rộng)
   const mockCosplayers = [
     {
       id: 1,
@@ -77,7 +77,7 @@ const CosplayersPage = () => {
       id: 2,
       name: 'Cosplayer B',
       price: 450000,
-      category: 'Game',
+      category: 'Trò chơi',
       image: '/src/assets/cosplayer2.png',
       gender: 'Nam',
       character: 'Naruto',
@@ -87,7 +87,7 @@ const CosplayersPage = () => {
       id: 3,
       name: 'Cosplayer C',
       price: 350000,
-      category: 'Movie',
+      category: 'Phim',
       image: '/src/assets/cosplayer3.png',
       gender: 'Nữ',
       character: 'Naruto',
@@ -97,7 +97,7 @@ const CosplayersPage = () => {
       id: 4,
       name: 'Cosplayer D',
       price: 500000,
-      category: 'Original',
+      category: 'Nguyên bản',
       image: '/src/assets/cosplayer4.png',
       gender: 'Nam',
       character: 'Naruto',
@@ -117,7 +117,7 @@ const CosplayersPage = () => {
       id: 6,
       name: 'Cosplayer F',
       price: 420000,
-      category: 'Game',
+      category: 'Trò chơi',
       image: '/src/assets/cosplayer6.png',
       gender: 'Nam',
       character: 'Naruto',
@@ -127,7 +127,7 @@ const CosplayersPage = () => {
       id: 7,
       name: 'Cosplayer G',
       price: 460000,
-      category: 'Historical',
+      category: 'Lịch sử',
       image: '/src/assets/cosplayer7.png',
       gender: 'Nữ',
       character: 'Naruto',
@@ -147,7 +147,7 @@ const CosplayersPage = () => {
       id: 9,
       name: 'Cosplayer I',
       price: 480000,
-      category: 'Game',
+      category: 'Trò chơi',
       image: '/src/assets/cosplayer1.png',
       gender: 'Nữ',
       character: 'Naruto',
@@ -167,7 +167,7 @@ const CosplayersPage = () => {
       id: 11,
       name: 'Cosplayer K',
       price: 410000,
-      category: 'Movie',
+      category: 'Phim',
       image: '/src/assets/cosplayer3.png',
       gender: 'Nữ',
       character: 'Naruto',
@@ -177,13 +177,13 @@ const CosplayersPage = () => {
       id: 12,
       name: 'Cosplayer L',
       price: 470000,
-      category: 'Original',
+      category: 'Nguyên bản',
       image: '/src/assets/cosplayer4.png',
       gender: 'Nam',
       character: 'Naruto',
       available: false
     },
-    // Add more to have enough for 4 rows
+    // Thêm nhiều hơn để có đủ cho 4 hàng
     {
       id: 13,
       name: 'Cosplayer M',
@@ -198,7 +198,7 @@ const CosplayersPage = () => {
       id: 14,
       name: 'Cosplayer N',
       price: 460000,
-      category: 'Game',
+      category: 'Trò chơi',
       image: '/src/assets/cosplayer6.png',
       gender: 'Nam',
       character: 'Naruto',
@@ -208,7 +208,7 @@ const CosplayersPage = () => {
       id: 15,
       name: 'Cosplayer O',
       price: 420000,
-      category: 'Movie',
+      category: 'Phim',
       image: '/src/assets/cosplayer7.png',
       gender: 'Nữ',
       character: 'Naruto',
@@ -216,11 +216,11 @@ const CosplayersPage = () => {
     }
   ];
 
-  // Load cosplayers data
+  // Tải dữ liệu cosplayers
   useEffect(() => {
     const loadCosplayers = async () => {
       setLoading(true);
-      // Simulate API call
+      // Mô phỏng cuộc gọi API
       await new Promise(resolve => setTimeout(resolve, 1000));
       setCosplayers(mockCosplayers);
       setFilteredCosplayers(mockCosplayers);
@@ -230,13 +230,13 @@ const CosplayersPage = () => {
     loadCosplayers();
   }, []);
 
-  // Handle search
+  // Xử lý tìm kiếm
   const handleSearch = (value) => {
     setSearchTerm(value);
     applyFilters(value, filters);
   };
 
-  // Handle filter changes
+  // Xử lý thay đổi bộ lọc
   const handleFilterChange = (filterType, value, checked) => {
     const newFilters = { ...filters };
     if (checked) {
@@ -248,37 +248,37 @@ const CosplayersPage = () => {
     applyFilters(searchTerm, newFilters);
   };
 
-  // Apply filters
+  // Áp dụng bộ lọc
   const applyFilters = (search, currentFilters) => {
     let filtered = [...cosplayers];
 
-    // Search by name
+    // Tìm kiếm theo tên
     if (search) {
       filtered = filtered.filter(cosplayer =>
         cosplayer.name.toLowerCase().includes(search.toLowerCase())
       );
     }
 
-    // Filter by gender
+    // Lọc theo giới tính
     if (currentFilters.gender.length > 0) {
       filtered = filtered.filter(cosplayer =>
         currentFilters.gender.includes(cosplayer.gender)
       );
     }
 
-    // Filter by character
+    // Lọc theo nhân vật
     if (currentFilters.characters.length > 0) {
       filtered = filtered.filter(cosplayer =>
         currentFilters.characters.includes(cosplayer.character)
       );
     }
 
-    // Filter by price range
+    // Lọc theo khoảng giá
     if (currentFilters.priceRange.length > 0) {
       filtered = filtered.filter(cosplayer => {
         return currentFilters.priceRange.some(range => {
-          if (range === '100.000 vnd') return cosplayer.price <= 100000;
-          if (range === '200.000 vnd') return cosplayer.price <= 200000;
+          if (range === '100.000 đ') return cosplayer.price <= 100000;
+          if (range === '200.000 đ') return cosplayer.price <= 200000;
           return true;
         });
       });
@@ -288,7 +288,7 @@ const CosplayersPage = () => {
     setCurrentPage(1);
   };
 
-  // Handle pagination
+  // Xử lý phân trang
   const totalPages = Math.ceil(filteredCosplayers.length / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
   const currentCosplayers = filteredCosplayers.slice(startIndex, startIndex + itemsPerPage);
@@ -298,7 +298,7 @@ const CosplayersPage = () => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  // Handle actions
+  // Xử lý các hành động
   const handleFavorite = (cosplayerId) => {
     const newFavorites = new Set(favorites);
     if (newFavorites.has(cosplayerId)) {
@@ -309,9 +309,9 @@ const CosplayersPage = () => {
     setFavorites(newFavorites);
   };
 
-  // ADD THIS FUNCTION - Navigation to cosplayer details
+  // THÊM CHỨC NĂNG NÀY - Điều hướng đến chi tiết cosplayer
   const handleViewCosplayer = (cosplayerId) => {
-    console.log('Navigating to cosplayer:', cosplayerId);
+    console.log('Điều hướng đến cosplayer:', cosplayerId);
     navigate(`/cosplayer/${cosplayerId}`);
   };
 
@@ -322,10 +322,10 @@ const CosplayersPage = () => {
   };
 
   const formatPrice = (price) => {
-    return new Intl.NumberFormat('vi-VN').format(price) + 'đ/h';
+    return new Intl.NumberFormat('vi-VN').format(price) + 'đ/giờ';
   };
 
-  // Loading skeleton
+  // Skeleton đang tải
   const CosplayerSkeleton = () => (
     <Card sx={{ 
       borderRadius: '16px', 
@@ -342,7 +342,7 @@ const CosplayersPage = () => {
     </Card>
   );
 
-  // Cosplayer Card Component - UPDATED WITH NAVIGATION
+  // Component thẻ Cosplayer - ĐÃ CẬP NHẬT VỚI ĐIỀU HƯỚNG
   const CosplayerCard = ({ cosplayer }) => {
     const isFavorite = favorites.has(cosplayer.id);
 
@@ -351,12 +351,12 @@ const CosplayersPage = () => {
     };
 
     const handleFavoriteClick = (e) => {
-      e.stopPropagation(); // Prevent card click when clicking favorite
+      e.stopPropagation(); // Ngăn click thẻ khi click yêu thích
       handleFavorite(cosplayer.id);
     };
 
     const handleButtonClick = (e) => {
-      e.stopPropagation(); // Prevent card click when clicking button
+      e.stopPropagation(); // Ngăn click thẻ khi click nút
       handleViewCosplayer(cosplayer.id);
     };
 
@@ -369,7 +369,7 @@ const CosplayersPage = () => {
           background: 'white',
           boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
           transition: 'all 0.3s ease',
-          cursor: 'pointer', // ADD CURSOR POINTER
+          cursor: 'pointer', // THÊM CON TRỎ
           '&:hover': {
             transform: 'translateY(-4px)',
             boxShadow: '0 8px 24px rgba(233, 30, 99, 0.15)',
@@ -483,14 +483,14 @@ const CosplayersPage = () => {
   return (
     <ThemeProvider theme={cosplayTheme}>
       <Box sx={{ minHeight: '100vh', backgroundColor: '#FFE8F5' }}>
-        {/* Header */}
+        {/* Tiêu đề */}
         <Header 
           user={user} 
           onLogout={handleLogout} 
           sx={{ 
             position: 'sticky',
             top: 0,
-            zIndex: 10, // Higher z-index than sidebar
+            zIndex: 10, // Z-index cao hơn thanh bên
             backgroundColor: '#FFE8F5',
             backdropFilter: 'blur(10px)',
           }} 
@@ -500,21 +500,21 @@ const CosplayersPage = () => {
           sx={{ 
             display: 'flex', 
             backgroundColor: '#FFE8F5', 
-            minHeight: 'calc(100vh - 64px)', // Account for header height
+            minHeight: 'calc(100vh - 64px)', // Tính cho chiều cao header
             position: 'relative',
-            justifyContent: 'center', // Center the entire content
-            gap: 4, // Add gap between sidebar and main content
-            px: 4, // Add horizontal padding to container
+            justifyContent: 'center', // Căn giữa toàn bộ nội dung
+            gap: 4, // Thêm khoảng cách giữa thanh bên và nội dung chính
+            px: 4, // Thêm padding ngang cho container
           }}
         >
-          {/* Sidebar */}
+          {/* Thanh bên */}
           <Box
             sx={{
               width: '350px',
               height: '870px',
               backgroundColor: '#FBCDFF',
               position: 'sticky',
-              top: '84px', // Header height (64px) + gap (20px)
+              top: '84px', // Chiều cao header (64px) + khoảng cách (20px)
               p: 3,
               overflowY: 'auto',
               borderRadius: '16px',
@@ -524,10 +524,10 @@ const CosplayersPage = () => {
               mt: 2,
               mb: 2,
               flexShrink: 0,
-              zIndex: 1, // Ensure sidebar is below header
+              zIndex: 1, // Đảm bảo thanh bên ở dưới header
             }}
           >
-            {/* Search */}
+            {/* Tìm kiếm */}
             <TextField
               fullWidth
               placeholder="Tên Cosplayer"
@@ -552,9 +552,9 @@ const CosplayersPage = () => {
               }}
             />
 
-            {/* Filters */}
+            {/* Bộ lọc */}
             <Box>
-              {/* Gender Filter */}
+              {/* Bộ lọc giới tính */}
               <Accordion
                 defaultExpanded
                 sx={{
@@ -623,7 +623,7 @@ const CosplayersPage = () => {
                 </AccordionDetails>
               </Accordion>
 
-              {/* Character Filter */}
+              {/* Bộ lọc nhân vật */}
               <Accordion
                 defaultExpanded
                 sx={{
@@ -673,7 +673,7 @@ const CosplayersPage = () => {
                 </AccordionDetails>
               </Accordion>
 
-              {/* Price Filter */}
+              {/* Bộ lọc giá */}
               <Accordion
                 defaultExpanded
                 sx={{
@@ -705,7 +705,7 @@ const CosplayersPage = () => {
                 </AccordionSummary>
                 <AccordionDetails sx={{ px: 0, pt: 0 }}>
                   <FormGroup>
-                    {['100.000 vnd', '200.000 vnd'].map((price, index) => (
+                    {['100.000 đ', '200.000 đ'].map((price, index) => (
                       <FormControlLabel
                         key={index}
                         control={
@@ -723,7 +723,7 @@ const CosplayersPage = () => {
                 </AccordionDetails>
               </Accordion>
 
-              {/* Style Section */}
+              {/* Phần Phong cách */}
               <Box sx={{ mt: 4 }}>
                 <Typography
                   variant="h6"
@@ -734,7 +734,7 @@ const CosplayersPage = () => {
                     mb: 2,
                   }}
                 >
-                  Style
+                  Phong cách
                 </Typography>
                 <Button
                   variant="contained"
@@ -762,7 +762,7 @@ const CosplayersPage = () => {
             </Box>
           </Box>
 
-          {/* Main Content */}
+          {/* Nội dung chính */}
           <Box sx={{ 
             flex: 1, 
             py: 4,
@@ -770,9 +770,9 @@ const CosplayersPage = () => {
             flexDirection: 'column',
             alignItems: 'center',
             overflow: 'hidden',
-            maxWidth: '1000px', // Control max width for better centering
+            maxWidth: '1000px', // Kiểm soát chiều rộng tối đa để căn giữa tốt hơn
           }}>
-            {/* Page Header */}
+            {/* Tiêu đề trang */}
             <Box sx={{ textAlign: 'center', mb: 4, width: '100%' }}>
               <Typography
                 variant="h2"
@@ -800,7 +800,7 @@ const CosplayersPage = () => {
               </Typography>
             </Box>
 
-            {/* Cosplayers Grid */}
+            {/* Lưới Cosplayers */}
             {loading ? (
               <Box
                 sx={{
@@ -837,7 +837,7 @@ const CosplayersPage = () => {
               </Box>
             )}
 
-            {/* No Results */}
+            {/* Không có kết quả */}
             {!loading && filteredCosplayers.length === 0 && (
               <Box sx={{ textAlign: 'center', py: 8 }}>
                 <Typography variant="h6" sx={{ color: 'text.secondary', mb: 2 }}>
@@ -849,7 +849,7 @@ const CosplayersPage = () => {
               </Box>
             )}
 
-            {/* Pagination */}
+            {/* Phân trang */}
             {!loading && filteredCosplayers.length > 0 && (
               <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}>
                 <Pagination
@@ -874,7 +874,7 @@ const CosplayersPage = () => {
           </Box>
         </Box>
 
-        {/* Footer */}
+        {/* Chân trang */}
         <Footer />
       </Box>
     </ThemeProvider>

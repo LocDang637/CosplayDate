@@ -48,23 +48,23 @@ const CustomerProfilePage = () => {
   // Mock customer profile data
   const mockCustomerProfile = {
     id: userId ? parseInt(userId) : user?.id || 1,
-    firstName: userId ? 'Other Customer' : user?.firstName || 'Mai',
-    lastName: userId ? 'Profile' : user?.lastName || 'Nguyen',
+    firstName: userId ? 'Khách hàng khác' : user?.firstName || 'Mai',
+    lastName: userId ? 'Hồ sơ' : user?.lastName || 'Nguyen',
     email: userId ? 'customer@cosplaydate.com' : user?.email || 'mai@cosplaydate.com',
     avatar: '/src/assets/cosplayer1.png',
     isVerified: true,
     isOnline: true,
-    location: 'Ho Chi Minh City, Vietnam',
-    bio: 'Passionate cosplay enthusiast and event organizer. I love discovering new cosplayers and bringing creative visions to life. Always excited to collaborate on unique cosplay experiences and support the community.',
+    location: 'Thành phố Hồ Chí Minh, Việt Nam',
+    bio: 'Người đam mê cosplay và tổ chức sự kiện. Tôi yêu thích khám phá những cosplayer mới và biến những ý tưởng sáng tạo thành hiện thực. Luôn hào hứng hợp tác trong những trải nghiệm cosplay độc đáo và hỗ trợ cộng đồng.',
     totalBookings: 23,
     favoriteCosplayers: 12,
     reviewsGiven: 18,
-    avgResponseTime: '< 30 minutes',
+    avgResponseTime: '< 30 phút',
     completionRate: '98%',
-    memberSince: 'January 2023',
+    memberSince: 'Tháng 1 năm 2023',
     avgRatingGiven: '4.7',
-    interests: ['Anime', 'Gaming', 'Photography', 'Events', 'Conventions', 'Original Characters'],
-    membershipTier: 'Gold',
+    interests: ['Anime', 'Gaming', 'Nhiếp ảnh', 'Sự kiện', 'Hội nghị', 'Nhân vật gốc'],
+    membershipTier: 'Vàng',
     loyaltyPoints: 3750,
     walletBalance: 2500000,
     activeBookings: 2,
@@ -81,53 +81,53 @@ const CustomerProfilePage = () => {
   };
 
   const mockFavoriteCategories = [
-    { name: 'Anime Cosplay', bookings: 12, color: '#E91E63' },
-    { name: 'Game Characters', bookings: 7, color: '#9C27B0' },
-    { name: 'Photoshoots', bookings: 3, color: '#673AB7' },
-    { name: 'Events', bookings: 1, color: '#3F51B5' },
+    { name: 'Cosplay Anime', bookings: 12, color: '#E91E63' },
+    { name: 'Nhân vật Game', bookings: 7, color: '#9C27B0' },
+    { name: 'Chụp ảnh', bookings: 3, color: '#673AB7' },
+    { name: 'Sự kiện', bookings: 1, color: '#3F51B5' },
   ];
 
   const mockRecentActivity = [
     {
       icon: '📸',
-      title: 'Completed photoshoot session',
-      description: 'Rated 5 stars for Cosplay A session',
-      time: '2 hours ago'
+      title: 'Hoàn thành phiên chụp ảnh',
+      description: 'Đánh giá 5 sao cho buổi chụp với Cosplay A',
+      time: '2 giờ trước'
     },
     {
       icon: '💰',
-      title: 'Wallet top-up',
-      description: 'Added 1,000,000đ to wallet',
-      time: '1 day ago'
+      title: 'Nạp tiền vào ví',
+      description: 'Đã thêm 1.000.000đ vào ví',
+      time: '1 ngày trước'
     },
     {
       icon: '📅',
-      title: 'New booking confirmed',
-      description: 'Convention appearance with Cosplay D',
-      time: '2 days ago'
+      title: 'Xác nhận đặt lịch mới',
+      description: 'Tham gia hội nghị với Cosplay D',
+      time: '2 ngày trước'
     },
     {
       icon: '⭐',
-      title: 'Left detailed review',
-      description: 'Reviewed experience with Cosplay C',
-      time: '3 days ago'
+      title: 'Để lại đánh giá chi tiết',
+      description: 'Đánh giá trải nghiệm với Cosplay C',
+      time: '3 ngày trước'
     },
     {
       icon: '🎯',
-      title: 'Reached Gold tier',
-      description: 'Unlocked Gold membership benefits',
-      time: '1 week ago'
+      title: 'Đạt hạng Vàng',
+      description: 'Mở khóa các quyền lợi thành viên Vàng',
+      time: '1 tuần trước'
     },
   ];
 
   const mockCustomerPhotos = Array.from({ length: 16 }, (_, index) => ({
     id: index + 1,
     url: `/src/assets/cosplayer${(index % 8) + 1}.png`,
-    title: `Event Photo ${index + 1}`,
-    description: `Amazing cosplay event experience #${index + 1}`,
-    category: ['event', 'photoshoot', 'convention', 'meetup'][index % 4],
+    title: `Ảnh sự kiện ${index + 1}`,
+    description: `Trải nghiệm sự kiện cosplay tuyệt vời #${index + 1}`,
+    category: ['sự kiện', 'chụp ảnh', 'hội nghị', 'gặp mặt'][index % 4],
     likes: Math.floor(Math.random() * 100) + 20,
-    tags: ['cosplay', 'event', 'memories', 'community'],
+    tags: ['cosplay', 'sự kiện', 'kỷ niệm', 'cộng đồng'],
   }));
 
   // Load profile data
@@ -144,7 +144,7 @@ const CustomerProfilePage = () => {
         setIsFollowing(Math.random() > 0.5); // Random follow status
 
       } catch (err) {
-        setError('Failed to load profile. Please try again.');
+        setError('Không thể tải hồ sơ. Vui lòng thử lại.');
         console.error('Profile loading error:', err);
       } finally {
         setLoading(false);
@@ -168,25 +168,25 @@ const CustomerProfilePage = () => {
 
   const handleEditProfile = () => {
     console.log('Edit profile clicked');
-    showSnackbar('Edit profile functionality coming soon!', 'info');
+    showSnackbar('Tính năng chỉnh sửa hồ sơ sẽ sớm ra mắt!', 'info');
   };
 
   const handleEditAvatar = () => {
     console.log('Edit avatar clicked');
-    showSnackbar('Avatar upload functionality coming soon!', 'info');
+    showSnackbar('Tính năng tải lên ảnh đại diện sẽ sớm ra mắt!', 'info');
   };
 
   const handleFollowToggle = () => {
     setIsFollowing(!isFollowing);
     showSnackbar(
-      isFollowing ? 'Unfollowed successfully' : 'Following successfully', 
+      isFollowing ? 'Hủy theo dõi thành công' : 'Theo dõi thành công', 
       'success'
     );
   };
 
   const handleAddPhoto = () => {
     console.log('Add photo clicked');
-    showSnackbar('Photo upload functionality coming soon!', 'info');
+    showSnackbar('Tính năng tải lên ảnh sẽ sớm ra mắt!', 'info');
   };
 
   const showSnackbar = (message, severity = 'success') => {
@@ -213,33 +213,33 @@ const CustomerProfilePage = () => {
   const customerTabs = [
     {
       id: 'overview',
-      label: 'Overview',
+      label: 'Tổng quan',
       icon: 'Info',
       show: true
     },
     {
       id: 'wallet',
-      label: 'Wallet',
+      label: 'Ví điện tử',
       icon: 'AccountBalanceWallet',
       show: isOwnProfile // Only show for own profile
     },
     {
       id: 'bookings',
-      label: 'Bookings',
+      label: 'Đặt lịch',
       icon: 'Event',
       count: customerTabCounts.bookings,
       show: isOwnProfile // Only show for own profile
     },
     {
       id: 'gallery',
-      label: 'Gallery',
+      label: 'Thư viện ảnh',
       icon: 'PhotoLibrary',
       count: customerTabCounts.photos,
       show: true
     },
     {
       id: 'favorites',
-      label: 'Favorites',
+      label: 'Yêu thích',
       icon: 'Favorite',
       count: customerTabCounts.favorites,
       show: isOwnProfile // Only show for own profile
@@ -288,8 +288,8 @@ const CustomerProfilePage = () => {
             borderRadius: '16px',
             border: '1px solid rgba(233, 30, 99, 0.1)',
           }}>
-            <h3>Favorite Cosplayers</h3>
-            <p>Your favorite cosplayers will appear here!</p>
+            <h3>Cosplayer yêu thích</h3>
+            <p>Các cosplayer yêu thích của bạn sẽ hiển thị ở đây!</p>
           </Box>
         );
       default:
@@ -306,7 +306,7 @@ const CustomerProfilePage = () => {
           <Container maxWidth="lg" sx={{ py: 8, textAlign: 'center' }}>
             <CircularProgress size={60} sx={{ color: 'primary.main' }} />
             <Box sx={{ mt: 2 }}>
-              <h3>Loading customer profile...</h3>
+              <h3>Đang tải hồ sơ khách hàng...</h3>
             </Box>
           </Container>
           <Footer />
@@ -327,7 +327,7 @@ const CustomerProfilePage = () => {
               sx={{ mb: 4, borderRadius: '12px' }}
               action={
                 <Button color="inherit" onClick={() => window.location.reload()}>
-                  Retry
+                  Thử lại
                 </Button>
               }
             >
