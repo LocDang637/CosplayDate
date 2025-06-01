@@ -37,37 +37,69 @@ const CustomerProfilePage = () => {
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
 
-  const isOwnProfile = !userId || user?.id === parseInt(userId);
+ 
+  const isOwnProfile = !userId || (user?.id && parseInt(userId) === parseInt(user.id));
   console.log('userId:', userId, 'isOwnProfile:', isOwnProfile);
   // Load current user
   useEffect(() => {
     const storedUser = localStorage.getItem('user');
     if (storedUser) {
-      setUser(JSON.parse(storedUser));
+      try {
+        const parsedUser = JSON.parse(storedUser);
+        console.log('📱 Loaded user from localStorage:', parsedUser);
+        setUser(parsedUser);
+      } catch (error) {
+        console.error('❌ Error parsing stored user:', error);
+        localStorage.removeItem('user');
+      }
+    } else {
+      console.log('⚠️ No user found in localStorage');
     }
   }, []);
+
 
   // Load profile data using API
   useEffect(() => {
     const loadProfile = async () => {
+      // ✅ FIX: Don't load profile until we have current user data (for own profile)
+      if (isOwnProfile && !user) {
+        console.log('⏳ Waiting for current user data...');
+        return;
+      }
+
       try {
         setLoading(true);
         setError(null);
 
+        console.log('🔄 Loading profile...', { isOwnProfile, userId, currentUser: user?.id });
+
         let result;
         if (isOwnProfile) {
+          // Get current user's profile
+          console.log('📱 Fetching own profile');
           result = await userAPI.getCurrentProfile();
         } else {
+          // Get specific user's profile
+          console.log('👤 Fetching user profile for ID:', userId);
           result = await userAPI.getUserProfile(userId);
         }
 
+        console.log('📊 Profile API result:', result);
+
         if (result.success) {
-          setProfileUser(result.data);
+          // ✅ FIX: Ensure the profile data has the correct ID structure
+          const profileData = {
+            ...result.data,
+            id: result.data.id || result.data.userId, // Ensure id field exists
+            userId: result.data.userId || result.data.id // Ensure userId field exists
+          };
+          
+          setProfileUser(profileData);
           
           // Update local storage if it's own profile
-          if (isOwnProfile && result.data) {
+          if (isOwnProfile && profileData) {
             const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
-            const updatedUser = { ...currentUser, ...result.data };
+            const updatedUser = { ...currentUser, ...profileData };
             localStorage.setItem('user', JSON.stringify(updatedUser));
             setUser(updatedUser);
           }
@@ -76,14 +108,15 @@ const CustomerProfilePage = () => {
         }
 
       } catch (err) {
-        console.error('Profile loading error:', err);
+        console.error('❌ Profile loading error:', err);
         setError('Unable to load profile. Please try again.');
       } finally {
         setLoading(false);
       }
     };
 
-    if (user || !isOwnProfile) {
+    // ✅ FIX: Only load profile when we have necessary data
+    if (!isOwnProfile || user) {
       loadProfile();
     }
   }, [userId, user?.id, isOwnProfile]);

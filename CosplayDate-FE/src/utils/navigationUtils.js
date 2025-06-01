@@ -1,4 +1,4 @@
-// src/utils/navigationUtils.js
+// In src/utils/navigationUtils.js - Update to handle both id and userId fields
 
 /**
  * Get the appropriate profile path based on user role
@@ -6,22 +6,35 @@
  * @returns {string} Profile path
  */
 export const getProfilePath = (user) => {
-  if (!user || !user.id) {
-    console.warn('No user or user ID provided');
+  if (!user) {
+    console.warn('No user provided');
+    return '/login';
+  }
+  
+  // ✅ FIX: Handle both id and userId fields
+  const userId = user.id || user.userId;
+  if (!userId) {
+    console.warn('No user ID found in user object:', user);
     return '/login';
   }
   
   const userType = user.userType || user.role; // Support both possible field names
   
+  console.log('🔍 getProfilePath Debug:', {
+    userId: userId,
+    userType: userType,
+    originalUser: user
+  });
+  
   switch (userType) {
     case 'Customer':
-      return `/customer-profile/${user.id}`;
+      return `/customer-profile/${userId}`;
     case 'Cosplayer':
-      return `/profile/${user.id}`;
+      return `/profile/${userId}`;
     default:
       // Fallback based on user properties or default to customer
       console.warn('Unknown user type:', userType, 'Defaulting to customer profile');
-      return `/customer-profile/${user.id}`;
+      return `/customer-profile/${userId}`;
   }
 };
 
@@ -50,10 +63,61 @@ export const getOwnProfilePath = (user) => {
 };
 
 /**
- * Get the appropriate dashboard path based on user role
- * @param {Object} user - User object with userType/role
- * @returns {string} Dashboard path
+ * Check if current user can view another user's profile
+ * @param {Object} currentUser - Current logged-in user
+ * @param {Object} targetUser - Target user whose profile is being viewed
+ * @returns {boolean} Whether current user can view target user's profile
  */
+export const canViewProfile = (currentUser, targetUser) => {
+  // Public profiles (cosplayers) can be viewed by anyone
+  if (targetUser?.userType === 'Cosplayer') {
+    return true;
+  }
+  
+  // Customer profiles can only be viewed by the owner or admin
+  if (targetUser?.userType === 'Customer') {
+    if (!currentUser) return false;
+    if (currentUser.userType === 'Admin') return true;
+    
+    // ✅ FIX: Handle both id and userId fields for comparison
+    const currentUserId = currentUser.id || currentUser.userId;
+    const targetUserId = targetUser.id || targetUser.userId;
+    
+    return currentUserId && targetUserId && 
+           parseInt(currentUserId) === parseInt(targetUserId);
+  }
+  
+  return false;
+};
+
+/**
+ * Helper function to normalize user ID
+ * @param {Object} user - User object
+ * @returns {number|null} Normalized user ID
+ */
+export const getUserId = (user) => {
+  if (!user) return null;
+  
+  const userId = user.id || user.userId;
+  return userId ? parseInt(userId) : null;
+};
+
+/**
+ * Helper function to check if two users are the same
+ * @param {Object} user1 - First user object
+ * @param {Object} user2 - Second user object
+ * @returns {boolean} Whether users are the same
+ */
+export const isSameUser = (user1, user2) => {
+  if (!user1 || !user2) return false;
+  
+  const id1 = getUserId(user1);
+  const id2 = getUserId(user2);
+  
+  return id1 && id2 && id1 === id2;
+};
+
+// ✅ FIX: Update existing functions to use the new helper
 export const getDashboardPath = (user) => {
   if (!user) {
     return '/';
@@ -73,11 +137,6 @@ export const getDashboardPath = (user) => {
   }
 };
 
-/**
- * Get user-specific navigation items based on role
- * @param {Object} user - User object with userType/role
- * @returns {Array} Navigation items array
- */
 export const getRoleBasedNavigation = (user) => {
   const baseNavigation = [
     { label: 'Trang chủ', path: '/', icon: 'Home' },
@@ -118,12 +177,6 @@ export const getRoleBasedNavigation = (user) => {
   }
 };
 
-/**
- * Check if user has permission to access a specific route
- * @param {Object} user - User object with userType/role
- * @param {string} path - Route path to check
- * @returns {boolean} Whether user has permission
- */
 export const hasRoutePermission = (user, path) => {
   if (!user) {
     // Public routes that don't require authentication
@@ -179,12 +232,6 @@ export const hasRoutePermission = (user, path) => {
   return false;
 };
 
-/**
- * Get redirect path for unauthorized access
- * @param {Object} user - User object with userType/role
- * @param {string} attemptedPath - The path user tried to access
- * @returns {string} Redirect path
- */
 export const getRedirectPath = (user, attemptedPath) => {
   if (!user) {
     return '/login';
@@ -199,11 +246,6 @@ export const getRedirectPath = (user, attemptedPath) => {
   return getDashboardPath(user);
 };
 
-/**
- * Get user type display name in Vietnamese
- * @param {string} userType - User type/role
- * @returns {string} Display name
- */
 export const getUserTypeDisplayName = (userType) => {
   switch (userType) {
     case 'Customer':
@@ -217,11 +259,6 @@ export const getUserTypeDisplayName = (userType) => {
   }
 };
 
-/**
- * Get user type emoji
- * @param {string} userType - User type/role
- * @returns {string} Emoji
- */
 export const getUserTypeEmoji = (userType) => {
   switch (userType) {
     case 'Customer':
@@ -235,34 +272,6 @@ export const getUserTypeEmoji = (userType) => {
   }
 };
 
-/**
- * Check if current user can view another user's profile
- * @param {Object} currentUser - Current logged-in user
- * @param {Object} targetUser - Target user whose profile is being viewed
- * @returns {boolean} Whether current user can view target user's profile
- */
-export const canViewProfile = (currentUser, targetUser) => {
-  // Public profiles (cosplayers) can be viewed by anyone
-  if (targetUser?.userType === 'Cosplayer') {
-    return true;
-  }
-  
-  // Customer profiles can only be viewed by the owner or admin
-  if (targetUser?.userType === 'Customer') {
-    if (!currentUser) return false;
-    if (currentUser.userType === 'Admin') return true;
-    return currentUser.id === targetUser.id;
-  }
-  
-  return false;
-};
-
-/**
- * Get appropriate welcome message based on user role
- * @param {Object} user - User object
- * @param {string} context - Context (login, signup, etc.)
- * @returns {string} Welcome message
- */
 export const getWelcomeMessage = (user, context = 'login') => {
   const name = user?.firstName || 'Người dùng';
   const userType = user?.userType || user?.role;
@@ -304,5 +313,7 @@ export default {
   getUserTypeDisplayName,
   getUserTypeEmoji,
   canViewProfile,
-  getWelcomeMessage
+  getWelcomeMessage,
+  getUserId,
+  isSameUser
 };

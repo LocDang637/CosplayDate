@@ -68,13 +68,32 @@ export const authAPI = {
         const userData = response.data.data;
         const token = response.data.data.token;
         
+        const normalizedUserData = {
+          id: userData.userId,           // ← Map userId to id
+          userId: userData.userId,       // ← Keep original for reference
+          email: userData.email,
+          firstName: userData.firstName,
+          lastName: userData.lastName,
+          userType: userData.userType,
+          // Add any other fields that might be missing
+          avatar: userData.avatar || userData.avatarUrl || null,
+          isVerified: true,
+          location: userData.location || null,
+          bio: userData.bio || null,
+          dateOfBirth: userData.dateOfBirth || null,
+          walletBalance: userData.walletBalance || 0,
+          loyaltyPoints: userData.loyaltyPoints || 0,
+          membershipTier: userData.membershipTier || 'Bronze'
+        };
+
         localStorage.setItem('token', token);
-        localStorage.setItem('user', JSON.stringify(userData));
+        localStorage.setItem('user', JSON.stringify(normalizedUserData));
         
+        console.log('🔄 Login successful, user data:', normalizedUserData);
         return {
           success: true,
           data: {
-            user: userData,
+            user: normalizedUserData,
             token: token,
             isVerified: true
           },

@@ -1,3 +1,5 @@
+// In src/components/layout/Header.jsx - Update profile navigation logic
+
 import React, { useState } from 'react';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
 import {
@@ -71,26 +73,40 @@ const Header = ({ user = null, onLogout }) => {
     navigate('/');
   };
 
-  // Role-based profile navigation
+  // ✅ FIX: Improved role-based profile navigation
   const getProfilePath = () => {
     if (!user) return '/login';
     
+    // Handle both id and userId fields
+    const userId = user.id || user.userId;
+    if (!userId) {
+      console.warn('No user ID found, redirecting to login');
+      return '/login';
+    }
+    
     const userType = user.userType || user.role; // Support both possible field names
-    console.log('User type:', userType, 'User ID:', user.id);
+    
+    console.log('🔍 Header Profile Navigation:', {
+      userId: userId,
+      userType: userType,
+      user: user
+    });
+    
     switch (userType) {
       case 'Customer':
-        return `/customer-profile/${user.id}`;
+        return `/customer-profile/${userId}`;
       case 'Cosplayer':
-        return `/profile/${user.id}`;
+        return `/profile/${userId}`;
       default:
         // Fallback based on user properties or default to customer
         console.warn('Unknown user type:', userType, 'Defaulting to customer profile');
-        return `/customer-profile/${user.id}`;
+        return `/customer-profile/${userId}`;
     }
   };
 
   const handleProfileNavigation = () => {
     const profilePath = getProfilePath();
+    console.log('📱 Navigating to profile:', profilePath);
     handleNavigation(profilePath);
   };
 
@@ -151,7 +167,7 @@ const Header = ({ user = null, onLogout }) => {
 
     return (
       <Button
-        onClick={() => handleNavigation(item.path)}
+        onClick={() => item.action ? item.action() : handleNavigation(item.path)}
         sx={{
           color: isActive ? 'primary.main' : 'text.primary',
           fontWeight: isActive ? 600 : 500,
@@ -373,6 +389,12 @@ const Header = ({ user = null, onLogout }) => {
               {user?.userType && (
                 <Typography variant="body2" sx={{ color: 'primary.main', fontSize: '11px', fontWeight: 500 }}>
                   {user.userType === 'Customer' ? '👤 Khách hàng' : '🎭 Cosplayer'}
+                </Typography>
+              )}
+              {/* ✅ ADD: Debug info for development */}
+              {process.env.NODE_ENV === 'development' && (
+                <Typography variant="body2" sx={{ color: 'text.secondary', fontSize: '10px', mt: 0.5 }}>
+                  ID: {user?.id || user?.userId || 'N/A'}
                 </Typography>
               )}
             </Box>
