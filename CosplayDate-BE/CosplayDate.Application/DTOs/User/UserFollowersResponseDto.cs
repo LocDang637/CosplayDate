@@ -4,11 +4,11 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace CosplayDate.Application.DTOs.Customer
+namespace CosplayDate.Application.DTOs.User
 {
-    public class BookingHistoryResponseDto
+    public class UserFollowersResponseDto
     {
-        public List<CustomerBookingDto> Bookings { get; set; } = new();
+        public List<UserSummaryDto> Followers { get; set; } = new();
         public int TotalCount { get; set; }
         public int CurrentPage { get; set; }
         public int PageSize { get; set; }

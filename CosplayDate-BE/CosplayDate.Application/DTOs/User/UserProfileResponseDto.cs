@@ -4,9 +4,9 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace CosplayDate.Application.DTOs.Customer
+namespace CosplayDate.Application.DTOs.User
 {
-    public class CustomerProfileResponseDto
+    public class UserProfileResponseDto
     {
         public int Id { get; set; }
         public string FirstName { get; set; } = string.Empty;
@@ -28,6 +28,6 @@ namespace CosplayDate.Application.DTOs.Customer
         public List<string> Interests { get; set; } = new();
         public bool IsOwnProfile { get; set; }
         public bool IsFollowing { get; set; }
-        public CustomerStatsDto Stats { get; set; } = new();
+        public UserStatsDto Stats { get; set; } = new();
     }
 }

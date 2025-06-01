@@ -20,7 +20,9 @@ namespace CosplayDate.Domain.Interfaces
         IRepository<UserInterest> UserInterests { get; }
         IRepository<Favorite> Favorites { get; }
         IRepository<Cosplayer> Cosplayers { get; }
-
+        IRepository<EventParticipant> EventParticipants { get; }
+        IRepository<PhotoLike> PhotoLikes { get; }
+        IRepository<T> Repository<T>() where T : class;
         Task<int> SaveChangesAsync();
         Task BeginTransactionAsync();
         Task CommitTransactionAsync();

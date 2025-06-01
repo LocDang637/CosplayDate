@@ -5,9 +5,9 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace CosplayDate.Application.DTOs.Customer
+namespace CosplayDate.Application.DTOs.User
 {
-    public class UpdateCustomerProfileRequestDto
+    public class UpdateUserProfileRequestDto
     {
         [StringLength(50, ErrorMessage = "First name cannot exceed 50 characters")]
         public string? FirstName { get; set; }
@@ -21,6 +21,6 @@ namespace CosplayDate.Application.DTOs.Customer
         [StringLength(1000, ErrorMessage = "Bio cannot exceed 1000 characters")]
         public string? Bio { get; set; }
 
-        public List<string>? Interests { get; set; }
+        public DateOnly? DateOfBirth { get; set; }
     }
 }

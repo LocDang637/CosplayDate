@@ -4,9 +4,9 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace CosplayDate.Application.DTOs.Customer
+namespace CosplayDate.Application.DTOs.User
 {
-    public class ToggleFollowResponseDto
+    public class FollowUserResponseDto
     {
         public bool IsFollowing { get; set; }
         public string Message { get; set; } = string.Empty;

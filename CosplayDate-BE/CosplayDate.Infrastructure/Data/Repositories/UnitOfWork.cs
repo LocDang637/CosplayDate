@@ -23,6 +23,8 @@ namespace CosplayDate.Infrastructure.Data.Repositories
             UserInterests = new Repository<UserInterest>(_context);
             Favorites = new Repository<Favorite>(_context);
             Cosplayers = new Repository<Cosplayer>(_context);
+            EventParticipants = new Repository<EventParticipant>(_context);
+            PhotoLikes = new Repository<PhotoLike>(_context);
         }
 
         public IUserRepository Users { get; private set; }
@@ -35,7 +37,14 @@ namespace CosplayDate.Infrastructure.Data.Repositories
         public IRepository<UserInterest> UserInterests { get; private set; }
         public IRepository<Favorite> Favorites { get; private set; }
         public IRepository<Cosplayer> Cosplayers { get; private set; }
+        public IRepository<EventParticipant> EventParticipants { get; private set; }
+        public IRepository<PhotoLike> PhotoLikes { get; private set; }
 
+
+        public IRepository<T> Repository<T>() where T : class
+        {
+            return new Repository<T>(_context);
+        }
         public async Task<int> SaveChangesAsync()
         {
             return await _context.SaveChangesAsync();

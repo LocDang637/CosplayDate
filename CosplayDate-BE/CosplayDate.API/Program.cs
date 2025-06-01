@@ -73,6 +73,7 @@ builder.Services.AddSwaggerGen(c =>
     }
 });
 
+builder.Services.AddHttpClient();
 // Database
 builder.Services.AddDbContext<CosplayDateDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
@@ -86,9 +87,8 @@ builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IEmailService, EmailService>();
 builder.Services.AddScoped<IJwtService, JwtService>();
-
-// Add the new CustomerService
-builder.Services.AddScoped<ICustomerService, CustomerService>();
+builder.Services.AddScoped<ISupabaseService, SupabaseService>();
+builder.Services.AddScoped<IUserService, UserService>();
 
 // JWT Authentication Configuration
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
