@@ -15,6 +15,7 @@ namespace CosplayDate.Infrastructure.Data.Repositories
             _context = context;
             Users = new UserRepository(_context);
             EmailVerificationTokens = new EmailVerificationTokenRepository(_context);
+            PasswordResetTokens = new PasswordResetTokenRepository(_context);
 
             Bookings = new Repository<Booking>(_context);
             Reviews = new Repository<Review>(_context);
@@ -29,6 +30,7 @@ namespace CosplayDate.Infrastructure.Data.Repositories
 
         public IUserRepository Users { get; private set; }
         public IEmailVerificationTokenRepository EmailVerificationTokens { get; private set; }
+        public IPasswordResetTokenRepository PasswordResetTokens { get; private set; }
 
         public IRepository<Booking> Bookings { get; private set; }
         public IRepository<Review> Reviews { get; private set; }
@@ -40,11 +42,11 @@ namespace CosplayDate.Infrastructure.Data.Repositories
         public IRepository<EventParticipant> EventParticipants { get; private set; }
         public IRepository<PhotoLike> PhotoLikes { get; private set; }
 
-
         public IRepository<T> Repository<T>() where T : class
         {
             return new Repository<T>(_context);
         }
+
         public async Task<int> SaveChangesAsync()
         {
             return await _context.SaveChangesAsync();

@@ -10,6 +10,8 @@ namespace CosplayDate.Application.Services.Interfaces
     public interface IJwtService
     {
         string GenerateToken(User user);
+        string GenerateRefreshToken(User user);
         DateTime GetTokenExpiration();
+        DateTime GetRefreshTokenExpiration();
     }
 }

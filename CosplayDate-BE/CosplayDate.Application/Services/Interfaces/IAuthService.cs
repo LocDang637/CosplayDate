@@ -14,5 +14,10 @@ namespace CosplayDate.Application.Services.Interfaces
         Task<ApiResponse<string>> ResendVerificationCodeAsync(ResendVerificationRequestDto request);
         Task<bool> IsEmailAvailableAsync(string email);
         Task<ApiResponse<LoginResponseDto>> LoginAsync(LoginRequestDto request);
+        Task<ApiResponse<string>> LogoutAsync(int userId);
+        Task<ApiResponse<RefreshTokenResponseDto>> RefreshTokenAsync(RefreshTokenRequestDto request);
+        Task<ApiResponse<string>> ForgotPasswordAsync(ForgotPasswordRequestDto request);
+        Task<ApiResponse<string>> ResetPasswordAsync(ResetPasswordRequestDto request);
+        Task<ApiResponse<string>> ChangePasswordAsync(int userId, ChangePasswordRequestDto request);
     }
 }

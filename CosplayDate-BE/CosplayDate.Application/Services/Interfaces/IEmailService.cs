@@ -10,5 +10,7 @@ namespace CosplayDate.Application.Services.Interfaces
     {
         Task<bool> SendVerificationEmailAsync(string email, string verificationCode, string firstName);
         Task<bool> SendWelcomeEmailAsync(string email, string firstName);
+        Task<bool> SendPasswordResetEmailAsync(string email, string resetCode, string firstName);
+        Task<bool> SendPasswordChangeConfirmationAsync(string email, string firstName);
     }
 }

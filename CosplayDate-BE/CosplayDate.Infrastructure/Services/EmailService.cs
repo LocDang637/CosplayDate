@@ -218,5 +218,153 @@ namespace CosplayDate.Infrastructure.Services
                 </body>
                 </html>";
         }
+
+        public async Task<bool> SendPasswordResetEmailAsync(string email, string resetCode, string firstName)
+        {
+            try
+            {
+                var subject = "Đặt lại mật khẩu CosplayDate";
+                var htmlBody = GetPasswordResetEmailTemplate(firstName, resetCode);
+
+                return await SendEmailAsync(email, subject, htmlBody);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to send password reset email to {Email}", email);
+                return false;
+            }
+        }
+
+        public async Task<bool> SendPasswordChangeConfirmationAsync(string email, string firstName)
+        {
+            try
+            {
+                var subject = "Mật khẩu CosplayDate đã được thay đổi";
+                var htmlBody = GetPasswordChangeConfirmationTemplate(firstName);
+
+                return await SendEmailAsync(email, subject, htmlBody);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to send password change confirmation email to {Email}", email);
+                return false;
+            }
+        }
+
+        private static string GetPasswordResetEmailTemplate(string firstName, string resetCode)
+        {
+            return $@"
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <meta charset='utf-8'>
+                    <meta name='viewport' content='width=device-width, initial-scale=1.0'>
+                    <title>Đặt lại mật khẩu CosplayDate</title>
+                </head>
+                <body style='font-family: Arial, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0; background-color: #FFE8F5;'>
+                    <div style='max-width: 600px; margin: 0 auto; background-color: white; border-radius: 16px; overflow: hidden; margin-top: 20px; margin-bottom: 20px; box-shadow: 0 4px 12px rgba(233, 30, 99, 0.1);'>
+                        
+                        <!-- Header -->
+                        <div style='background: linear-gradient(135deg, #F8BBD9 0%, #E1BEE7 100%); padding: 30px; text-align: center;'>
+                            <h1 style='color: #E91E63; margin: 0; font-size: 28px; font-weight: 700;'>🔐 Đặt lại mật khẩu</h1>
+                            <p style='color: #666; margin: 10px 0 0 0; font-size: 16px;'>CosplayDate</p>
+                        </div>
+                        
+                        <!-- Content -->
+                        <div style='padding: 40px 30px;'>
+                            <h2 style='color: #E91E63; margin-bottom: 20px; font-size: 24px;'>Xin chào {firstName}! 👋</h2>
+                            
+                            <p style='margin-bottom: 20px; font-size: 16px; line-height: 1.6;'>
+                                Chúng tôi nhận được yêu cầu đặt lại mật khẩu cho tài khoản CosplayDate của bạn.
+                            </p>
+                            
+                            <p style='margin-bottom: 30px; font-size: 16px; line-height: 1.6;'>
+                                Vui lòng sử dụng mã dưới đây để đặt lại mật khẩu:
+                            </p>
+                            
+                            <!-- Reset Code -->
+                            <div style='text-align: center; margin: 30px 0;'>
+                                <div style='background: linear-gradient(45deg, #E91E63, #9C27B0); color: white; padding: 20px; border-radius: 12px; display: inline-block; font-size: 32px; font-weight: 700; letter-spacing: 4px; font-family: monospace;'>
+                                    {resetCode}
+                                </div>
+                            </div>
+                            
+                            <p style='margin-bottom: 20px; font-size: 14px; color: #666; text-align: center;'>
+                                Mã này sẽ hết hạn sau 1 giờ vì lý do bảo mật.
+                            </p>
+                            
+                            <div style='background: rgba(255, 193, 7, 0.1); border-radius: 8px; padding: 15px; margin: 20px 0;'>
+                                <p style='margin: 0; font-size: 14px; color: #856404;'>
+                                    ⚠️ Nếu bạn không yêu cầu đặt lại mật khẩu, vui lòng bỏ qua email này và mật khẩu của bạn sẽ không bị thay đổi.
+                                </p>
+                            </div>
+                        </div>
+                        
+                        <!-- Footer -->
+                        <div style='background-color: #F8BBD9; padding: 20px; text-align: center;'>
+                            <p style='margin: 0; font-size: 14px; color: #666;'>
+                                © 2024 CosplayDate. Được tạo với 💖 cho cộng đồng cosplay.
+                            </p>
+                        </div>
+                    </div>
+                </body>
+                </html>";
+        }
+
+        private static string GetPasswordChangeConfirmationTemplate(string firstName)
+        {
+            return $@"
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <meta charset='utf-8'>
+                    <meta name='viewport' content='width=device-width, initial-scale=1.0'>
+                    <title>Mật khẩu đã được thay đổi</title>
+                </head>
+                <body style='font-family: Arial, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0; background-color: #FFE8F5;'>
+                    <div style='max-width: 600px; margin: 0 auto; background-color: white; border-radius: 16px; overflow: hidden; margin-top: 20px; margin-bottom: 20px; box-shadow: 0 4px 12px rgba(233, 30, 99, 0.1);'>
+                        
+                        <!-- Header -->
+                        <div style='background: linear-gradient(135deg, #F8BBD9 0%, #E1BEE7 100%); padding: 30px; text-align: center;'>
+                            <h1 style='color: #E91E63; margin: 0; font-size: 28px; font-weight: 700;'>✅ Mật khẩu đã được thay đổi</h1>
+                            <p style='color: #666; margin: 10px 0 0 0; font-size: 16px;'>CosplayDate</p>
+                        </div>
+                        
+                        <!-- Content -->
+                        <div style='padding: 40px 30px; text-align: center;'>
+                            <h2 style='color: #E91E63; margin-bottom: 20px; font-size: 24px;'>Xin chào {firstName}! 👋</h2>
+                            
+                            <p style='margin-bottom: 30px; font-size: 16px; line-height: 1.6;'>
+                                Mật khẩu cho tài khoản CosplayDate của bạn đã được thay đổi thành công vào lúc {DateTime.UtcNow.AddHours(7):dd/MM/yyyy HH:mm} (GMT+7).
+                            </p>
+                            
+                            <div style='background: rgba(40, 167, 69, 0.1); border-radius: 12px; padding: 20px; margin: 30px 0;'>
+                                <h3 style='color: #28a745; margin-top: 0; font-size: 20px;'>🔒 Tài khoản của bạn đã được bảo mật</h3>
+                                <p style='margin-bottom: 0; font-size: 16px; color: #155724;'>
+                                    Mật khẩu mới đã có hiệu lực ngay lập tức. Bạn có thể đăng nhập bằng mật khẩu mới.
+                                </p>
+                            </div>
+                            
+                            <div style='background: rgba(255, 193, 7, 0.1); border-radius: 8px; padding: 15px; margin: 20px 0;'>
+                                <p style='margin: 0; font-size: 14px; color: #856404;'>
+                                    ⚠️ Nếu bạn không thực hiện thay đổi này, vui lòng liên hệ với đội ngũ hỗ trợ ngay lập tức tại support@cosplaydate.com
+                                </p>
+                            </div>
+                            
+                            <p style='margin-top: 30px; font-size: 14px; color: #666;'>
+                                Cảm ơn bạn đã giữ an toàn cho tài khoản CosplayDate!
+                            </p>
+                        </div>
+                        
+                        <!-- Footer -->
+                        <div style='background-color: #F8BBD9; padding: 20px; text-align: center;'>
+                            <p style='margin: 0; font-size: 14px; color: #666;'>
+                                © 2024 CosplayDate. Được tạo với 💖 cho cộng đồng cosplay.
+                            </p>
+                        </div>
+                    </div>
+                </body>
+                </html>";
+        }
     }
 }
