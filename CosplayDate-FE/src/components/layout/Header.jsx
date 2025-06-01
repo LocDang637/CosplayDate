@@ -76,7 +76,7 @@ const Header = ({ user = null, onLogout }) => {
     if (!user) return '/login';
     
     const userType = user.userType || user.role; // Support both possible field names
-    
+    console.log('User type:', userType, 'User ID:', user.id);
     switch (userType) {
       case 'Customer':
         return `/customer-profile/${user.id}`;

@@ -20,7 +20,7 @@ dist-ssr
 *.suo
 *.ntvs*
 *.njsproj
-
+.env*
 *.sw?
 
 # Build results

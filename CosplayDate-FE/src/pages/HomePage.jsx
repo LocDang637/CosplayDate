@@ -46,6 +46,7 @@ const HomePage = () => {
       setWelcomeMessage(location.state.message);
       setShowWelcomeMessage(true);
     }
+    console.log('Location state:', storedUser.id);
   }, [location.state]);
 
   const handleLogout = () => {

@@ -3,7 +3,7 @@ import axios from 'axios';
 
 // Create axios instance with base configuration
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL || 'http://localhost:5068/api',
+  baseURL: import.meta.env.VITE_API_BASE_URL,
   timeout: 10000,
   headers: {
     'Content-Type': 'application/json',
@@ -30,21 +30,17 @@ api.interceptors.response.use(
     return response;
   },
   (error) => {
-    // Handle common errors
     if (error.response?.status === 401) {
-      // Unauthorized - clear token and redirect to login
       localStorage.removeItem('token');
       localStorage.removeItem('user');
       window.location.href = '/login';
     }
-    
     return Promise.reject(error);
   }
 );
 
-// Auth API endpoints
+// Auth API endpoints (existing code)
 export const authAPI = {
-  // Register new user
   register: async (userData) => {
     try {
       const response = await api.post('/auth/register', userData);
@@ -63,29 +59,15 @@ export const authAPI = {
     }
   },
 
-  // Enhanced login with three cases handling
   login: async (credentials) => {
     try {
       console.log('🔄 Making login API call...');
       const response = await api.post('/auth/login', credentials);
       
-      console.log('📥 API Response:', {
-        status: response.status,
-        isSuccess: response.data?.isSuccess,
-        message: response.data?.message,
-        hasData: !!response.data?.data,
-        hasToken: !!response.data?.data?.token,
-        errors: response.data?.errors
-      });
-      
-      // Case 1: Login successful and verified (isSuccess: true with token)
       if (response.data.isSuccess === true && response.data.data?.token) {
         const userData = response.data.data;
         const token = response.data.data.token;
         
-        console.log('✅ Case 1: Login successful and verified');
-        
-        // Store token and user data
         localStorage.setItem('token', token);
         localStorage.setItem('user', JSON.stringify(userData));
         
@@ -100,17 +82,12 @@ export const authAPI = {
         };
       }
       
-      // Case 2: Login credentials correct but not verified (isSuccess: false with specific message)
       else if (response.data.isSuccess === false && 
                response.data.message === "Account is not verified" &&
                response.data.errors?.includes("A new verification code has been sent to your email")) {
         
-        console.log('⚠️ Case 2: Account not verified, OTP resent');
-        
-        // Extract user info from the login attempt (we'll need to get this from the credentials)
         const userData = {
           email: credentials.email,
-          // We don't have full user data in this case, but we have the email
         };
         
         return {
@@ -124,10 +101,7 @@ export const authAPI = {
         };
       }
       
-      // Case 3: Login failed (invalid credentials or other errors)
       else {
-        console.log('❌ Case 3: Login failed -', response.data.message);
-        
         return {
           success: false,
           message: response.data.message || 'Login failed',
@@ -138,23 +112,12 @@ export const authAPI = {
     } catch (error) {
       console.error('🚨 Login API error:', error);
       
-      // Handle different types of API errors
       if (error.response) {
         const { status, data } = error.response;
         
-        console.log('📊 Error response details:', {
-          status,
-          message: data?.message,
-          errors: data?.errors,
-          isSuccess: data?.isSuccess
-        });
-        
-        // Handle Case 2 when it comes as an error response
         if (data?.isSuccess === false && 
             data?.message === "Account is not verified" &&
             data?.errors?.includes("A new verification code has been sent to your email")) {
-          
-          console.log('⚠️ Case 2 (via error): Account not verified, OTP resent');
           
           const userData = {
             email: credentials.email,
@@ -173,7 +136,6 @@ export const authAPI = {
         
         switch (status) {
           case 400:
-            // Bad request - often invalid credentials
             const errorMessage = data?.message || '';
             if (errorMessage.toLowerCase().includes('password')) {
               return {
@@ -196,7 +158,6 @@ export const authAPI = {
             }
             
           case 401:
-            // Unauthorized - invalid credentials
             return {
               success: false,
               message: 'Email hoặc mật khẩu không đúng',
@@ -204,27 +165,10 @@ export const authAPI = {
             };
             
           case 404:
-            // User not found
             return {
               success: false,
               message: 'Không tìm thấy tài khoản với email này',
               errors: { email: 'Email không tồn tại trong hệ thống' }
-            };
-            
-          case 429:
-            // Too many requests
-            return {
-              success: false,
-              message: 'Quá nhiều lần thử đăng nhập. Vui lòng thử lại sau.',
-              errors: {}
-            };
-            
-          case 500:
-            // Server error
-            return {
-              success: false,
-              message: 'Lỗi máy chủ. Vui lòng thử lại sau.',
-              errors: {}
             };
             
           default:
@@ -235,16 +179,12 @@ export const authAPI = {
             };
         }
       } else if (error.request) {
-        // Network error
-        console.error('🌐 Network error:', error.request);
         return {
           success: false,
           message: 'Lỗi kết nối mạng. Vui lòng kiểm tra kết nối của bạn.',
           errors: {}
         };
       } else {
-        // Other error
-        console.error('❓ Other error:', error.message);
         return {
           success: false,
           message: 'Đã xảy ra lỗi không mong muốn. Vui lòng thử lại.',
@@ -254,16 +194,13 @@ export const authAPI = {
     }
   },
 
-  // Verify email with OTP
   verifyEmail: async (verificationData) => {
     try {
       const response = await api.post('/auth/verify-email', verificationData);
       
-      // Store token and updated user data after successful verification
       if (response.data.isSuccess && response.data.data?.token) {
         localStorage.setItem('token', response.data.data.token);
         
-        // Update user data with verified status
         if (response.data.data.user) {
           const updatedUser = { ...response.data.data.user, isVerified: true };
           localStorage.setItem('user', JSON.stringify(updatedUser));
@@ -320,7 +257,6 @@ export const authAPI = {
     }
   },
 
-  // Resend verification code
   resendVerification: async (email) => {
     try {
       const response = await api.post('/auth/resend-verification', { email });
@@ -374,7 +310,6 @@ export const authAPI = {
     }
   },
 
-  // Check email availability
   checkEmailAvailability: async (email) => {
     try {
       const response = await api.get(`/auth/check-email?email=${encodeURIComponent(email)}`);
@@ -391,93 +326,315 @@ export const authAPI = {
         message: error.response?.data?.message || 'Failed to check email availability'
       };
     }
-  },
+  }
+};
 
-  // Logout user (clear local storage and optionally call logout endpoint)
-  logout: async () => {
+// NEW: User API endpoints
+export const userAPI = {
+  // Get current user profile
+  getCurrentProfile: async () => {
     try {
-      // Call logout endpoint if it exists (optional)
-      await api.post('/auth/logout');
+      const response = await api.get('/users/profile');
+      
+      if (response.data.isSuccess) {
+        return {
+          success: true,
+          data: response.data.data,
+          message: response.data.message || 'Profile retrieved successfully'
+        };
+      } else {
+        return {
+          success: false,
+          message: response.data.message || 'Failed to get profile',
+          errors: response.data.errors || {}
+        };
+      }
     } catch (error) {
-      console.warn('Logout API call failed:', error);
-      // Continue with local logout even if API call fails
-    } finally {
-      // Always clear local storage
-      localStorage.removeItem('token');
-      localStorage.removeItem('user');
+      console.error('Get current profile API error:', error);
+      
+      if (error.response) {
+        const { status, data } = error.response;
+        
+        switch (status) {
+          case 401:
+            return {
+              success: false,
+              message: 'Unauthorized. Please login again.',
+              errors: {}
+            };
+          case 404:
+            return {
+              success: false,
+              message: 'Profile not found',
+              errors: {}
+            };
+          default:
+            return {
+              success: false,
+              message: data?.message || 'Failed to get profile',
+              errors: data?.errors || {}
+            };
+        }
+      }
+      
+      return {
+        success: false,
+        message: 'Network error. Please try again.',
+        errors: {}
+      };
     }
   },
 
-  // Refresh token (if you implement refresh token logic)
-  refreshToken: async () => {
+  // Get user profile by ID
+  getUserProfile: async (userId) => {
     try {
-      const refreshToken = localStorage.getItem('refreshToken');
-      if (!refreshToken) {
-        throw new Error('No refresh token available');
-      }
-
-      const response = await api.post('/auth/refresh', { refreshToken });
+      const response = await api.get(`/users/profile/${userId}`);
       
-      if (response.data.isSuccess && response.data.data?.token) {
-        localStorage.setItem('token', response.data.data.token);
+      if (response.data.isSuccess) {
+        return {
+          success: true,
+          data: response.data.data,
+          message: response.data.message || 'Profile retrieved successfully'
+        };
+      } else {
+        return {
+          success: false,
+          message: response.data.message || 'Failed to get profile',
+          errors: response.data.errors || {}
+        };
+      }
+    } catch (error) {
+      console.error('Get user profile API error:', error);
+      
+      if (error.response) {
+        const { status, data } = error.response;
         
-        if (response.data.data.refreshToken) {
-          localStorage.setItem('refreshToken', response.data.data.refreshToken);
+        switch (status) {
+          case 404:
+            return {
+              success: false,
+              message: 'User not found',
+              errors: {}
+            };
+          case 403:
+            return {
+              success: false,
+              message: 'Access denied',
+              errors: {}
+            };
+          default:
+            return {
+              success: false,
+              message: data?.message || 'Failed to get profile',
+              errors: data?.errors || {}
+            };
         }
+      }
+      
+      return {
+        success: false,
+        message: 'Network error. Please try again.',
+        errors: {}
+      };
+    }
+  },
+
+  // Update user profile
+  updateProfile: async (profileData) => {
+    try {
+      const response = await api.put('/users/profile', profileData);
+      
+      if (response.data.isSuccess) {
+        // Update local storage with new profile data
+        const updatedUser = response.data.data;
+        const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
+        const mergedUser = { ...currentUser, ...updatedUser };
+        localStorage.setItem('user', JSON.stringify(mergedUser));
         
         return {
           success: true,
           data: response.data.data,
-          message: 'Token refreshed successfully'
+          message: response.data.message || 'Profile updated successfully'
+        };
+      } else {
+        return {
+          success: false,
+          message: response.data.message || 'Failed to update profile',
+          errors: response.data.errors || {}
         };
       }
-      
-      throw new Error('Invalid refresh response');
-      
     } catch (error) {
-      console.error('Token refresh error:', error);
+      console.error('Update profile API error:', error);
       
-      // Clear tokens and redirect to login
-      localStorage.removeItem('token');
-      localStorage.removeItem('refreshToken');
-      localStorage.removeItem('user');
+      if (error.response) {
+        const { status, data } = error.response;
+        
+        switch (status) {
+          case 400:
+            return {
+              success: false,
+              message: 'Invalid profile data',
+              errors: data?.errors || {}
+            };
+          case 401:
+            return {
+              success: false,
+              message: 'Unauthorized. Please login again.',
+              errors: {}
+            };
+          default:
+            return {
+              success: false,
+              message: data?.message || 'Failed to update profile',
+              errors: data?.errors || {}
+            };
+        }
+      }
       
       return {
         success: false,
-        message: 'Session expired. Please login again.',
+        message: 'Network error. Please try again.',
+        errors: {}
+      };
+    }
+  },
+
+  // Upload profile avatar
+  uploadAvatar: async (file) => {
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      
+      const response = await api.post('/users/upload-avatar', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+      
+      if (response.data.isSuccess) {
+        // Update local storage with new avatar URL
+        const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
+        const updatedUser = { 
+          ...currentUser, 
+          avatarUrl: response.data.data.avatarUrl 
+        };
+        localStorage.setItem('user', JSON.stringify(updatedUser));
+        
+        return {
+          success: true,
+          data: response.data.data,
+          message: response.data.message || 'Avatar uploaded successfully'
+        };
+      } else {
+        return {
+          success: false,
+          message: response.data.message || 'Failed to upload avatar',
+          errors: response.data.errors || {}
+        };
+      }
+    } catch (error) {
+      console.error('Upload avatar API error:', error);
+      
+      if (error.response) {
+        const { status, data } = error.response;
+        
+        switch (status) {
+          case 400:
+            return {
+              success: false,
+              message: data?.message || 'Invalid file format or size',
+              errors: data?.errors || {}
+            };
+          case 401:
+            return {
+              success: false,
+              message: 'Unauthorized. Please login again.',
+              errors: {}
+            };
+          case 413:
+            return {
+              success: false,
+              message: 'File too large. Maximum size is 5MB.',
+              errors: {}
+            };
+          default:
+            return {
+              success: false,
+              message: data?.message || 'Failed to upload avatar',
+              errors: data?.errors || {}
+            };
+        }
+      }
+      
+      return {
+        success: false,
+        message: 'Network error. Please try again.',
+        errors: {}
+      };
+    }
+  },
+
+  // Delete profile avatar
+  deleteAvatar: async () => {
+    try {
+      const response = await api.delete('/users/avatar');
+      
+      if (response.data.isSuccess) {
+        // Update local storage to remove avatar URL
+        const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
+        const updatedUser = { ...currentUser, avatarUrl: null };
+        localStorage.setItem('user', JSON.stringify(updatedUser));
+        
+        return {
+          success: true,
+          data: response.data.data,
+          message: response.data.message || 'Avatar deleted successfully'
+        };
+      } else {
+        return {
+          success: false,
+          message: response.data.message || 'Failed to delete avatar',
+          errors: response.data.errors || {}
+        };
+      }
+    } catch (error) {
+      console.error('Delete avatar API error:', error);
+      
+      if (error.response) {
+        const { status, data } = error.response;
+        
+        switch (status) {
+          case 401:
+            return {
+              success: false,
+              message: 'Unauthorized. Please login again.',
+              errors: {}
+            };
+          case 404:
+            return {
+              success: false,
+              message: 'No avatar to delete',
+              errors: {}
+            };
+          default:
+            return {
+              success: false,
+              message: data?.message || 'Failed to delete avatar',
+              errors: data?.errors || {}
+            };
+        }
+      }
+      
+      return {
+        success: false,
+        message: 'Network error. Please try again.',
         errors: {}
       };
     }
   }
 };
 
-// Helper function to handle API errors
-export const handleApiError = (error) => {
-  if (error.response) {
-    // Server responded with error status
-    return {
-      message: error.response.data?.message || 'Server error occurred',
-      status: error.response.status,
-      errors: error.response.data?.errors || {}
-    };
-  } else if (error.request) {
-    // Request was made but no response received
-    return {
-      message: 'Network error - please check your connection',
-      status: null,
-      errors: {}
-    };
-  } else {
-    // Something else happened
-    return {
-      message: error.message || 'An unexpected error occurred',
-      status: null,
-      errors: {}
-    };
-  }
-};
-
-// User utility functions
+// Existing utility functions
 export const userUtils = {
   getCurrentUser: () => {
     const userData = localStorage.getItem('user');

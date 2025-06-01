@@ -1,3 +1,4 @@
+// Updated CustomerProfilePage.jsx with API integration
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
@@ -10,6 +11,7 @@ import {
 } from '@mui/material';
 import { ThemeProvider } from '@mui/material/styles';
 import { cosplayTheme } from '../theme/cosplayTheme';
+import { userAPI } from '../services/api';
 
 // Import components
 import Header from '../components/layout/Header';
@@ -20,24 +22,24 @@ import CustomerProfileOverview from '../components/profile/CustomerProfileOvervi
 import CustomerWallet from '../components/profile/CustomerWallet';
 import CustomerBookingHistory from '../components/profile/CustomerBookingHistory';
 import ProfileGallery from '../components/profile/ProfileGallery';
+import ProfileEditModal from '../components/profile/ProfileEditModal';
 
 const CustomerProfilePage = () => {
   const { userId } = useParams();
   const navigate = useNavigate();
   
-  // State management
   const [user, setUser] = useState(null);
   const [profileUser, setProfileUser] = useState(null);
   const [activeTab, setActiveTab] = useState('overview');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [isFollowing, setIsFollowing] = useState(false);
+  const [editModalOpen, setEditModalOpen] = useState(false);
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
 
-  // Check if viewing own profile
   const isOwnProfile = !userId || user?.id === parseInt(userId);
-
-  // Load current user from localStorage
+  console.log('userId:', userId, 'isOwnProfile:', isOwnProfile);
+  // Load current user
   useEffect(() => {
     const storedUser = localStorage.getItem('user');
     if (storedUser) {
@@ -45,116 +47,47 @@ const CustomerProfilePage = () => {
     }
   }, []);
 
-  // Mock customer profile data
-  const mockCustomerProfile = {
-    id: userId ? parseInt(userId) : user?.id || 1,
-    firstName: userId ? 'Khách hàng khác' : user?.firstName || 'Mai',
-    lastName: userId ? 'Hồ sơ' : user?.lastName || 'Nguyen',
-    email: userId ? 'customer@cosplaydate.com' : user?.email || 'mai@cosplaydate.com',
-    avatar: '/src/assets/cosplayer1.png',
-    isVerified: true,
-    isOnline: true,
-    location: 'Thành phố Hồ Chí Minh, Việt Nam',
-    bio: 'Người đam mê cosplay và tổ chức sự kiện. Tôi yêu thích khám phá những cosplayer mới và biến những ý tưởng sáng tạo thành hiện thực. Luôn hào hứng hợp tác trong những trải nghiệm cosplay độc đáo và hỗ trợ cộng đồng.',
-    totalBookings: 23,
-    favoriteCosplayers: 12,
-    reviewsGiven: 18,
-    avgResponseTime: '< 30 phút',
-    completionRate: '98%',
-    memberSince: 'Tháng 1 năm 2023',
-    avgRatingGiven: '4.7',
-    interests: ['Anime', 'Gaming', 'Nhiếp ảnh', 'Sự kiện', 'Hội nghị', 'Nhân vật gốc'],
-    membershipTier: 'Vàng',
-    loyaltyPoints: 3750,
-    walletBalance: 2500000,
-    activeBookings: 2,
-  };
-
-  const mockStats = {
-    totalBookings: 23,
-    totalSpent: 8500000,
-    favoriteCosplayers: 12,
-    reviewsGiven: 18,
-    completedBookings: 21,
-    cancelledBookings: 2,
-    avgBookingValue: 369565,
-  };
-
-  const mockFavoriteCategories = [
-    { name: 'Cosplay Anime', bookings: 12, color: '#E91E63' },
-    { name: 'Nhân vật Game', bookings: 7, color: '#9C27B0' },
-    { name: 'Chụp ảnh', bookings: 3, color: '#673AB7' },
-    { name: 'Sự kiện', bookings: 1, color: '#3F51B5' },
-  ];
-
-  const mockRecentActivity = [
-    {
-      icon: '📸',
-      title: 'Hoàn thành phiên chụp ảnh',
-      description: 'Đánh giá 5 sao cho buổi chụp với Cosplay A',
-      time: '2 giờ trước'
-    },
-    {
-      icon: '💰',
-      title: 'Nạp tiền vào ví',
-      description: 'Đã thêm 1.000.000đ vào ví',
-      time: '1 ngày trước'
-    },
-    {
-      icon: '📅',
-      title: 'Xác nhận đặt lịch mới',
-      description: 'Tham gia hội nghị với Cosplay D',
-      time: '2 ngày trước'
-    },
-    {
-      icon: '⭐',
-      title: 'Để lại đánh giá chi tiết',
-      description: 'Đánh giá trải nghiệm với Cosplay C',
-      time: '3 ngày trước'
-    },
-    {
-      icon: '🎯',
-      title: 'Đạt hạng Vàng',
-      description: 'Mở khóa các quyền lợi thành viên Vàng',
-      time: '1 tuần trước'
-    },
-  ];
-
-  const mockCustomerPhotos = Array.from({ length: 16 }, (_, index) => ({
-    id: index + 1,
-    url: `/src/assets/cosplayer${(index % 8) + 1}.png`,
-    title: `Ảnh sự kiện ${index + 1}`,
-    description: `Trải nghiệm sự kiện cosplay tuyệt vời #${index + 1}`,
-    category: ['sự kiện', 'chụp ảnh', 'hội nghị', 'gặp mặt'][index % 4],
-    likes: Math.floor(Math.random() * 100) + 20,
-    tags: ['cosplay', 'sự kiện', 'kỷ niệm', 'cộng đồng'],
-  }));
-
-  // Load profile data
+  // Load profile data using API
   useEffect(() => {
     const loadProfile = async () => {
       try {
         setLoading(true);
         setError(null);
 
-        // Simulate API call
-        await new Promise(resolve => setTimeout(resolve, 1000));
+        let result;
+        if (isOwnProfile) {
+          result = await userAPI.getCurrentProfile();
+        } else {
+          result = await userAPI.getUserProfile(userId);
+        }
 
-        setProfileUser(mockCustomerProfile);
-        setIsFollowing(Math.random() > 0.5); // Random follow status
+        if (result.success) {
+          setProfileUser(result.data);
+          
+          // Update local storage if it's own profile
+          if (isOwnProfile && result.data) {
+            const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
+            const updatedUser = { ...currentUser, ...result.data };
+            localStorage.setItem('user', JSON.stringify(updatedUser));
+            setUser(updatedUser);
+          }
+        } else {
+          setError(result.message || 'Failed to load profile');
+        }
 
       } catch (err) {
-        setError('Không thể tải hồ sơ. Vui lòng thử lại.');
         console.error('Profile loading error:', err);
+        setError('Unable to load profile. Please try again.');
       } finally {
         setLoading(false);
       }
     };
 
-    loadProfile();
-  }, [userId, user]);
+    if (user || !isOwnProfile) {
+      loadProfile();
+    }
+  }, [userId, user?.id, isOwnProfile]);
 
-  // Event handlers
   const handleLogout = () => {
     setUser(null);
     localStorage.removeItem('user');
@@ -167,26 +100,67 @@ const CustomerProfilePage = () => {
   };
 
   const handleEditProfile = () => {
-    console.log('Edit profile clicked');
-    showSnackbar('Tính năng chỉnh sửa hồ sơ sẽ sớm ra mắt!', 'info');
+    setEditModalOpen(true);
   };
 
-  const handleEditAvatar = () => {
-    console.log('Edit avatar clicked');
-    showSnackbar('Tính năng tải lên ảnh đại diện sẽ sớm ra mắt!', 'info');
+  const handleProfileUpdated = (updatedProfile) => {
+    setProfileUser(prev => ({ ...prev, ...updatedProfile }));
+    
+    // Update user state and localStorage if it's own profile
+    if (isOwnProfile) {
+      const updatedUser = { ...user, ...updatedProfile };
+      setUser(updatedUser);
+      localStorage.setItem('user', JSON.stringify(updatedUser));
+    }
+    
+    showSnackbar('Profile updated successfully!', 'success');
+  };
+
+  const handleEditAvatar = async () => {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'image/*';
+    input.onchange = async (event) => {
+      const file = event.target.files[0];
+      if (file) {
+        try {
+          setLoading(true);
+          const result = await userAPI.uploadAvatar(file);
+          
+          if (result.success) {
+            const newAvatarUrl = result.data.avatarUrl;
+            setProfileUser(prev => ({ ...prev, avatarUrl: newAvatarUrl }));
+            
+            if (isOwnProfile) {
+              const updatedUser = { ...user, avatarUrl: newAvatarUrl };
+              setUser(updatedUser);
+              localStorage.setItem('user', JSON.stringify(updatedUser));
+            }
+            
+            showSnackbar('Avatar updated successfully!', 'success');
+          } else {
+            showSnackbar(result.message || 'Failed to upload avatar', 'error');
+          }
+        } catch (error) {
+          showSnackbar('Error uploading avatar', 'error');
+        } finally {
+          setLoading(false);
+        }
+      }
+    };
+    input.click();
   };
 
   const handleFollowToggle = () => {
     setIsFollowing(!isFollowing);
     showSnackbar(
-      isFollowing ? 'Hủy theo dõi thành công' : 'Theo dõi thành công', 
+      isFollowing ? 'Unfollowed successfully' : 'Followed successfully', 
       'success'
     );
   };
 
   const handleAddPhoto = () => {
-    console.log('Add photo clicked');
-    showSnackbar('Tính năng tải lên ảnh sẽ sớm ra mắt!', 'info');
+    showSnackbar('Photo upload feature coming soon!', 'info');
   };
 
   const showSnackbar = (message, severity = 'success') => {
@@ -197,7 +171,67 @@ const CustomerProfilePage = () => {
     setSnackbar({ ...snackbar, open: false });
   };
 
-  // Customer-specific tab counts
+  // Mock data for features not yet implemented
+  const mockStats = {
+    totalBookings: profileUser?.totalBookings || 23,
+    totalSpent: profileUser?.totalSpent || 8500000,
+    favoriteCosplayers: profileUser?.favoriteCosplayers || 12,
+    reviewsGiven: profileUser?.reviewsGiven || 18,
+    completedBookings: profileUser?.completedBookings || 21,
+    cancelledBookings: profileUser?.cancelledBookings || 2,
+    avgBookingValue: profileUser?.avgBookingValue || 369565,
+  };
+
+  const mockFavoriteCategories = [
+    { name: 'Anime Cosplay', bookings: 12, color: '#E91E63' },
+    { name: 'Game Characters', bookings: 7, color: '#9C27B0' },
+    { name: 'Photography', bookings: 3, color: '#673AB7' },
+    { name: 'Events', bookings: 1, color: '#3F51B5' },
+  ];
+
+  const mockRecentActivity = [
+    {
+      icon: '📸',
+      title: 'Completed photoshoot',
+      description: 'Rated 5 stars for session with Cosplay A',
+      time: '2 hours ago'
+    },
+    {
+      icon: '💰',
+      title: 'Added funds to wallet',
+      description: 'Added 1,000,000đ to wallet',
+      time: '1 day ago'
+    },
+    {
+      icon: '📅',
+      title: 'Confirmed new booking',
+      description: 'Convention participation with Cosplay D',
+      time: '2 days ago'
+    },
+    {
+      icon: '⭐',
+      title: 'Left detailed review',
+      description: 'Reviewed experience with Cosplay C',
+      time: '3 days ago'
+    },
+    {
+      icon: '🎯',
+      title: 'Achieved Gold status',
+      description: 'Unlocked Gold member benefits',
+      time: '1 week ago'
+    },
+  ];
+
+  const mockCustomerPhotos = Array.from({ length: 16 }, (_, index) => ({
+    id: index + 1,
+    url: `/src/assets/cosplayer${(index % 8) + 1}.png`,
+    title: `Event Photo ${index + 1}`,
+    description: `Amazing cosplay event experience #${index + 1}`,
+    category: ['event', 'photoshoot', 'convention', 'meetup'][index % 4],
+    likes: Math.floor(Math.random() * 100) + 20,
+    tags: ['cosplay', 'event', 'memories', 'community'],
+  }));
+
   const customerTabCounts = {
     photos: mockCustomerPhotos.length,
     videos: 0,
@@ -209,44 +243,42 @@ const CustomerProfilePage = () => {
     wallet: 1,
   };
 
-  // Customer tabs configuration
   const customerTabs = [
     {
       id: 'overview',
-      label: 'Tổng quan',
+      label: 'Overview',
       icon: 'Info',
       show: true
     },
     {
       id: 'wallet',
-      label: 'Ví điện tử',
+      label: 'Wallet',
       icon: 'AccountBalanceWallet',
-      show: isOwnProfile // Only show for own profile
+      show: isOwnProfile
     },
     {
       id: 'bookings',
-      label: 'Đặt lịch',
+      label: 'Bookings',
       icon: 'Event',
       count: customerTabCounts.bookings,
-      show: isOwnProfile // Only show for own profile
+      show: isOwnProfile
     },
     {
       id: 'gallery',
-      label: 'Thư viện ảnh',
+      label: 'Gallery',
       icon: 'PhotoLibrary',
       count: customerTabCounts.photos,
       show: true
     },
     {
       id: 'favorites',
-      label: 'Yêu thích',
+      label: 'Favorites',
       icon: 'Favorite',
       count: customerTabCounts.favorites,
-      show: isOwnProfile // Only show for own profile
+      show: isOwnProfile
     }
   ];
 
-  // Render tab content
   const renderTabContent = () => {
     switch (activeTab) {
       case 'overview':
@@ -288,8 +320,8 @@ const CustomerProfilePage = () => {
             borderRadius: '16px',
             border: '1px solid rgba(233, 30, 99, 0.1)',
           }}>
-            <h3>Cosplayer yêu thích</h3>
-            <p>Các cosplayer yêu thích của bạn sẽ hiển thị ở đây!</p>
+            <h3>Favorite Cosplayers</h3>
+            <p>Your favorite cosplayers will appear here!</p>
           </Box>
         );
       default:
@@ -297,7 +329,6 @@ const CustomerProfilePage = () => {
     }
   };
 
-  // Loading state
   if (loading) {
     return (
       <ThemeProvider theme={cosplayTheme}>
@@ -306,7 +337,7 @@ const CustomerProfilePage = () => {
           <Container maxWidth="lg" sx={{ py: 8, textAlign: 'center' }}>
             <CircularProgress size={60} sx={{ color: 'primary.main' }} />
             <Box sx={{ mt: 2 }}>
-              <h3>Đang tải hồ sơ khách hàng...</h3>
+              <h3>Loading customer profile...</h3>
             </Box>
           </Container>
           <Footer />
@@ -315,7 +346,6 @@ const CustomerProfilePage = () => {
     );
   }
 
-  // Error state
   if (error) {
     return (
       <ThemeProvider theme={cosplayTheme}>
@@ -327,7 +357,7 @@ const CustomerProfilePage = () => {
               sx={{ mb: 4, borderRadius: '12px' }}
               action={
                 <Button color="inherit" onClick={() => window.location.reload()}>
-                  Thử lại
+                  Retry
                 </Button>
               }
             >
@@ -346,7 +376,6 @@ const CustomerProfilePage = () => {
         <Header user={user} onLogout={handleLogout} />
         
         <Container maxWidth="lg" sx={{ py: 4 }}>
-          {/* Customer Profile Header */}
           <CustomerProfileHeader
             user={profileUser}
             isOwnProfile={isOwnProfile}
@@ -358,7 +387,6 @@ const CustomerProfilePage = () => {
             membershipTier={profileUser?.membershipTier}
           />
 
-          {/* Customer Profile Tabs */}
           <ProfileTabs
             activeTab={activeTab}
             onTabChange={handleTabChange}
@@ -367,13 +395,20 @@ const CustomerProfilePage = () => {
             customTabs={customerTabs}
           />
 
-          {/* Tab Content */}
           <Box sx={{ minHeight: '400px' }}>
             {renderTabContent()}
           </Box>
         </Container>
 
         <Footer />
+
+        {/* Profile Edit Modal */}
+        <ProfileEditModal
+          open={editModalOpen}
+          onClose={() => setEditModalOpen(false)}
+          user={profileUser}
+          onProfileUpdated={handleProfileUpdated}
+        />
 
         {/* Snackbar for notifications */}
         <Snackbar
