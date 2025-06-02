@@ -38,7 +38,16 @@ const HomePage = () => {
   useEffect(() => {
     const storedUser = localStorage.getItem('user');
     if (storedUser) {
-      setUser(JSON.parse(storedUser));
+      try {
+        const parsedUser = JSON.parse(storedUser);
+        setUser(parsedUser);
+        console.log('Location state:', parsedUser?.id || 'No user ID'); // ✅ FIX: Safe access to user ID
+      } catch (error) {
+        console.error('Error parsing stored user:', error);
+        localStorage.removeItem('user'); // Clean up invalid data
+      }
+    } else {
+      console.log('No user found - guest user'); // ✅ FIX: Better logging for guest users
     }
 
     // Check for welcome message from login
@@ -46,7 +55,6 @@ const HomePage = () => {
       setWelcomeMessage(location.state.message);
       setShowWelcomeMessage(true);
     }
-    console.log('Location state:', storedUser.id);
   }, [location.state]);
 
   const handleLogout = () => {
@@ -311,14 +319,10 @@ const HomePage = () => {
           </Box>
         </Container>
 
-       
-
         {/* User Comments Section */}
         <Container maxWidth="lg" sx={{ py: 2 }}>
           <UserComments />
         </Container>
-
-        
 
         {/* Footer */}
         <Footer />
