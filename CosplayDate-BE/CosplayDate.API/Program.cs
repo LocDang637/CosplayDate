@@ -90,6 +90,8 @@ builder.Services.AddScoped<IEmailService, EmailService>();
 builder.Services.AddScoped<IJwtService, JwtService>();
 builder.Services.AddScoped<ISupabaseService, SupabaseService>();
 builder.Services.AddScoped<IUserService, UserService>();
+builder.Services.AddScoped<ICosplayerService, CosplayerService>();
+builder.Services.AddScoped<ICosplayerMediaService, CosplayerMediaService>();
 
 // JWT Authentication Configuration
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
