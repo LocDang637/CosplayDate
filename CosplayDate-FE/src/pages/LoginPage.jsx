@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { Box, Typography, Alert, Switch, FormControlLabel } from '@mui/material';
+import { Box, Typography, Alert } from '@mui/material';
 import { Email, Lock } from '@mui/icons-material';
 import PageLayout from '../components/layout/PageLayout';
 import FormContainer from '../components/common/FormContainer';
@@ -19,51 +19,7 @@ const LoginPage = () => {
   const [passwordError, setPasswordError] = useState('');
   const [loading, setLoading] = useState(false);
   const [apiError, setApiError] = useState('');
-  const [useMockApi, setUseMockApi] = useState(true); // Toggle for demo
   const [pendingUser, setPendingUser] = useState(null); // Store user data for verification step
-
-  // Mock account credentials (for demo purposes)
-  const MOCK_ACCOUNTS = {
-    customer: {
-      email: 'customer@cosplaydate.com',
-      password: 'cosplay123',
-      user: {
-        id: 1,
-        firstName: 'Mai',
-        lastName: 'Nguyen',
-        email: 'customer@cosplaydate.com',
-        userType: 'Customer',
-        isVerified: true,
-        avatar: null
-      }
-    },
-    cosplayer: {
-      email: 'cosplayer@cosplaydate.com',
-      password: 'cosplay123',
-      user: {
-        id: 2,
-        firstName: 'Sakura',
-        lastName: 'Haruno',
-        email: 'cosplayer@cosplaydate.com',
-        userType: 'Cosplayer',
-        isVerified: true,
-        avatar: null
-      }
-    },
-    unverified: {
-      email: 'unverified@cosplaydate.com',
-      password: 'cosplay123',
-      user: {
-        id: 3,
-        firstName: 'Pending',
-        lastName: 'User',
-        email: 'unverified@cosplaydate.com',
-        userType: 'Customer',
-        isVerified: false,
-        avatar: null
-      }
-    }
-  };
 
   const validateEmail = (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 
@@ -112,41 +68,23 @@ const LoginPage = () => {
     setStep('verification');
   };
 
-  const handleMockLogin = async () => {
-    console.log('Using mock login...');
-    
-    // Simulate API delay
-    await new Promise(resolve => setTimeout(resolve, 1500));
-    
-    // Find matching mock account
-    const mockAccount = Object.values(MOCK_ACCOUNTS).find(
-      account => account.email === email && account.password === password
-    );
-    
-    if (mockAccount) {
-      const { user } = mockAccount;
-      
-      if (user.isVerified) {
-        // Case 1: Login successful and verified
-        handleSuccessfulLogin(user, 'mock-jwt-token-' + Date.now());
-      } else {
-        // Case 2: Login successful but not verified
-        handleUnverifiedUser(user);
-      }
-    } else {
-      // Case 3: Invalid credentials
-      const emailExists = Object.values(MOCK_ACCOUNTS).some(account => account.email === email);
-      
-      if (!emailExists) {
-        setEmailError('Không tìm thấy tài khoản với email này');
-      } else {
-        setPasswordError('Mật khẩu không đúng');
-      }
+  const handleLogin = async () => {
+    // Validation
+    if (!email) { 
+      setEmailError('Email là bắt buộc'); 
+      return; 
     }
-  };
+    if (!password) { 
+      setPasswordError('Mật khẩu là bắt buộc'); 
+      return; 
+    }
+    if (!validateEmail(email)) { 
+      setEmailError('Vui lòng nhập địa chỉ email hợp lệ'); 
+      return; 
+    }
 
-  const handleRealApiLogin = async () => {
-    console.log('Using real API login...');
+    setLoading(true);
+    setApiError('');
     
     try {
       const credentials = {
@@ -226,38 +164,8 @@ const LoginPage = () => {
       }
       
     } catch (error) {
-      console.error('Login API error:', error);
-      setApiError('Lỗi kết nối. Vui lòng kiểm tra kết nối mạng và thử lại.');
-    }
-  };
-
-  const handleLogin = async () => {
-    // Validation
-    if (!email) { 
-      setEmailError('Email là bắt buộc'); 
-      return; 
-    }
-    if (!password) { 
-      setPasswordError('Mật khẩu là bắt buộc'); 
-      return; 
-    }
-    if (!validateEmail(email)) { 
-      setEmailError('Vui lòng nhập địa chỉ email hợp lệ'); 
-      return; 
-    }
-
-    setLoading(true);
-    setApiError('');
-    
-    try {
-      if (useMockApi) {
-        await handleMockLogin();
-      } else {
-        await handleRealApiLogin();
-      }
-    } catch (error) {
       console.error('Login failed:', error);
-      setApiError('Đã xảy ra lỗi không mong muốn. Vui lòng thử lại.');
+      setApiError('Lỗi kết nối. Vui lòng kiểm tra kết nối mạng và thử lại.');
     } finally {
       setLoading(false);
     }
@@ -272,21 +180,14 @@ const LoginPage = () => {
         code: code
       };
       
-      if (useMockApi) {
-        // Mock verification - always successful
-        await new Promise(resolve => setTimeout(resolve, 1000));
+      const result = await authAPI.verifyEmail(verificationData);
+      
+      if (result.success) {
+        console.log('✅ Email verified successfully!');
         const verifiedUser = { ...pendingUser, isVerified: true };
-        handleSuccessfulLogin(verifiedUser, 'mock-jwt-token-' + Date.now());
+        handleSuccessfulLogin(verifiedUser, result.data.token);
       } else {
-        const result = await authAPI.verifyEmail(verificationData);
-        
-        if (result.success) {
-          console.log('✅ Email verified successfully!');
-          const verifiedUser = { ...pendingUser, isVerified: true };
-          handleSuccessfulLogin(verifiedUser, result.data.token);
-        } else {
-          throw new Error(result.message || 'Xác thực email thất bại');
-        }
+        throw new Error(result.message || 'Xác thực email thất bại');
       }
       
     } catch (error) {
@@ -299,16 +200,10 @@ const LoginPage = () => {
     try {
       console.log('Resending verification code to:', pendingUser.email);
       
-      if (useMockApi) {
-        // Mock resend
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        console.log('📧 Mock verification code resent: 123456');
-      } else {
-        const result = await authAPI.resendVerification(pendingUser.email);
-        
-        if (!result.success) {
-          throw new Error(result.message || 'Không thể gửi lại mã xác thực');
-        }
+      const result = await authAPI.resendVerification(pendingUser.email);
+      
+      if (!result.success) {
+        throw new Error(result.message || 'Không thể gửi lại mã xác thực');
       }
       
     } catch (error) {
@@ -318,15 +213,6 @@ const LoginPage = () => {
   };
 
   const handleKeyPress = (e) => e.key === 'Enter' && !loading && handleLogin();
-
-  const handleDemoLogin = (accountType) => {
-    const account = MOCK_ACCOUNTS[accountType];
-    setEmail(account.email);
-    setPassword(account.password);
-    setEmailError('');
-    setPasswordError('');
-    setApiError('');
-  };
 
   // Email verification step
   if (step === 'verification') {
@@ -353,112 +239,6 @@ const LoginPage = () => {
         subtitle="Cosplay theo cách của bạn, lưu giữ nhân vật yêu thích và tìm kiếm kết nối để gặp gỡ & cùng nhau cosplay!"
       >
         <Box component="form" sx={{ mt: 3 }}>
-          {/* API Mode Toggle (for development) */}
-          <Box sx={{ mb: 3, p: 2, backgroundColor: 'rgba(0,0,0,0.05)', borderRadius: '12px' }}>
-            <FormControlLabel
-              control={
-                <Switch
-                  checked={useMockApi}
-                  onChange={(e) => setUseMockApi(e.target.checked)}
-                  color="primary"
-                />
-              }
-              label={
-                <Typography variant="body2" sx={{ fontSize: '12px' }}>
-                  {useMockApi ? '🎭 Chế độ Demo (Mock API)' : '🌐 Chế độ API thực'}
-                </Typography>
-              }
-            />
-            <Typography variant="body2" sx={{ fontSize: '11px', color: 'text.secondary', mt: 0.5 }}>
-              {useMockApi 
-                ? 'Sử dụng xác thực giả lập cho mục đích demo' 
-                : 'Sử dụng API backend thực để xác thực'
-              }
-            </Typography>
-          </Box>
-
-          {/* Demo Account Info (only show in mock mode) */}
-          {useMockApi && (
-            <Alert 
-              severity="info" 
-              sx={{ 
-                mb: 3, 
-                borderRadius: '12px',
-                '& .MuiAlert-message': { fontSize: '14px' }
-              }}
-            >
-              <Typography variant="body2" sx={{ fontWeight: 600, mb: 1 }}>
-                🎭 Tài khoản Demo có sẵn
-              </Typography>
-              
-              <Box sx={{ mb: 1 }}>
-                <Typography variant="body2" sx={{ fontSize: '12px', fontWeight: 600 }}>
-                  👤 Khách hàng (Customer):
-                </Typography>
-                <Typography variant="body2" sx={{ fontSize: '11px' }}>
-                  Email: <strong>customer@cosplaydate.com</strong> | Mật khẩu: <strong>cosplay123</strong>
-                </Typography>
-                <Typography
-                  variant="body2"
-                  onClick={() => handleDemoLogin('customer')}
-                  sx={{
-                    fontSize: '11px',
-                    color: 'primary.main',
-                    cursor: 'pointer',
-                    textDecoration: 'underline',
-                    '&:hover': { color: 'primary.dark' }
-                  }}
-                >
-                  Nhấn để điền tự động
-                </Typography>
-              </Box>
-
-              <Box sx={{ mb: 1 }}>
-                <Typography variant="body2" sx={{ fontSize: '12px', fontWeight: 600 }}>
-                  🎭 Cosplayer:
-                </Typography>
-                <Typography variant="body2" sx={{ fontSize: '11px' }}>
-                  Email: <strong>cosplayer@cosplaydate.com</strong> | Mật khẩu: <strong>cosplay123</strong>
-                </Typography>
-                <Typography
-                  variant="body2"
-                  onClick={() => handleDemoLogin('cosplayer')}
-                  sx={{
-                    fontSize: '11px',
-                    color: 'primary.main',
-                    cursor: 'pointer',
-                    textDecoration: 'underline',
-                    '&:hover': { color: 'primary.dark' }
-                  }}
-                >
-                  Nhấn để điền tự động
-                </Typography>
-              </Box>
-
-              <Box>
-                <Typography variant="body2" sx={{ fontSize: '12px', fontWeight: 600 }}>
-                  ⚠️ Chưa xác thực (Unverified):
-                </Typography>
-                <Typography variant="body2" sx={{ fontSize: '11px' }}>
-                  Email: <strong>unverified@cosplaydate.com</strong> | Mật khẩu: <strong>cosplay123</strong>
-                </Typography>
-                <Typography
-                  variant="body2"
-                  onClick={() => handleDemoLogin('unverified')}
-                  sx={{
-                    fontSize: '11px',
-                    color: 'primary.main',
-                    cursor: 'pointer',
-                    textDecoration: 'underline',
-                    '&:hover': { color: 'primary.dark' }
-                  }}
-                >
-                  Nhấn để điền tự động
-                </Typography>
-              </Box>
-            </Alert>
-          )}
-
           {/* API Error Alert */}
           {apiError && (
             <Alert 
@@ -523,7 +303,7 @@ const LoginPage = () => {
             disabled={loading}
             sx={{ mb: 3 }}
           >
-            {loading ? (useMockApi ? 'Đang đăng nhập...' : 'Đang xác thực...') : 'ĐĂNG NHẬP'}
+            {loading ? 'Đang xác thực...' : 'ĐĂNG NHẬP'}
           </ActionButton>
 
           <Box sx={{ textAlign: 'center' }}>
@@ -553,10 +333,7 @@ const LoginPage = () => {
             textAlign: 'center'
           }}>
             <Typography variant="body2" sx={{ fontSize: '11px', color: 'text.secondary' }}>
-              {useMockApi 
-                ? '🔧 Chế độ phát triển: Sử dụng xác thực giả lập với role-based navigation'
-                : `🌐 API Endpoint: ${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5068/api'}`
-              }
+              🌐 API Endpoint: {import.meta.env.VITE_API_BASE_URL || 'http://localhost:5068/api'}
             </Typography>
           </Box>
         </Box>

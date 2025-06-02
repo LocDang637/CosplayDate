@@ -39,7 +39,7 @@ api.interceptors.response.use(
   }
 );
 
-// Auth API endpoints (existing code)
+// Auth API endpoints
 export const authAPI = {
   register: async (userData) => {
     try {
@@ -213,6 +213,27 @@ export const authAPI = {
     }
   },
 
+  logout: async () => {
+    try {
+      await api.post('/auth/logout');
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+      return {
+        success: true,
+        message: 'Logged out successfully'
+      };
+    } catch (error) {
+      console.error('Logout API error:', error);
+      // Even if API call fails, clear local storage
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+      return {
+        success: true,
+        message: 'Logged out successfully'
+      };
+    }
+  },
+
   verifyEmail: async (verificationData) => {
     try {
       const response = await api.post('/auth/verify-email', verificationData);
@@ -329,6 +350,183 @@ export const authAPI = {
     }
   },
 
+  forgotPassword: async (emailData) => {
+    try {
+      const response = await api.post('/auth/forgot-password', emailData);
+      return {
+        success: response.data.isSuccess,
+        data: response.data.data,
+        message: response.data.message || 'Reset code sent successfully'
+      };
+    } catch (error) {
+      console.error('Forgot password API error:', error);
+      
+      if (error.response) {
+        const { status, data } = error.response;
+        
+        switch (status) {
+          case 404:
+            return {
+              success: false,
+              message: 'Không tìm thấy tài khoản với email này',
+              errors: {}
+            };
+            
+          case 429:
+            return {
+              success: false,
+              message: 'Vui lòng đợi trước khi yêu cầu mã mới',
+              errors: {}
+            };
+            
+          default:
+            return {
+              success: false,
+              message: data?.message || 'Không thể gửi mã đặt lại mật khẩu',
+              errors: data?.errors || {}
+            };
+        }
+      }
+      
+      return {
+        success: false,
+        message: 'Lỗi kết nối. Vui lòng thử lại.',
+        errors: {}
+      };
+    }
+  },
+
+  resetPassword: async (resetData) => {
+  try {
+    // Ensure the data structure matches your backend DTO
+    const requestData = {
+      email: resetData.email,
+      token: resetData.code,
+      newPassword: resetData.password, // Changed from 'password' to 'newPassword'
+      
+    };
+    
+    console.log('🔄 Sending reset password request:', {
+      email: requestData.email,
+      code: requestData.code,
+      newPassword: '[HIDDEN]'
+    });
+    
+    const response = await api.post('/auth/reset-password', requestData);
+    
+    console.log('✅ Reset password API response:', response.data);
+    
+    return {
+      success: response.data.isSuccess,
+      data: response.data.data,
+      message: response.data.message || 'Password reset successfully'
+    };
+  } catch (error) {
+    console.error('🚨 Reset password API error:', error);
+    
+    if (error.response) {
+      const { status, data } = error.response;
+      
+      console.log('❌ Error response:', {
+        status,
+        data,
+        message: data?.message
+      });
+      
+      switch (status) {
+        case 400:
+          // Check if it's a validation error
+          if (data?.errors && typeof data.errors === 'object') {
+            return {
+              success: false,
+              message: 'Dữ liệu không hợp lệ',
+              errors: data.errors
+            };
+          }
+          
+          return {
+            success: false,
+            message: data?.message || 'Dữ liệu không hợp lệ',
+            errors: data?.errors || {}
+          };
+          
+        case 404:
+          return {
+            success: false,
+            message: 'Mã xác thực không hợp lệ hoặc đã hết hạn',
+            errors: {}
+          };
+          
+        case 410:
+          return {
+            success: false,
+            message: 'Mã xác thực đã hết hạn. Vui lòng yêu cầu mã mới.',
+            errors: {}
+          };
+          
+        default:
+          return {
+            success: false,
+            message: data?.message || 'Không thể đặt lại mật khẩu',
+            errors: data?.errors || {}
+          };
+      }
+    }
+    
+    return {
+      success: false,
+      message: 'Lỗi kết nối. Vui lòng thử lại.',
+      errors: {}
+    };
+  }
+},
+
+  changePassword: async (passwordData) => {
+    try {
+      const response = await api.post('/auth/change-password', passwordData);
+      return {
+        success: response.data.isSuccess,
+        data: response.data.data,
+        message: response.data.message || 'Password changed successfully'
+      };
+    } catch (error) {
+      console.error('Change password API error:', error);
+      
+      if (error.response) {
+        const { status, data } = error.response;
+        
+        switch (status) {
+          case 400:
+            return {
+              success: false,
+              message: data?.message || 'Mật khẩu hiện tại không đúng',
+              errors: data?.errors || {}
+            };
+            
+          case 401:
+            return {
+              success: false,
+              message: 'Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.',
+              errors: {}
+            };
+            
+          default:
+            return {
+              success: false,
+              message: data?.message || 'Không thể thay đổi mật khẩu',
+              errors: data?.errors || {}
+            };
+        }
+      }
+      
+      return {
+        success: false,
+        message: 'Lỗi kết nối. Vui lòng thử lại.',
+        errors: {}
+      };
+    }
+  },
+
   checkEmailAvailability: async (email) => {
     try {
       const response = await api.get(`/auth/check-email?email=${encodeURIComponent(email)}`);
@@ -348,7 +546,7 @@ export const authAPI = {
   }
 };
 
-// NEW: User API endpoints
+// User API endpoints (existing code continues...)
 export const userAPI = {
   // Get current user profile
   getCurrentProfile: async () => {
@@ -653,7 +851,7 @@ export const userAPI = {
   }
 };
 
-// Existing utility functions
+// Utility functions
 export const userUtils = {
   getCurrentUser: () => {
     const userData = localStorage.getItem('user');

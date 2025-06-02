@@ -87,12 +87,15 @@ const CustomerProfilePage = () => {
         console.log('📊 Profile API result:', result);
 
         if (result.success) {
-          // ✅ FIX: Ensure the profile data has the correct ID structure
-          const profileData = {
-            ...result.data,
-            id: result.data.id || result.data.userId, // Ensure id field exists
-            userId: result.data.userId || result.data.id // Ensure userId field exists
-          };
+      // ✅ FIX: Ensure the profile data has both avatar fields
+      const profileData = {
+        ...result.data,
+        id: result.data.id || result.data.userId,
+        userId: result.data.userId || result.data.id,
+        // Ensure both avatar fields are available
+        avatar: result.data.avatar || result.data.avatarUrl,
+        avatarUrl: result.data.avatarUrl || result.data.avatar
+      };
           
           setProfileUser(profileData);
           
@@ -150,39 +153,51 @@ const CustomerProfilePage = () => {
   };
 
   const handleEditAvatar = async () => {
-    const input = document.createElement('input');
-    input.type = 'file';
-    input.accept = 'image/*';
-    input.onchange = async (event) => {
-      const file = event.target.files[0];
-      if (file) {
-        try {
-          setLoading(true);
-          const result = await userAPI.uploadAvatar(file);
+  const input = document.createElement('input');
+  input.type = 'file';
+  input.accept = 'image/*';
+  input.onchange = async (event) => {
+    const file = event.target.files[0];
+    if (file) {
+      try {
+        setLoading(true);
+        const result = await userAPI.uploadAvatar(file);
+        
+        if (result.success) {
+          const newAvatarUrl = result.data.avatarUrl;
           
-          if (result.success) {
-            const newAvatarUrl = result.data.avatarUrl;
-            setProfileUser(prev => ({ ...prev, avatarUrl: newAvatarUrl }));
-            
-            if (isOwnProfile) {
-              const updatedUser = { ...user, avatarUrl: newAvatarUrl };
-              setUser(updatedUser);
-              localStorage.setItem('user', JSON.stringify(updatedUser));
-            }
-            
-            showSnackbar('Avatar updated successfully!', 'success');
-          } else {
-            showSnackbar(result.message || 'Failed to upload avatar', 'error');
+          // ✅ FIX: Update profileUser state with both avatar and avatarUrl fields
+          setProfileUser(prev => ({ 
+            ...prev, 
+            avatar: newAvatarUrl,      // ← Add this for CustomerProfileHeader compatibility
+            avatarUrl: newAvatarUrl    // ← Keep this for API compatibility
+          }));
+          
+          // ✅ FIX: If it's own profile, also update the user state
+          if (isOwnProfile) {
+            const updatedUser = { 
+              ...user, 
+              avatar: newAvatarUrl,      // ← Add this for header compatibility
+              avatarUrl: newAvatarUrl    // ← Keep this for API compatibility
+            };
+            setUser(updatedUser);
+            localStorage.setItem('user', JSON.stringify(updatedUser));
           }
-        } catch (error) {
-          showSnackbar('Error uploading avatar', 'error');
-        } finally {
-          setLoading(false);
+          
+          showSnackbar('Avatar updated successfully!', 'success');
+        } else {
+          showSnackbar(result.message || 'Failed to upload avatar', 'error');
         }
+      } catch (error) {
+        console.error('Avatar upload error:', error);
+        showSnackbar('Error uploading avatar', 'error');
+      } finally {
+        setLoading(false);
       }
-    };
-    input.click();
+    }
   };
+  input.click();
+};
 
   const handleFollowToggle = () => {
     setIsFollowing(!isFollowing);

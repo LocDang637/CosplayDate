@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
-import { Box, Typography } from '@mui/material';
-import { Lock, Visibility, VisibilityOff } from '@mui/icons-material';
+import { Box, Typography, Alert } from '@mui/material';
+import { Lock } from '@mui/icons-material';
 import PageLayout from '../components/layout/PageLayout';
 import FormContainer from '../components/common/FormContainer';
 import CosplayInput from '../components/common/CosplayInput';
 import ActionButton from '../components/common/ActionButton';
+import { authAPI } from '../services/api';
 
 const ResetPasswordPage = () => {
   const navigate = useNavigate();
@@ -19,6 +20,7 @@ const ResetPasswordPage = () => {
   const [passwordError, setPasswordError] = useState('');
   const [confirmPasswordError, setConfirmPasswordError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [apiError, setApiError] = useState('');
 
   // Redirect if no email/code provided
   React.useEffect(() => {
@@ -39,6 +41,7 @@ const ResetPasswordPage = () => {
     const value = e.target.value;
     setPassword(value);
     setPasswordError(value ? validatePassword(value) : '');
+    if (apiError) setApiError(''); // Clear API error when user types
     
     // Check confirm password match if it's already filled
     if (confirmPassword && value !== confirmPassword) {
@@ -51,6 +54,7 @@ const ResetPasswordPage = () => {
   const handleConfirmPasswordChange = (e) => {
     const value = e.target.value;
     setConfirmPassword(value);
+    if (apiError) setApiError(''); // Clear API error when user types
     
     if (value && value !== password) {
       setConfirmPasswordError('Mật khẩu không khớp');
@@ -83,25 +87,54 @@ const ResetPasswordPage = () => {
     }
 
     setLoading(true);
+    setApiError('');
     
     try {
-      // Replace with your actual API call
       console.log('Resetting password for:', email, 'with code:', code);
       
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      const resetData = {
+        email: email.trim().toLowerCase(),
+        code: code,
+        password: password
+      };
       
-      // Navigate to login with success message
-      navigate('/login', { 
-        state: { 
-          message: 'Đặt lại mật khẩu thành công! Vui lòng đăng nhập với mật khẩu mới.',
-          email: email
+      const result = await authAPI.resetPassword(resetData);
+      
+      if (result.success) {
+        console.log('✅ Password reset successful');
+        
+        // Navigate to login with success message
+        navigate('/login', { 
+          state: { 
+            message: 'Đặt lại mật khẩu thành công! Vui lòng đăng nhập với mật khẩu mới.',
+            email: email
+          }
+        });
+      } else {
+        console.error('❌ Password reset failed:', result.message);
+        
+        // Handle different types of errors
+        if (result.errors && Object.keys(result.errors).length > 0) {
+          // Handle field-specific errors
+          if (result.errors.password) setPasswordError(result.errors.password);
+          if (result.errors.code) {
+            setApiError('Mã xác thực không hợp lệ hoặc đã hết hạn. Vui lòng yêu cầu mã mới.');
+          }
+        } else {
+          const message = result.message.toLowerCase();
+          if (message.includes('code') || message.includes('invalid') || message.includes('expired')) {
+            setApiError('Mã xác thực không hợp lệ hoặc đã hết hạn. Vui lòng yêu cầu mã mới.');
+          } else if (message.includes('password')) {
+            setPasswordError(result.message);
+          } else {
+            setApiError(result.message || 'Không thể đặt lại mật khẩu. Vui lòng thử lại.');
+          }
         }
-      });
+      }
       
     } catch (error) {
       console.error('Password reset failed:', error);
-      setPasswordError('Không thể đặt lại mật khẩu. Vui lòng thử lại.');
+      setApiError('Lỗi kết nối. Vui lòng kiểm tra kết nối mạng và thử lại.');
     } finally {
       setLoading(false);
     }
@@ -132,6 +165,17 @@ const ResetPasswordPage = () => {
               Đặt lại mật khẩu cho: <strong>{email}</strong>
             </Typography>
           </Box>
+
+          {/* API Error Alert */}
+          {apiError && (
+            <Alert 
+              severity="error" 
+              sx={{ mb: 3, borderRadius: '12px' }}
+              onClose={() => setApiError('')}
+            >
+              {apiError}
+            </Alert>
+          )}
 
           <CosplayInput
             label="Mật khẩu mới"
@@ -187,7 +231,7 @@ const ResetPasswordPage = () => {
             disabled={loading || !password || !confirmPassword || !!passwordError || !!confirmPasswordError}
             sx={{ mb: 3 }}
           >
-            Đặt lại mật khẩu
+            {loading ? 'Đang đặt lại mật khẩu...' : 'Đặt lại mật khẩu'}
           </ActionButton>
 
           <Box sx={{ textAlign: 'center' }}>
@@ -205,6 +249,19 @@ const ResetPasswordPage = () => {
               >
                 Đăng nhập
               </Typography>
+            </Typography>
+          </Box>
+
+          {/* API Status Info */}
+          <Box sx={{ 
+            mt: 3, 
+            p: 2, 
+            backgroundColor: 'rgba(0,0,0,0.02)', 
+            borderRadius: '8px',
+            textAlign: 'center'
+          }}>
+            <Typography variant="body2" sx={{ fontSize: '11px', color: 'text.secondary' }}>
+              🌐 API Endpoint: {import.meta.env.VITE_API_BASE_URL || 'http://localhost:5068/api'}
             </Typography>
           </Box>
         </Box>
