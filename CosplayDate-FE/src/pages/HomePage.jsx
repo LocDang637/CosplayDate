@@ -1,3 +1,4 @@
+// src/pages/HomePage.jsx - Updated with API integration
 import React, { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { 
@@ -26,36 +27,59 @@ import CosplayerLeaderboard from '../components/common/CosplayerLeaderboard';
 import CosplayNews from '../components/common/CosplayNews';
 import UserComments from '../components/common/UserComments';
 import Footer from '../components/layout/Footer';
+import { cosplayerAPI } from '../services/cosplayerAPI';
 
 const HomePage = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const [user, setUser] = useState(null);
+  const [cosplayers, setCosplayers] = useState([]);
+  const [loading, setLoading] = useState(false);
   const [showWelcomeMessage, setShowWelcomeMessage] = useState(false);
   const [welcomeMessage, setWelcomeMessage] = useState('');
 
-  // Load user from localStorage on component mount
   useEffect(() => {
     const storedUser = localStorage.getItem('user');
     if (storedUser) {
       try {
         const parsedUser = JSON.parse(storedUser);
         setUser(parsedUser);
-        console.log('Location state:', parsedUser?.id || 'No user ID'); // ✅ FIX: Safe access to user ID
       } catch (error) {
         console.error('Error parsing stored user:', error);
-        localStorage.removeItem('user'); // Clean up invalid data
+        localStorage.removeItem('user');
       }
-    } else {
-      console.log('No user found - guest user'); // ✅ FIX: Better logging for guest users
     }
 
-    // Check for welcome message from login
     if (location.state?.message) {
       setWelcomeMessage(location.state.message);
       setShowWelcomeMessage(true);
     }
   }, [location.state]);
+
+  useEffect(() => {
+    loadFeaturedCosplayers();
+  }, []);
+
+  const loadFeaturedCosplayers = async () => {
+    try {
+      setLoading(true);
+      
+      const result = await cosplayerAPI.getCosplayers({
+        page: 1,
+        pageSize: 8,
+        sortBy: 'rating', // Get top rated cosplayers
+        sortOrder: 'desc'
+      });
+
+      if (result.success) {
+        setCosplayers(result.data.items || result.data || []);
+      }
+    } catch (err) {
+      console.error('Failed to load featured cosplayers:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleLogout = () => {
     setUser(null);
@@ -65,112 +89,25 @@ const HomePage = () => {
     setShowWelcomeMessage(true);
   };
 
-  // Mock data for cosplayers (8 cosplayers)
-  const cosplayers = [
-    {
-      id: 1,
-      name: 'Cosplayer A',
-      price: 400000,
-      category: 'Anime',
-      image: '/src/assets/cosplayer1.png',
-      location: 'Hà Nội',
-      rating: 4.9
-    },
-    {
-      id: 2,
-      name: 'Cosplayer B',
-      price: 450000,
-      category: 'Trò chơi',
-      image: '/src/assets/cosplayer2.png',
-      location: 'TP.HCM',
-      rating: 4.8
-    },
-    {
-      id: 3,
-      name: 'Cosplayer C',
-      price: 350000,
-      category: 'Phim ảnh',
-      image: '/src/assets/cosplayer3.png',
-      location: 'Đà Nẵng',
-      rating: 4.7
-    },
-    {
-      id: 4,
-      name: 'Cosplayer D',
-      price: 500000,
-      category: 'Nguyên bản',
-      image: '/src/assets/cosplayer4.png',
-      location: 'Cần Thơ',
-      rating: 4.9
-    },
-    {
-      id: 5,
-      name: 'Cosplayer E',
-      price: 380000,
-      category: 'Anime',
-      image: '/src/assets/cosplayer5.png',
-      location: 'Hải Phòng',
-      rating: 4.6
-    },
-    {
-      id: 6,
-      name: 'Cosplayer F',
-      price: 420000,
-      category: 'Trò chơi',
-      image: '/src/assets/cosplayer6.png',
-      location: 'Hà Nội',
-      rating: 4.8
-    },
-    {
-      id: 7,
-      name: 'Cosplayer G',
-      price: 460000,
-      category: 'Lịch sử',
-      image: '/src/assets/cosplayer7.png',
-      location: 'TP.HCM',
-      rating: 4.7
-    },
-    {
-      id: 8,
-      name: 'Cosplayer H',
-      price: 390000,
-      category: 'Anime',
-      image: '/src/assets/cosplayer8.png',
-      location: 'Đà Nẵng',
-      rating: 4.9
-    }
-  ];
-
-  const stats = [
-    { icon: <People />, label: 'Cosplayer Hoạt Động', value: '10K+' },
-    { icon: <Event />, label: 'Sự Kiện Tháng Này', value: '150+' },
-    { icon: <PhotoCamera />, label: 'Ảnh Được Chia Sẻ', value: '50K+' },
-    { icon: <TrendingUp />, label: 'Kết Nối Được Tạo', value: '2.5K+' }
-  ];
-
   const handleSearch = (filters) => {
-    console.log('Tìm kiếm với bộ lọc:', filters);
-    // Handle search logic here
+    navigate('/cosplayers', { 
+      state: { filters } 
+    });
   };
 
   const handleFiltersChange = (filters) => {
-    console.log('Bộ lọc đã thay đổi:', filters);
-    // Handle filter change logic here
+    // Real-time filter change handling if needed
   };
 
   const handleSeeAll = () => {
-    console.log('Xem tất cả cosplayer');
-    navigate("/cosplayers");  // Assuming you have a route for cosplayers
-    // Navigate to cosplayers page
+    navigate("/cosplayers");
   };
 
   return (
     <ThemeProvider theme={cosplayTheme}>
       <Box sx={{ minHeight: '100vh', backgroundColor: '#FFE8F5' }}>
-        {/* Header */}
         <Header user={user} onLogout={handleLogout} />
 
-        {/* Welcome Message Snackbar */}
         <Snackbar
           open={showWelcomeMessage}
           autoHideDuration={6000}
@@ -288,7 +225,6 @@ const HomePage = () => {
           </Container>
         </Box>
 
-        {/* Search Filters Section */}
         <Container maxWidth="lg" sx={{ py: 4 }}>
           <CosplayerSearchFilters
             onSearch={handleSearch}
@@ -296,16 +232,15 @@ const HomePage = () => {
           />
         </Container>
 
-        {/* Featured Cosplayers Carousel */}
         <Container maxWidth="lg" sx={{ py: 2 }}>
           <CosplayerCarousel
             title="Cosplayer nổi bật"
             cosplayers={cosplayers}
             onSeeAll={handleSeeAll}
+            loading={loading}
           />
         </Container>
 
-        {/* Leaderboard and News Section */}
         <Container maxWidth="lg" sx={{ py: 4 }}>
           <Box sx={{ 
             display: 'flex', 
@@ -319,12 +254,10 @@ const HomePage = () => {
           </Box>
         </Container>
 
-        {/* User Comments Section */}
         <Container maxWidth="lg" sx={{ py: 2 }}>
           <UserComments />
         </Container>
 
-        {/* Footer */}
         <Footer />
       </Box>
     </ThemeProvider>

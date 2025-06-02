@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+// src/components/profile/ProfileGallery.jsx - Updated with API integration
+import React, { useState, useEffect } from 'react';
 import {
   Box,
   Typography,
@@ -18,7 +19,10 @@ import {
   ToggleButtonGroup,
   ToggleButton,
   Skeleton,
-  Badge
+  Badge,
+  Menu,
+  MenuItem,
+  Alert
 } from '@mui/material';
 import {
   Add,
@@ -33,81 +37,206 @@ import {
   FavoriteBorder,
   Share,
   Download,
-  Fullscreen
+  Fullscreen,
+  Edit,
+  Delete,
+  MoreVert
 } from '@mui/icons-material';
+import { cosplayerMediaAPI } from '../../services/cosplayerAPI';
+import MediaUploadDialog from '../media/MediaUploadDialog';
 
 const ProfileGallery = ({ 
-  photos = [], 
-  isOwnProfile = false, 
-  onAddPhoto,
-  loading = false 
+  cosplayerId,
+  isOwnProfile = false,
+  loading: externalLoading = false 
 }) => {
-  const [selectedPhoto, setSelectedPhoto] = useState(null);
+  const [photos, setPhotos] = useState([]);
+  const [videos, setVideos] = useState([]);
+  const [selectedMedia, setSelectedMedia] = useState(null);
   const [viewMode, setViewMode] = useState('grid');
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
-  const [likedPhotos, setLikedPhotos] = useState(new Set());
+  const [mediaType, setMediaType] = useState('photos'); // 'photos' or 'videos'
+  const [likedMedia, setLikedMedia] = useState(new Set());
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const [uploadDialog, setUploadDialog] = useState(false);
+  const [uploadType, setUploadType] = useState('photo');
+  const [menuAnchor, setMenuAnchor] = useState(null);
+  const [selectedMediaForMenu, setSelectedMediaForMenu] = useState(null);
 
-  // Mock categories for filtering
   const categories = [
-    { id: 'all', label: 'Tất cả', count: photos.length },
-    { id: 'anime', label: 'Anime', count: 12 },
-    { id: 'game', label: 'Game', count: 8 },
-    { id: 'original', label: 'Gốc', count: 5 },
-    { id: 'event', label: 'Sự kiện', count: 3 },
+    { id: 'all', label: 'Tất cả', count: photos.length + videos.length },
+    { id: 'anime', label: 'Anime', count: 0 },
+    { id: 'game', label: 'Game', count: 0 },
+    { id: 'original', label: 'Gốc', count: 0 },
+    { id: 'event', label: 'Sự kiện', count: 0 },
+    { id: 'photoshoot', label: 'Chụp ảnh', count: 0 },
   ];
 
-  // Filter photos based on search and category
-  const filteredPhotos = photos.filter(photo => {
-    const matchesSearch = searchTerm === '' || 
-      photo.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      photo.tags?.some(tag => tag.toLowerCase().includes(searchTerm.toLowerCase()));
+  useEffect(() => {
+    if (cosplayerId) {
+      loadMedia();
+    }
+  }, [cosplayerId, mediaType]);
+
+  const loadMedia = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      if (mediaType === 'photos') {
+        const result = await cosplayerMediaAPI.getPhotos(cosplayerId);
+        if (result.success) {
+          setPhotos(result.data || []);
+        } else {
+          setError(result.message);
+        }
+      } else {
+        const result = await cosplayerMediaAPI.getVideos(cosplayerId);
+        if (result.success) {
+          setVideos(result.data || []);
+        } else {
+          setError(result.message);
+        }
+      }
+    } catch (err) {
+      setError('Không thể tải media');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleMediaClick = (media, index) => {
+    setSelectedMedia({ ...media, index });
+  };
+
+  const handleCloseModal = () => {
+    setSelectedMedia(null);
+  };
+
+  const handleNextMedia = () => {
+    const currentMedia = mediaType === 'photos' ? filteredPhotos : filteredVideos;
+    if (selectedMedia && selectedMedia.index < currentMedia.length - 1) {
+      const nextIndex = selectedMedia.index + 1;
+      setSelectedMedia({ ...currentMedia[nextIndex], index: nextIndex });
+    }
+  };
+
+  const handlePrevMedia = () => {
+    const currentMedia = mediaType === 'photos' ? filteredPhotos : filteredVideos;
+    if (selectedMedia && selectedMedia.index > 0) {
+      const prevIndex = selectedMedia.index - 1;
+      setSelectedMedia({ ...currentMedia[prevIndex], index: prevIndex });
+    }
+  };
+
+  const handleLike = async (mediaId) => {
+    if (mediaType !== 'photos') return; // Only photos can be liked currently
     
-    const matchesCategory = selectedCategory === 'all' || photo.category === selectedCategory;
+    try {
+      const result = await cosplayerMediaAPI.togglePhotoLike(mediaId);
+      if (result.success) {
+        const newLikedMedia = new Set(likedMedia);
+        if (newLikedMedia.has(mediaId)) {
+          newLikedMedia.delete(mediaId);
+        } else {
+          newLikedMedia.add(mediaId);
+        }
+        setLikedMedia(newLikedMedia);
+        
+        // Update photo likes count
+        setPhotos(photos.map(photo => 
+          photo.id === mediaId 
+            ? { ...photo, likesCount: photo.likesCount + (newLikedMedia.has(mediaId) ? 1 : -1) }
+            : photo
+        ));
+      }
+    } catch (err) {
+      console.error('Failed to toggle like:', err);
+    }
+  };
+
+  const handleUploadSuccess = (uploadedMedia) => {
+    if (uploadType === 'photo') {
+      setPhotos([uploadedMedia, ...photos]);
+    } else {
+      setVideos([uploadedMedia, ...videos]);
+    }
+  };
+
+  const handleDeleteMedia = async (mediaId) => {
+    if (!window.confirm('Bạn có chắc chắn muốn xóa media này?')) return;
+
+    try {
+      let result;
+      if (mediaType === 'photos') {
+        result = await cosplayerMediaAPI.deletePhoto(mediaId);
+      } else {
+        result = await cosplayerMediaAPI.deleteVideo(mediaId);
+      }
+
+      if (result.success) {
+        if (mediaType === 'photos') {
+          setPhotos(photos.filter(p => p.id !== mediaId));
+        } else {
+          setVideos(videos.filter(v => v.id !== mediaId));
+        }
+        setMenuAnchor(null);
+      } else {
+        setError(result.message);
+      }
+    } catch (err) {
+      setError('Không thể xóa media');
+    }
+  };
+
+  const handleMenuOpen = (event, media) => {
+    event.stopPropagation();
+    setMenuAnchor(event.currentTarget);
+    setSelectedMediaForMenu(media);
+  };
+
+  const handleMenuClose = () => {
+    setMenuAnchor(null);
+    setSelectedMediaForMenu(null);
+  };
+
+  // Filter media based on search and category
+  const currentMedia = mediaType === 'photos' ? photos : videos;
+  const filteredMedia = currentMedia.filter(media => {
+    const matchesSearch = searchTerm === '' || 
+      media.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      media.description?.toLowerCase().includes(searchTerm.toLowerCase());
+    
+    const matchesCategory = selectedCategory === 'all' || media.category === selectedCategory;
     
     return matchesSearch && matchesCategory;
   });
 
-  const handlePhotoClick = (photo, index) => {
-    setSelectedPhoto({ ...photo, index });
-  };
+  const filteredPhotos = photos.filter(photo => {
+    const matchesSearch = searchTerm === '' || 
+      photo.title?.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesCategory = selectedCategory === 'all' || photo.category === selectedCategory;
+    return matchesSearch && matchesCategory;
+  });
 
-  const handleCloseModal = () => {
-    setSelectedPhoto(null);
-  };
+  const filteredVideos = videos.filter(video => {
+    const matchesSearch = searchTerm === '' || 
+      video.title?.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesCategory = selectedCategory === 'all' || video.category === selectedCategory;
+    return matchesSearch && matchesCategory;
+  });
 
-  const handleNextPhoto = () => {
-    if (selectedPhoto && selectedPhoto.index < filteredPhotos.length - 1) {
-      const nextIndex = selectedPhoto.index + 1;
-      setSelectedPhoto({ ...filteredPhotos[nextIndex], index: nextIndex });
-    }
-  };
-
-  const handlePrevPhoto = () => {
-    if (selectedPhoto && selectedPhoto.index > 0) {
-      const prevIndex = selectedPhoto.index - 1;
-      setSelectedPhoto({ ...filteredPhotos[prevIndex], index: prevIndex });
-    }
-  };
-
-  const handleLike = (photoId) => {
-    const newLikedPhotos = new Set(likedPhotos);
-    if (newLikedPhotos.has(photoId)) {
-      newLikedPhotos.delete(photoId);
-    } else {
-      newLikedPhotos.add(photoId);
-    }
-    setLikedPhotos(newLikedPhotos);
-  };
-
-  const PhotoSkeleton = () => (
+  const MediaSkeleton = () => (
     <Card sx={{ borderRadius: '12px', overflow: 'hidden' }}>
       <Skeleton variant="rectangular" height={200} />
     </Card>
   );
 
-  const PhotoCard = ({ photo, index }) => {
-    const isLiked = likedPhotos.has(photo.id);
+  const MediaCard = ({ media, index }) => {
+    const isLiked = likedMedia.has(media.id);
+    const isPhoto = mediaType === 'photos';
     
     return (
       <Card
@@ -120,24 +249,24 @@ const ProfileGallery = ({
           '&:hover': {
             transform: 'translateY(-4px)',
             boxShadow: '0 8px 24px rgba(233, 30, 99, 0.15)',
-            '& .photo-overlay': {
+            '& .media-overlay': {
               opacity: 1,
             },
           },
         }}
-        onClick={() => handlePhotoClick(photo, index)}
+        onClick={() => handleMediaClick(media, index)}
       >
         <CardMedia
-          component="img"
+          component={isPhoto ? "img" : "div"}
           height="200"
-          image={photo.url}
-          alt={photo.title}
+          image={isPhoto ? media.url : media.thumbnailUrl}
+          alt={media.title}
           sx={{ objectFit: 'cover' }}
         />
         
         {/* Overlay */}
         <Box
-          className="photo-overlay"
+          className="media-overlay"
           sx={{
             position: 'absolute',
             top: 0,
@@ -155,41 +284,42 @@ const ProfileGallery = ({
         >
           {/* Top Actions */}
           <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-            <IconButton
-              size="small"
-              onClick={(e) => {
-                e.stopPropagation();
-                handleLike(photo.id);
-              }}
-              sx={{ 
-                backgroundColor: 'rgba(255,255,255,0.2)',
-                color: isLiked ? '#E91E63' : 'white',
-                '&:hover': { backgroundColor: 'rgba(255,255,255,0.3)' }
-              }}
-            >
-              {isLiked ? <Favorite /> : <FavoriteBorder />}
-            </IconButton>
-            
-            <Box sx={{ display: 'flex', gap: 0.5 }}>
+            {isPhoto && (
               <IconButton
                 size="small"
                 onClick={(e) => {
                   e.stopPropagation();
-                  // Handle share
+                  handleLike(media.id);
                 }}
                 sx={{ 
                   backgroundColor: 'rgba(255,255,255,0.2)',
-                  color: 'white',
+                  color: isLiked ? '#E91E63' : 'white',
                   '&:hover': { backgroundColor: 'rgba(255,255,255,0.3)' }
                 }}
               >
-                <Share />
+                {isLiked ? <Favorite /> : <FavoriteBorder />}
               </IconButton>
+            )}
+            
+            <Box sx={{ display: 'flex', gap: 0.5, ml: 'auto' }}>
+              {isOwnProfile && (
+                <IconButton
+                  size="small"
+                  onClick={(e) => handleMenuOpen(e, media)}
+                  sx={{ 
+                    backgroundColor: 'rgba(255,255,255,0.2)',
+                    color: 'white',
+                    '&:hover': { backgroundColor: 'rgba(255,255,255,0.3)' }
+                  }}
+                >
+                  <MoreVert />
+                </IconButton>
+              )}
               <IconButton
                 size="small"
                 onClick={(e) => {
                   e.stopPropagation();
-                  setSelectedPhoto({ ...photo, index });
+                  setSelectedMedia({ ...media, index });
                 }}
                 sx={{ 
                   backgroundColor: 'rgba(255,255,255,0.2)',
@@ -204,7 +334,7 @@ const ProfileGallery = ({
 
           {/* Bottom Info */}
           <Box>
-            {photo.title && (
+            {media.title && (
               <Typography
                 variant="body2"
                 sx={{
@@ -214,11 +344,11 @@ const ProfileGallery = ({
                   mb: 0.5,
                 }}
               >
-                {photo.title}
+                {media.title}
               </Typography>
             )}
             
-            {photo.likes && (
+            {isPhoto && media.likesCount !== undefined && (
               <Typography
                 variant="caption"
                 sx={{
@@ -226,16 +356,16 @@ const ProfileGallery = ({
                   textShadow: '1px 1px 2px rgba(0,0,0,0.5)',
                 }}
               >
-                {photo.likes} lượt thích
+                {media.likesCount} lượt thích
               </Typography>
             )}
           </Box>
         </Box>
 
         {/* Category Badge */}
-        {photo.category && (
+        {media.category && (
           <Chip
-            label={photo.category}
+            label={media.category}
             size="small"
             sx={{
               position: 'absolute',
@@ -248,12 +378,40 @@ const ProfileGallery = ({
             }}
           />
         )}
+
+        {/* Video Play Icon */}
+        {!isPhoto && (
+          <Box
+            sx={{
+              position: 'absolute',
+              top: '50%',
+              left: '50%',
+              transform: 'translate(-50%, -50%)',
+              backgroundColor: 'rgba(0,0,0,0.7)',
+              borderRadius: '50%',
+              width: 48,
+              height: 48,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              color: 'white',
+            }}
+          >
+            ▶
+          </Box>
+        )}
       </Card>
     );
   };
 
   return (
     <Box>
+      {error && (
+        <Alert severity="error" sx={{ mb: 3, borderRadius: '12px' }}>
+          {error}
+        </Alert>
+      )}
+
       {/* Header with Search and Filters */}
       <Paper
         sx={{
@@ -272,9 +430,20 @@ const ProfileGallery = ({
           mb: 2
         }}>
           <Typography variant="h6" sx={{ fontWeight: 700, color: 'text.primary', flex: 1 }}>
-            Bộ sưu tập ảnh ({filteredPhotos.length})
+            {mediaType === 'photos' ? 'Ảnh' : 'Video'} ({filteredMedia.length})
           </Typography>
           
+          {/* Media Type Toggle */}
+          <ToggleButtonGroup
+            value={mediaType}
+            exclusive
+            onChange={(e, newType) => newType && setMediaType(newType)}
+            size="small"
+          >
+            <ToggleButton value="photos">Ảnh</ToggleButton>
+            <ToggleButton value="videos">Video</ToggleButton>
+          </ToggleButtonGroup>
+
           {/* View Mode Toggle */}
           <ToggleButtonGroup
             value={viewMode}
@@ -290,12 +459,15 @@ const ProfileGallery = ({
             </ToggleButton>
           </ToggleButtonGroup>
 
-          {/* Add Photo Button (Own Profile Only) */}
+          {/* Add Media Button */}
           {isOwnProfile && (
             <Button
               variant="contained"
               startIcon={<Add />}
-              onClick={onAddPhoto}
+              onClick={() => {
+                setUploadType(mediaType === 'photos' ? 'photo' : 'video');
+                setUploadDialog(true);
+              }}
               sx={{
                 background: 'linear-gradient(45deg, #E91E63, #9C27B0)',
                 borderRadius: '12px',
@@ -303,7 +475,7 @@ const ProfileGallery = ({
                 fontWeight: 600,
               }}
             >
-              Thêm ảnh
+              Thêm {mediaType === 'photos' ? 'ảnh' : 'video'}
             </Button>
           )}
         </Box>
@@ -311,7 +483,7 @@ const ProfileGallery = ({
         {/* Search Bar */}
         <TextField
           fullWidth
-          placeholder="Tìm kiếm ảnh theo tiêu đề hoặc thẻ..."
+          placeholder={`Tìm kiếm ${mediaType === 'photos' ? 'ảnh' : 'video'}...`}
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
           size="small"
@@ -351,27 +523,27 @@ const ProfileGallery = ({
         </Box>
       </Paper>
 
-      {/* Photo Grid */}
-      {loading ? (
+      {/* Media Grid */}
+      {loading || externalLoading ? (
         <Grid container spacing={2}>
           {Array.from({ length: 12 }).map((_, index) => (
             <Grid item xs={12} sm={6} md={4} lg={3} key={index}>
-              <PhotoSkeleton />
+              <MediaSkeleton />
             </Grid>
           ))}
         </Grid>
-      ) : filteredPhotos.length > 0 ? (
+      ) : filteredMedia.length > 0 ? (
         <Grid container spacing={2}>
-          {filteredPhotos.map((photo, index) => (
+          {filteredMedia.map((media, index) => (
             <Grid 
               item 
               xs={12} 
               sm={viewMode === 'grid' ? 6 : 12} 
               md={viewMode === 'grid' ? 4 : 12} 
               lg={viewMode === 'grid' ? 3 : 12} 
-              key={photo.id}
+              key={media.id}
             >
-              <PhotoCard photo={photo} index={index} />
+              <MediaCard media={media} index={index} />
             </Grid>
           ))}
         </Grid>
@@ -386,19 +558,22 @@ const ProfileGallery = ({
           }}
         >
           <Typography variant="h6" sx={{ color: 'text.secondary', mb: 2 }}>
-            Không tìm thấy ảnh nào
+            Không tìm thấy {mediaType === 'photos' ? 'ảnh' : 'video'} nào
           </Typography>
           <Typography variant="body2" sx={{ color: 'text.secondary', mb: 3 }}>
             {searchTerm || selectedCategory !== 'all' 
-              ? 'Hãy thử điều chỉnh tìm kiếm hoặc bộ lọc của bạn'
-              : 'Chưa có ảnh nào được tải lên'
+              ? 'Hãy thử điều chỉnh tìm kiếm hoặc bộ lọc'
+              : `Chưa có ${mediaType === 'photos' ? 'ảnh' : 'video'} nào được tải lên`
             }
           </Typography>
           {isOwnProfile && (
             <Button
               variant="contained"
               startIcon={<Add />}
-              onClick={onAddPhoto}
+              onClick={() => {
+                setUploadType(mediaType === 'photos' ? 'photo' : 'video');
+                setUploadDialog(true);
+              }}
               sx={{
                 background: 'linear-gradient(45deg, #E91E63, #9C27B0)',
                 borderRadius: '12px',
@@ -406,15 +581,15 @@ const ProfileGallery = ({
                 fontWeight: 600,
               }}
             >
-              Tải lên ảnh đầu tiên của bạn
+              Tải lên {mediaType === 'photos' ? 'ảnh' : 'video'} đầu tiên
             </Button>
           )}
         </Paper>
       )}
 
-      {/* Photo Modal */}
+      {/* Media Modal */}
       <Dialog
-        open={!!selectedPhoto}
+        open={!!selectedMedia}
         onClose={handleCloseModal}
         maxWidth="lg"
         fullWidth
@@ -427,9 +602,8 @@ const ProfileGallery = ({
         }}
       >
         <DialogContent sx={{ p: 0, position: 'relative' }}>
-          {selectedPhoto && (
+          {selectedMedia && (
             <>
-              {/* Close Button */}
               <IconButton
                 onClick={handleCloseModal}
                 sx={{
@@ -446,9 +620,9 @@ const ProfileGallery = ({
               </IconButton>
 
               {/* Navigation Arrows */}
-              {selectedPhoto.index > 0 && (
+              {selectedMedia.index > 0 && (
                 <IconButton
-                  onClick={handlePrevPhoto}
+                  onClick={handlePrevMedia}
                   sx={{
                     position: 'absolute',
                     left: 16,
@@ -464,9 +638,9 @@ const ProfileGallery = ({
                 </IconButton>
               )}
 
-              {selectedPhoto.index < filteredPhotos.length - 1 && (
+              {selectedMedia.index < filteredMedia.length - 1 && (
                 <IconButton
-                  onClick={handleNextPhoto}
+                  onClick={handleNextMedia}
                   sx={{
                     position: 'absolute',
                     right: 16,
@@ -482,22 +656,37 @@ const ProfileGallery = ({
                 </IconButton>
               )}
 
-              {/* Photo */}
-              <Box
-                component="img"
-                src={selectedPhoto.url}
-                alt={selectedPhoto.title}
-                sx={{
-                  width: '100%',
-                  height: 'auto',
-                  maxHeight: '80vh',
-                  objectFit: 'contain',
-                  borderRadius: '8px',
-                }}
-              />
+              {/* Media Content */}
+              {mediaType === 'photos' ? (
+                <Box
+                  component="img"
+                  src={selectedMedia.url}
+                  alt={selectedMedia.title}
+                  sx={{
+                    width: '100%',
+                    height: 'auto',
+                    maxHeight: '80vh',
+                    objectFit: 'contain',
+                    borderRadius: '8px',
+                  }}
+                />
+              ) : (
+                <Box
+                  component="video"
+                  controls
+                  sx={{
+                    width: '100%',
+                    height: 'auto',
+                    maxHeight: '80vh',
+                    borderRadius: '8px',
+                  }}
+                >
+                  <source src={selectedMedia.url} type="video/mp4" />
+                </Box>
+              )}
 
-              {/* Photo Info */}
-              {(selectedPhoto.title || selectedPhoto.description) && (
+              {/* Media Info */}
+              {(selectedMedia.title || selectedMedia.description) && (
                 <Box sx={{ 
                   position: 'absolute',
                   bottom: 0,
@@ -507,14 +696,14 @@ const ProfileGallery = ({
                   color: 'white',
                   p: 3,
                 }}>
-                  {selectedPhoto.title && (
+                  {selectedMedia.title && (
                     <Typography variant="h6" sx={{ fontWeight: 600, mb: 1 }}>
-                      {selectedPhoto.title}
+                      {selectedMedia.title}
                     </Typography>
                   )}
-                  {selectedPhoto.description && (
+                  {selectedMedia.description && (
                     <Typography variant="body2" sx={{ opacity: 0.9 }}>
-                      {selectedPhoto.description}
+                      {selectedMedia.description}
                     </Typography>
                   )}
                 </Box>
@@ -524,11 +713,49 @@ const ProfileGallery = ({
         </DialogContent>
       </Dialog>
 
+      {/* Upload Dialog */}
+      <MediaUploadDialog
+        open={uploadDialog}
+        onClose={() => setUploadDialog(false)}
+        type={uploadType}
+        onUploadSuccess={handleUploadSuccess}
+      />
+
+      {/* Context Menu */}
+      <Menu
+        anchorEl={menuAnchor}
+        open={Boolean(menuAnchor)}
+        onClose={handleMenuClose}
+        PaperProps={{
+          sx: { borderRadius: '12px' }
+        }}
+      >
+        <MenuItem onClick={() => {
+          // Handle edit
+          handleMenuClose();
+        }}>
+          <Edit sx={{ mr: 1 }} />
+          Chỉnh sửa
+        </MenuItem>
+        <MenuItem 
+          onClick={() => {
+            handleDeleteMedia(selectedMediaForMenu?.id);
+          }}
+          sx={{ color: 'error.main' }}
+        >
+          <Delete sx={{ mr: 1 }} />
+          Xóa
+        </MenuItem>
+      </Menu>
+
       {/* Floating Add Button (Mobile) */}
       {isOwnProfile && (
         <Fab
           color="primary"
-          onClick={onAddPhoto}
+          onClick={() => {
+            setUploadType(mediaType === 'photos' ? 'photo' : 'video');
+            setUploadDialog(true);
+          }}
           sx={{
             position: 'fixed',
             bottom: 24,
