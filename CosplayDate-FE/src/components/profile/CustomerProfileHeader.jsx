@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Box,
   Typography,
@@ -30,7 +31,8 @@ import {
   LocalOffer,
   Event,
   Favorite,
-  TrendingUp
+  TrendingUp,
+  TheaterComedy
 } from '@mui/icons-material';
 
 const CustomerProfileHeader = ({ 
@@ -43,6 +45,7 @@ const CustomerProfileHeader = ({
   walletBalance = 0,
   membershipTier = 'Bronze'
 }) => {
+  const navigate = useNavigate();
   const [anchorEl, setAnchorEl] = useState(null);
   const [avatarHovered, setAvatarHovered] = useState(false);
 
@@ -66,6 +69,10 @@ const CustomerProfileHeader = ({
     handleMenuClose();
   };
 
+  const handleBecomeCosplayer = () => {
+    navigate('/cosplayer-policy');
+    handleMenuClose();
+  };
   const formatCurrency = (amount) => {
     return new Intl.NumberFormat('vi-VN', {
       style: 'currency',
@@ -541,12 +548,22 @@ const CustomerProfileHeader = ({
           <ListItemText primary="Chia sẻ hồ sơ" />
         </MenuItem>
         {isOwnProfile && (
+          <>
+          <MenuItem onClick={handleBecomeCosplayer}>
+              <ListItemIcon>
+                <TheaterComedy fontSize="small" />
+              </ListItemIcon>
+              <ListItemText primary="Trở thành Cosplayer" />
+            </MenuItem>
+
           <MenuItem onClick={() => { handleMenuClose(); /* Handle settings */ }}>
             <ListItemIcon>
               <Settings fontSize="small" />
             </ListItemIcon>
             <ListItemText primary="Cài đặt" />
           </MenuItem>
+          </>
+          
         )}
       </Menu>
     </Paper>

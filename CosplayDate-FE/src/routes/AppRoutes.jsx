@@ -9,6 +9,7 @@ import ProtectedRoute from "../components/ProtectedRoute";
 import Cosplayers from "../pages/CosplayersPage";
 import CosplayerDetailsPage from "../pages/CosplayerDetailsPage";
 import CustomerProfilePage from "../pages/CustomerProfilePage";
+import CosplayerPolicyPage from "../pages/CosplayerPolicyPage";
 function AppRoutes() {
   return (
     <Routes>
@@ -19,6 +20,7 @@ function AppRoutes() {
       <Route path="/reset-password" element={<ResetPasswordPage />} />
       <Route path="/cosplayers" element={<Cosplayers />} />
       <Route path="/cosplayer/:id" element={<CosplayerDetailsPage />} />
+      <Route path="/cosplayer-policy" element={<CosplayerPolicyPage />} />
       
       {/* Profile routes - both own profile and viewing others */}
       <Route path="/profile" element={<ProfilePage />} /> {/* Own profile */}
