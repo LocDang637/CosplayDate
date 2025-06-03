@@ -1,4 +1,3 @@
-// src/routes/AppRoutes.jsx - Updated with cosplayer routes
 import { Routes, Route } from "react-router-dom";
 import HomePage from "../pages/HomePage";
 import LoginPage from "../pages/LoginPage";
@@ -12,6 +11,8 @@ import CosplayerDetailsPage from "../pages/CosplayerDetailsPage";
 import CustomerProfilePage from "../pages/CustomerProfilePage";
 import CosplayerPolicyPage from "../pages/CosplayerPolicyPage";
 import CosplayerProfilePage from "../pages/CosplayerProfilePage";
+import PaymentSuccessPage from "../pages/PaymentSuccessPage";
+import PaymentFailedPage from "../pages/PaymentFailedPage";
 
 function AppRoutes() {
   return (
@@ -22,6 +23,10 @@ function AppRoutes() {
       <Route path="/signup" element={<SignUpPage />} />
       <Route path="/forgot-password" element={<ForgotPasswordPage />} />
       <Route path="/reset-password" element={<ResetPasswordPage />} />
+      
+      {/* Payment routes */}
+      <Route path="/payment/success" element={<PaymentSuccessPage />} />
+      <Route path="/payment/cancel" element={<PaymentFailedPage />} />
       
       {/* Cosplayer public routes */}
       <Route path="/cosplayers" element={<Cosplayers />} />
@@ -71,16 +76,6 @@ function AppRoutes() {
           </ProtectedRoute>
         }
       />
-      
-      {/* Future routes */}
-      {/* 
-      <Route path="/privacy-policy" element={<PrivacyPolicyPage />} />
-      <Route path="/terms-of-service" element={<TermsOfServicePage />} />
-      <Route path="/booking/:cosplayerId" element={<BookingPage />} />
-      <Route path="/messages" element={<MessagesPage />} />
-      <Route path="/messages/:cosplayerId" element={<ChatPage />} />
-      */}
-      
     </Routes>
   );
 }

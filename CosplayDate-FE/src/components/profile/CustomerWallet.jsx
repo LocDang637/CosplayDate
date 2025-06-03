@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+// File: src/components/profile/CustomerWallet.jsx (Complete Implementation)
+import React, { useState, useEffect } from 'react';
 import {
   Box,
   Typography,
@@ -6,7 +7,6 @@ import {
   Card,
   CardContent,
   Button,
-  TextField,
   Dialog,
   DialogTitle,
   DialogContent,
@@ -27,7 +27,10 @@ import {
   Select,
   FormControl,
   InputLabel,
-  Pagination
+  Pagination,
+  CircularProgress,
+  Snackbar,
+  TextField
 } from '@mui/material';
 import {
   AccountBalanceWallet,
@@ -44,24 +47,83 @@ import {
   FilterList,
   SwapVert,
   Receipt,
-  LocalOffer
+  LocalOffer,
+  Star,
+  CheckCircle,
+  Payment,
+  Security,
+  Close
 } from '@mui/icons-material';
+import { paymentAPI } from '../../services/paymentAPI';
 
 const CustomerWallet = ({ 
-  balance = 2500000, 
+  balance = 0, 
   transactions = [],
-  loyaltyPoints = 1250 
+  loyaltyPoints = 0,
+  onBalanceUpdate 
 }) => {
+  // State management
   const [topUpDialog, setTopUpDialog] = useState(false);
   const [withdrawDialog, setWithdrawDialog] = useState(false);
-  const [topUpAmount, setTopUpAmount] = useState('');
   const [withdrawAmount, setWithdrawAmount] = useState('');
-  const [paymentMethod, setPaymentMethod] = useState('credit_card');
   const [filterType, setFilterType] = useState('all');
   const [sortOrder, setSortOrder] = useState('newest');
   const [currentPage, setCurrentPage] = useState(1);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
+
+  // Top-up specific state
+  const [packages, setPackages] = useState([]);
+  const [selectedPackage, setSelectedPackage] = useState(null);
+  const [processingPayment, setProcessingPayment] = useState(false);
+  const [walletBalance, setWalletBalance] = useState(balance);
   
   const transactionsPerPage = 10;
+
+  // Load initial data
+  useEffect(() => {
+    loadWalletData();
+  }, []);
+
+  useEffect(() => {
+    setWalletBalance(balance);
+  }, [balance]);
+
+  const loadWalletData = async () => {
+    try {
+      const result = await paymentAPI.getWalletBalance();
+      if (result.success) {
+        setWalletBalance(result.data.Balance || balance);
+        onBalanceUpdate?.(result.data.Balance || balance);
+      }
+    } catch (error) {
+      console.error('Failed to load wallet data:', error);
+    }
+  };
+
+  const loadPackages = async () => {
+    setLoading(true);
+    try {
+      const result = await paymentAPI.getTopUpPackages();
+      if (result.success) {
+        setPackages(result.data);
+        // Auto-select popular package
+        const popularPackage = result.data.find(pkg => pkg.Popular);
+        if (popularPackage) {
+          setSelectedPackage(popularPackage);
+        } else if (result.data.length > 0) {
+          setSelectedPackage(result.data[0]);
+        }
+      } else {
+        setError(result.message);
+      }
+    } catch (err) {
+      setError('Failed to load packages');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   // Mock transaction data with Vietnamese descriptions
   const mockTransactions = [
@@ -79,7 +141,7 @@ const CustomerWallet = ({
       id: 2,
       type: 'top_up',
       amount: 1000000,
-      description: 'Nạp tiền ví - Thẻ tín dụng',
+      description: 'Nạp tiền ví - PayOS',
       date: '2024-01-14T14:20:00',
       status: 'completed',
       reference: 'TP2024001'
@@ -127,7 +189,7 @@ const CustomerWallet = ({
       id: 7,
       type: 'top_up',
       amount: 2000000,
-      description: 'Nạp tiền ví - Chuyển khoản',
+      description: 'Nạp tiền ví - PayOS',
       date: '2024-01-09T08:00:00',
       status: 'completed',
       reference: 'TP2024002'
@@ -148,6 +210,14 @@ const CustomerWallet = ({
       style: 'currency',
       currency: 'VND'
     }).format(amount);
+  };
+
+  const getBonusMultiplier = (pkg) => {
+    return Math.round(pkg.ReceiveAmount / pkg.PayAmount);
+  };
+
+  const getSavingsAmount = (pkg) => {
+    return pkg.ReceiveAmount - pkg.PayAmount;
   };
 
   const getTransactionIcon = (type) => {
@@ -198,11 +268,38 @@ const CustomerWallet = ({
   const startIndex = (currentPage - 1) * transactionsPerPage;
   const currentTransactions = filteredTransactions.slice(startIndex, startIndex + transactionsPerPage);
 
-  const handleTopUp = () => {
-    // Handle top up logic
-    console.log('Top up:', topUpAmount, paymentMethod);
-    setTopUpDialog(false);
-    setTopUpAmount('');
+  const handleTopUpOpen = () => {
+    setTopUpDialog(true);
+    loadPackages();
+  };
+
+  const handlePackageSelect = (pkg) => {
+    setSelectedPackage(pkg);
+  };
+
+  const handleProceedToPayment = async () => {
+    if (!selectedPackage) return;
+
+    setProcessingPayment(true);
+    setError('');
+
+    try {
+      const result = await paymentAPI.createTopUp({
+        Package: selectedPackage.Package
+      });
+
+      if (result.success && result.data?.CheckoutUrl) {
+        // Close dialog and redirect to PayOS
+        setTopUpDialog(false);
+        window.location.href = result.data.CheckoutUrl;
+      } else {
+        setError(result.message || 'Failed to create payment');
+      }
+    } catch (err) {
+      setError('Payment creation failed');
+    } finally {
+      setProcessingPayment(false);
+    }
   };
 
   const handleWithdraw = () => {
@@ -210,9 +307,103 @@ const CustomerWallet = ({
     console.log('Withdraw:', withdrawAmount);
     setWithdrawDialog(false);
     setWithdrawAmount('');
+    showSnackbar('Yêu cầu rút tiền đã được gửi', 'success');
   };
 
-  const quickTopUpAmounts = [100000, 500000, 1000000, 2000000];
+  const showSnackbar = (message, severity = 'success') => {
+    setSnackbar({ open: true, message, severity });
+  };
+
+  const handleCloseSnackbar = () => {
+    setSnackbar({ ...snackbar, open: false });
+  };
+
+  const PackageCard = ({ pkg, isSelected, onSelect }) => {
+    const bonusMultiplier = getBonusMultiplier(pkg);
+    const savings = getSavingsAmount(pkg);
+    
+    return (
+      <Card
+        sx={{
+          cursor: 'pointer',
+          border: isSelected 
+            ? '2px solid #E91E63' 
+            : '1px solid rgba(0,0,0,0.12)',
+          backgroundColor: isSelected 
+            ? 'rgba(233, 30, 99, 0.05)' 
+            : 'white',
+          borderRadius: '12px',
+          transition: 'all 0.2s ease',
+          position: 'relative',
+          '&:hover': {
+            transform: 'translateY(-2px)',
+            boxShadow: '0 4px 12px rgba(233, 30, 99, 0.15)',
+          },
+        }}
+        onClick={() => onSelect(pkg)}
+      >
+        {/* Popular Badge */}
+        {pkg.Popular && (
+          <Chip
+            label="Phổ biến"
+            size="small"
+            sx={{
+              position: 'absolute',
+              top: -8,
+              left: '50%',
+              transform: 'translateX(-50%)',
+              backgroundColor: '#FF6B35',
+              color: 'white',
+              fontSize: '10px',
+              height: '20px',
+            }}
+          />
+        )}
+
+        {/* Selection Indicator */}
+        {isSelected && (
+          <CheckCircle 
+            sx={{ 
+              position: 'absolute',
+              top: 8,
+              right: 8,
+              color: '#E91E63',
+              fontSize: 20,
+            }} 
+          />
+        )}
+        
+        <CardContent sx={{ textAlign: 'center', p: 2 }}>
+          {/* Package Name */}
+          <Typography variant="h6" sx={{ fontWeight: 700, mb: 1 }}>
+            {pkg.Package}
+          </Typography>
+          
+          {/* Payment Amount */}
+          <Typography variant="body2" sx={{ color: 'text.secondary', mb: 0.5 }}>
+            Trả: {formatCurrency(pkg.PayAmount)}
+          </Typography>
+          
+          {/* Receive Amount */}
+          <Typography variant="h6" sx={{ fontWeight: 700, color: '#E91E63', mb: 1 }}>
+            Nhận: {formatCurrency(pkg.ReceiveAmount)}
+          </Typography>
+          
+          {/* Bonus */}
+          <Chip
+            label={`${bonusMultiplier}x`}
+            size="small"
+            sx={{
+              backgroundColor: '#4CAF50',
+              color: 'white',
+              fontSize: '10px',
+              height: '20px',
+            }}
+          />
+        </CardContent>
+      </Card>
+    );
+  };
 
   return (
     <Box>
@@ -249,7 +440,7 @@ const CustomerWallet = ({
               </Box>
               
               <Typography variant="h3" sx={{ fontWeight: 700, mb: 1 }}>
-                {formatCurrency(balance)}
+                {formatCurrency(walletBalance)}
               </Typography>
               
               <Typography variant="body2" sx={{ opacity: 0.8, mb: 3 }}>
@@ -260,7 +451,7 @@ const CustomerWallet = ({
                 <Button
                   variant="contained"
                   startIcon={<Add />}
-                  onClick={() => setTopUpDialog(true)}
+                  onClick={handleTopUpOpen}
                   sx={{
                     backgroundColor: 'rgba(255,255,255,0.2)',
                     color: 'white',
@@ -506,115 +697,167 @@ const CustomerWallet = ({
       <Dialog
         open={topUpDialog}
         onClose={() => setTopUpDialog(false)}
-        maxWidth="sm"
+        maxWidth="md"
         fullWidth
         PaperProps={{
-          sx: { borderRadius: '16px' }
+          sx: { 
+            borderRadius: '16px',
+            maxHeight: '90vh',
+          }
         }}
       >
         <DialogTitle sx={{ textAlign: 'center', pb: 1 }}>
-          <AccountBalanceWallet sx={{ fontSize: 32, color: 'primary.main', mb: 1 }} />
-          <Typography variant="h6" sx={{ fontWeight: 700 }}>
-            Nạp tiền vào ví
-          </Typography>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <Box sx={{ flex: 1 }} />
+            <Box sx={{ textAlign: 'center' }}>
+              <AccountBalanceWallet sx={{ fontSize: 32, color: 'primary.main', mb: 1 }} />
+              <Typography variant="h6" sx={{ fontWeight: 700 }}>
+                Nạp tiền vào ví
+              </Typography>
+            </Box>
+            <Box sx={{ flex: 1, display: 'flex', justifyContent: 'flex-end' }}>
+              <IconButton onClick={() => setTopUpDialog(false)}>
+                <Close />
+              </IconButton>
+            </Box>
+          </Box>
         </DialogTitle>
         
         <DialogContent>
-          {/* Quick Amount Buttons */}
-          <Typography variant="subtitle2" sx={{ mb: 2, fontWeight: 600 }}>
-            Chọn nhanh:
-          </Typography>
-          <Grid container spacing={1} sx={{ mb: 3 }}>
-            {quickTopUpAmounts.map((amount) => (
-              <Grid item xs={6} key={amount}>
-                <Button
-                  variant="outlined"
-                  fullWidth
-                  onClick={() => setTopUpAmount(amount.toString())}
+          {error && (
+            <Alert 
+              severity="error" 
+              sx={{ 
+                mb: 3, 
+                borderRadius: '12px',
+                fontSize: '14px',
+              }}
+            >
+              {error}
+            </Alert>
+          )}
+
+          {loading ? (
+            <Box sx={{ display: 'flex', justifyContent: 'center', py: 6 }}>
+              <CircularProgress size={60} sx={{ color: 'primary.main' }} />
+            </Box>
+          ) : (
+            <>
+              {/* Header */}
+              <Box sx={{ textAlign: 'center', mb: 3 }}>
+                <Typography variant="body1" sx={{ color: 'text.secondary' }}>
+                  Chọn gói nạp tiền phù hợp với bạn
+                </Typography>
+              </Box>
+
+              {/* Package Grid */}
+              <Grid container spacing={2} sx={{ mb: 4 }}>
+                {packages.map((pkg) => (
+                  <Grid item xs={6} sm={4} md={4} key={pkg.Package}>
+                    <PackageCard
+                      pkg={pkg}
+                      isSelected={selectedPackage?.Package === pkg.Package}
+                      onSelect={handlePackageSelect}
+                    />
+                  </Grid>
+                ))}
+              </Grid>
+
+              {/* Selected Package Details */}
+              {selectedPackage && (
+                <Paper
                   sx={{
-                    borderColor: topUpAmount === amount.toString() ? 'primary.main' : 'rgba(0,0,0,0.12)',
-                    backgroundColor: topUpAmount === amount.toString() ? 'rgba(233, 30, 99, 0.05)' : 'transparent',
+                    backgroundColor: 'rgba(233, 30, 99, 0.05)',
                     borderRadius: '12px',
-                    py: 1.5,
+                    p: 3,
+                    mb: 3,
+                    border: '1px solid rgba(233, 30, 99, 0.2)',
                   }}
                 >
-                  {formatCurrency(amount)}
-                </Button>
-              </Grid>
-            ))}
-          </Grid>
+                  <Typography variant="h6" sx={{ fontWeight: 700, mb: 2, textAlign: 'center' }}>
+                    Chi tiết gói {selectedPackage.Package}
+                  </Typography>
+                  
+                  <Grid container spacing={2} alignItems="center">
+                    <Grid item xs={12} sm={8}>
+                      <Grid container spacing={2}>
+                        <Grid item xs={6}>
+                          <Box sx={{ textAlign: 'center' }}>
+                            <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+                              Số tiền thanh toán
+                            </Typography>
+                            <Typography variant="h6" sx={{ fontWeight: 700, color: '#E91E63' }}>
+                              {formatCurrency(selectedPackage.PayAmount)}
+                            </Typography>
+                          </Box>
+                        </Grid>
+                        
+                        <Grid item xs={6}>
+                          <Box sx={{ textAlign: 'center' }}>
+                            <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+                              Số dư nhận được
+                            </Typography>
+                            <Typography variant="h6" sx={{ fontWeight: 700, color: '#4CAF50' }}>
+                              {formatCurrency(selectedPackage.ReceiveAmount)}
+                            </Typography>
+                          </Box>
+                        </Grid>
+                      </Grid>
 
-          {/* Custom Amount */}
-          <TextField
-            fullWidth
-            label="Nhập số tiền"
-            value={topUpAmount}
-            onChange={(e) => setTopUpAmount(e.target.value)}
-            type="number"
-            sx={{
-              mb: 3,
-              '& .MuiOutlinedInput-root': {
-                borderRadius: '12px',
-              }
-            }}
-            helperText="Tối thiểu: 100.000đ"
-          />
+                      <Divider sx={{ my: 2 }} />
 
-          {/* Payment Method */}
-          <FormControl fullWidth sx={{ mb: 2 }}>
-            <InputLabel>Phương thức thanh toán</InputLabel>
-            <Select
-              value={paymentMethod}
-              onChange={(e) => setPaymentMethod(e.target.value)}
-              label="Phương thức thanh toán"
-              sx={{ borderRadius: '12px' }}
-            >
-              <MenuItem value="credit_card">
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                  <CreditCard sx={{ fontSize: 20 }} />
-                  Thẻ tín dụng/Ghi nợ
-                </Box>
-              </MenuItem>
-              <MenuItem value="bank_transfer">
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                  <AccountBalance sx={{ fontSize: 20 }} />
-                  Chuyển khoản ngân hàng
-                </Box>
-              </MenuItem>
-              <MenuItem value="momo">
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                  <Phone sx={{ fontSize: 20 }} />
-                  Ví điện tử MoMo
-                </Box>
-              </MenuItem>
-            </Select>
-          </FormControl>
+                      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 1 }}>
+                        <TrendingUp sx={{ color: '#FF9800', fontSize: 20 }} />
+                        <Typography variant="body1" sx={{ fontWeight: 600, color: '#FF9800' }}>
+                          Tiết kiệm được: {formatCurrency(getSavingsAmount(selectedPackage))}
+                        </Typography>
+                      </Box>
+                    </Grid>
+                    
+                    <Grid item xs={12} sm={4}>
+                      <Button
+                        variant="contained"
+                        onClick={handleProceedToPayment}
+                        disabled={processingPayment}
+                        startIcon={processingPayment ? <CircularProgress size={20} /> : <Payment />}
+                        fullWidth
+                        sx={{
+                          background: 'linear-gradient(45deg, #E91E63, #9C27B0)',
+                          borderRadius: '8px',
+                          py: 1.5,
+                          fontSize: '16px',
+                          fontWeight: 600,
+                          '&:hover': {
+                            background: 'linear-gradient(45deg, #AD1457, #7B1FA2)',
+                          },
+                        }}
+                      >
+                        {processingPayment ? 'Đang xử lý...' : 'Thanh toán'}
+                      </Button>
+                    </Grid>
+                  </Grid>
+                </Paper>
+              )}
 
-          <Alert severity="info" sx={{ borderRadius: '12px' }}>
-            Phí xử lý: Miễn phí cho số tiền trên 500.000đ
-          </Alert>
+              {/* Security Info */}
+              <Alert 
+                severity="info" 
+                sx={{ 
+                  borderRadius: '12px',
+                  backgroundColor: 'rgba(33, 150, 243, 0.05)',
+                  border: '1px solid rgba(33, 150, 243, 0.2)',
+                }}
+              >
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <Security sx={{ fontSize: 20 }} />
+                  <Typography variant="body2">
+                    Thanh toán được bảo mật bởi PayOS • Không lưu trữ thông tin thẻ
+                  </Typography>
+                </Box>
+              </Alert>
+            </>
+          )}
         </DialogContent>
-        
-        <DialogActions sx={{ p: 3, pt: 1 }}>
-          <Button 
-            onClick={() => setTopUpDialog(false)}
-            sx={{ borderRadius: '12px' }}
-          >
-            Hủy
-          </Button>
-          <Button
-            variant="contained"
-            onClick={handleTopUp}
-            disabled={!topUpAmount || parseFloat(topUpAmount) < 100000}
-            sx={{
-              background: 'linear-gradient(45deg, #E91E63, #9C27B0)',
-              borderRadius: '12px',
-              px: 3,
-            }}
-          >
-            Nạp {topUpAmount && formatCurrency(parseFloat(topUpAmount))}
-          </Button>
-        </DialogActions>
       </Dialog>
 
       {/* Withdraw Dialog */}
@@ -636,7 +879,7 @@ const CustomerWallet = ({
         
         <DialogContent>
           <Alert severity="warning" sx={{ mb: 3, borderRadius: '12px' }}>
-            Số dư khả dụng: {formatCurrency(balance)}
+            Số dư khả dụng: {formatCurrency(walletBalance)}
           </Alert>
 
           <TextField
@@ -669,7 +912,7 @@ const CustomerWallet = ({
           <Button
             variant="contained"
             onClick={handleWithdraw}
-            disabled={!withdrawAmount || parseFloat(withdrawAmount) < 100000 || parseFloat(withdrawAmount) > balance}
+            disabled={!withdrawAmount || parseFloat(withdrawAmount) < 100000 || parseFloat(withdrawAmount) > walletBalance}
             sx={{
               backgroundColor: 'warning.main',
               borderRadius: '12px',
@@ -683,6 +926,22 @@ const CustomerWallet = ({
           </Button>
         </DialogActions>
       </Dialog>
+
+      {/* Snackbar for notifications */}
+      <Snackbar
+        open={snackbar.open}
+        autoHideDuration={6000}
+        onClose={handleCloseSnackbar}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      >
+        <Alert 
+          onClose={handleCloseSnackbar} 
+          severity={snackbar.severity}
+          sx={{ borderRadius: '12px' }}
+        >
+          {snackbar.message}
+        </Alert>
+      </Snackbar>
     </Box>
   );
 };
