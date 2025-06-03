@@ -1,4 +1,4 @@
-// src/components/layout/Header.jsx - FIXED PROFILE NAVIGATION
+// src/components/layout/Header.jsx - FIXED CUSTOMER PROFILE NAVIGATION
 import React, { useState } from 'react';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
 import {
@@ -74,7 +74,7 @@ const Header = ({ user = null, onLogout }) => {
     navigate('/');
   };
 
-  // ✅ FIXED: Completely rewritten profile path logic
+  // ✅ FIXED: Customer profile navigation - the main fix
   const getProfilePath = () => {
     if (!user) {
       console.warn('❌ Header: No user data available');
@@ -91,45 +91,34 @@ const Header = ({ user = null, onLogout }) => {
       fullUser: user
     });
     
-    // FIXED: If no user ID but user exists, use generic profile routes
-    if (!userId) {
-      console.warn('⚠️ Header: No user ID found, using generic profile routes');
-      if (userType === 'Cosplayer' || userType === 'cosplayer') {
-        return '/profile'; // Generic cosplayer profile route
-      } else {
-        return '/customer-profile'; // Generic customer profile route
-      }
-    }
-    
-    // FIXED: Determine correct profile route based on user type with fallbacks
+    // FIXED: Determine correct profile route based on user type
     const normalizedUserType = (userType || '').toLowerCase();
     
-    switch (normalizedUserType) {
-      case 'customer':
-        console.log('👤 Header: Customer profile path:', `/customer-profile/${userId}`);
-        return `/customer-profile/${userId}`;
-      case 'cosplayer':
-        console.log('🎭 Header: Cosplayer profile path:', `/profile/${userId}`);
-        return `/profile/${userId}`;
-      default:
-        console.warn('⚠️ Header: Unknown user type:', userType);
-        
-        // FIXED: Better detection logic based on user properties
-        const hasCosplayerProps = user.displayName || user.pricePerHour || user.category || 
-                                 user.skills || user.portfolio || user.characterTypes;
-        const hasCustomerProps = user.preferences || user.bookingHistory || user.orders;
-        
-        if (hasCosplayerProps && !hasCustomerProps) {
-          console.log('🎭 Header: Detected cosplayer from properties, using cosplayer route');
-          return `/profile/${userId}`;
-        } else if (hasCustomerProps && !hasCosplayerProps) {
-          console.log('👤 Header: Detected customer from properties, using customer route');
-          return `/customer-profile/${userId}`;
-        } else {
-          // FIXED: Default to customer profile if uncertain
-          console.log('👤 Header: Defaulting to customer route due to uncertainty');
-          return `/customer-profile/${userId}`;
-        }
+    // ✅ THE MAIN FIX: Proper routing logic for customers
+    if (normalizedUserType === 'customer') {
+      const profilePath = userId ? `/customer-profile/${userId}` : '/customer-profile';
+      console.log('👤 Header: Customer profile path:', profilePath);
+      return profilePath;
+    } else if (normalizedUserType === 'cosplayer') {
+      const profilePath = userId ? `/profile/${userId}` : '/profile';
+      console.log('🎭 Header: Cosplayer profile path:', profilePath);
+      return profilePath;
+    } else {
+      // FIXED: Better detection logic based on user properties for unknown user types
+      const hasCosplayerProps = user.displayName || user.pricePerHour || user.category || 
+                               user.skills || user.portfolio || user.characterTypes;
+      const hasCustomerProps = user.preferences || user.bookingHistory || user.orders;
+      
+      if (hasCosplayerProps && !hasCustomerProps) {
+        console.log('🎭 Header: Detected cosplayer from properties, using cosplayer route');
+        const profilePath = userId ? `/profile/${userId}` : '/profile';
+        return profilePath;
+      } else {
+        // FIXED: Default to customer profile for unknown/uncertain user types
+        console.log('👤 Header: Defaulting to customer route due to uncertainty or detected customer properties');
+        const profilePath = userId ? `/customer-profile/${userId}` : '/customer-profile';
+        return profilePath;
+      }
     }
   };
 
@@ -149,8 +138,9 @@ const Header = ({ user = null, onLogout }) => {
       // FIXED: Don't redirect to login if we have a user but no specific ID
       if (profilePath === '/login' && user) {
         console.error('❌ Header: Profile path resolved to login despite having user data');
-        // Try fallback routes
-        const fallbackPath = user.userType === 'Cosplayer' ? '/profile' : '/customer-profile';
+        // Try fallback routes based on user type
+        const userType = (user.userType || '').toLowerCase();
+        const fallbackPath = userType === 'cosplayer' ? '/profile' : '/customer-profile';
         console.log('🔄 Header: Using fallback path:', fallbackPath);
         handleNavigation(fallbackPath);
         return;
@@ -163,8 +153,9 @@ const Header = ({ user = null, onLogout }) => {
       if (!user) {
         handleNavigation('/login');
       } else {
-        // Try a safe fallback for authenticated users
-        const safeFallback = user.userType === 'Cosplayer' ? '/profile' : '/customer-profile';
+        // Try a safe fallback for authenticated users based on their actual user type
+        const userType = (user.userType || '').toLowerCase();
+        const safeFallback = userType === 'cosplayer' ? '/profile' : '/customer-profile';
         console.log('🔄 Header: Using safe fallback:', safeFallback);
         handleNavigation(safeFallback);
       }
