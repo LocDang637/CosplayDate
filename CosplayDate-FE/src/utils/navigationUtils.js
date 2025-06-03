@@ -1,5 +1,4 @@
-// In src/utils/navigationUtils.js - Update to handle both id and userId fields
-
+// src/utils/navigationUtils.js - FIXED VERSION
 /**
  * Get the appropriate profile path based on user role
  * @param {Object} user - User object with userType/role
@@ -11,7 +10,7 @@ export const getProfilePath = (user) => {
     return '/login';
   }
   
-  // ✅ FIX: Handle both id and userId fields
+  // FIX: Handle both id and userId fields and ensure they exist
   const userId = user.id || user.userId;
   if (!userId) {
     console.warn('No user ID found in user object:', user);
@@ -30,6 +29,7 @@ export const getProfilePath = (user) => {
     case 'Customer':
       return `/customer-profile/${userId}`;
     case 'Cosplayer':
+      // FIX: Always use /profile for cosplayers (not /cosplayer)
       return `/profile/${userId}`;
     default:
       // Fallback based on user properties or default to customer
@@ -50,15 +50,17 @@ export const getOwnProfilePath = (user) => {
   }
   
   const userType = user.userType || user.role;
+  const userId = user.id || user.userId;
   
+  // FIX: For own profile, always include user ID for consistency
   switch (userType) {
     case 'Customer':
-      return '/customer-profile';
+      return userId ? `/customer-profile/${userId}` : '/customer-profile';
     case 'Cosplayer':
-      return '/profile';
+      return userId ? `/profile/${userId}` : '/profile';
     default:
       console.warn('Unknown user type:', userType, 'Defaulting to customer profile');
-      return '/customer-profile';
+      return userId ? `/customer-profile/${userId}` : '/customer-profile';
   }
 };
 
@@ -79,7 +81,7 @@ export const canViewProfile = (currentUser, targetUser) => {
     if (!currentUser) return false;
     if (currentUser.userType === 'Admin') return true;
     
-    // ✅ FIX: Handle both id and userId fields for comparison
+    // FIX: Handle both id and userId fields for comparison
     const currentUserId = currentUser.id || currentUser.userId;
     const targetUserId = targetUser.id || targetUser.userId;
     
@@ -117,7 +119,27 @@ export const isSameUser = (user1, user2) => {
   return id1 && id2 && id1 === id2;
 };
 
-// ✅ FIX: Update existing functions to use the new helper
+// FIX: Add function to get correct profile route based on current URL and user type
+export const getCorrectProfileRoute = (user, currentPath) => {
+  if (!user) return '/login';
+  
+  const userType = user.userType || user.role;
+  const userId = user.id || user.userId;
+  
+  // If user is on wrong profile type route, redirect to correct one
+  if (userType === 'Customer' && currentPath.startsWith('/profile/')) {
+    return `/customer-profile/${userId}`;
+  }
+  
+  if (userType === 'Cosplayer' && currentPath.startsWith('/customer-profile/')) {
+    return `/profile/${userId}`;
+  }
+  
+  // Return appropriate profile path
+  return getProfilePath(user);
+};
+
+// FIX: Update existing functions to use the new helper
 export const getDashboardPath = (user) => {
   if (!user) {
     return '/';
@@ -221,12 +243,14 @@ export const hasRoutePermission = (user, path) => {
       '/earnings',
       '/notifications',
       '/messages',
-      '/settings'
+      '/settings',
+      '/cosplayer-policy' // Allow cosplayers to view policy
     ];
     
     return cosplayerRoutes.includes(path) || 
            path.startsWith('/profile/') ||
-           path.startsWith('/customer-profile/');
+           path.startsWith('/customer-profile/') ||
+           path.startsWith('/cosplayer/'); // Allow viewing other cosplayers
   }
   
   return false;
@@ -240,6 +264,12 @@ export const getRedirectPath = (user, attemptedPath) => {
   // If user has permission, return the attempted path
   if (hasRoutePermission(user, attemptedPath)) {
     return attemptedPath;
+  }
+  
+  // FIX: Check if user is on wrong profile type and redirect to correct one
+  const correctRoute = getCorrectProfileRoute(user, attemptedPath);
+  if (correctRoute !== attemptedPath) {
+    return correctRoute;
   }
   
   // Otherwise, redirect to appropriate dashboard
@@ -303,6 +333,25 @@ export const getWelcomeMessage = (user, context = 'login') => {
   return `Chào ${name}!`;
 };
 
+// FIX: Add helper to validate profile route match
+export const isValidProfileRoute = (user, currentPath) => {
+  if (!user) return false;
+  
+  const userType = user.userType || user.role;
+  const userId = user.id || user.userId;
+  
+  // Check if current path matches user type
+  if (userType === 'Customer' && currentPath.startsWith('/customer-profile/')) {
+    return true;
+  }
+  
+  if (userType === 'Cosplayer' && currentPath.startsWith('/profile/')) {
+    return true;
+  }
+  
+  return false;
+};
+
 export default {
   getProfilePath,
   getOwnProfilePath,
@@ -315,5 +364,7 @@ export default {
   canViewProfile,
   getWelcomeMessage,
   getUserId,
-  isSameUser
+  isSameUser,
+  getCorrectProfileRoute,
+  isValidProfileRoute
 };

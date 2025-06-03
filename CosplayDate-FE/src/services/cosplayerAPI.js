@@ -1,4 +1,4 @@
-// src/services/cosplayerAPI.js
+// src/services/cosplayerAPI.js - FIXED VERSION with better error handling
 import axios from 'axios';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5068/api';
@@ -20,14 +20,20 @@ const createApiInstance = () => {
     return config;
   });
 
+  // FIX: Improved response interceptor - don't auto-redirect on profile routes
   instance.interceptors.response.use(
     (response) => response,
     (error) => {
-      if (error.response?.status === 401) {
+      const currentPath = window.location.pathname;
+      const isProfileRoute = currentPath.startsWith('/profile/') || currentPath.startsWith('/cosplayer/');
+      
+      // Only auto-redirect to login for 401 errors if not on profile routes
+      if (error.response?.status === 401 && !isProfileRoute) {
         localStorage.removeItem('token');
         localStorage.removeItem('user');
         window.location.href = '/login';
       }
+      
       return Promise.reject(error);
     }
   );
@@ -56,20 +62,92 @@ export const cosplayerAPI = {
     }
   },
 
-  // Get cosplayer details by ID
+  // FIX: Better error handling for cosplayer details
   getCosplayerDetails: async (id) => {
     try {
+      console.log('🔍 API: Getting cosplayer details for ID:', id);
+      
       const response = await api.get(`/cosplayers/${id}`);
+      
+      console.log('✅ API: Cosplayer details response:', {
+        status: response.status,
+        hasData: !!response.data
+      });
+      
       return {
         success: true,
         data: response.data.data || response.data,
         message: response.data.message || 'Cosplayer details loaded successfully'
       };
     } catch (error) {
+      console.error('❌ API: Error getting cosplayer details:', {
+        status: error.response?.status,
+        message: error.response?.data?.message,
+        url: error.config?.url
+      });
+      
+      // FIX: Handle different error cases without triggering global redirects
+      if (error.response?.status === 404) {
+        return {
+          success: false,
+          message: 'Cosplayer profile not found',
+          errors: { notFound: true, status: 404 }
+        };
+      } else if (error.response?.status === 401) {
+        return {
+          success: false,
+          message: 'Authentication required',
+          errors: { unauthorized: true, status: 401 }
+        };
+      } else if (error.response?.status === 403) {
+        return {
+          success: false,
+          message: 'Access denied',
+          errors: { forbidden: true, status: 403 }
+        };
+      } else {
+        return {
+          success: false,
+          message: error.response?.data?.message || 'Failed to load cosplayer details',
+          errors: error.response?.data?.errors || { status: error.response?.status }
+        };
+      }
+    }
+  },
+
+  // FIX: Add method to check if user has cosplayer profile without triggering redirects
+  checkCosplayerProfile: async (userId) => {
+    try {
+      console.log('🔍 API: Checking cosplayer profile for user:', userId);
+      
+      // First try to get cosplayer details
+      const result = await cosplayerAPI.getCosplayerDetails(userId);
+      
+      if (result.success) {
+        return {
+          success: true,
+          exists: true,
+          data: result.data
+        };
+      } else if (result.errors?.notFound) {
+        return {
+          success: true,
+          exists: false,
+          data: null
+        };
+      } else {
+        return {
+          success: false,
+          exists: false,
+          message: result.message
+        };
+      }
+    } catch (error) {
+      console.error('❌ API: Error checking cosplayer profile:', error);
       return {
         success: false,
-        message: error.response?.data?.message || 'Failed to load cosplayer details',
-        errors: error.response?.data?.errors || {}
+        exists: false,
+        message: 'Failed to check cosplayer profile'
       };
     }
   },
@@ -95,13 +173,23 @@ export const cosplayerAPI = {
   // Convert customer to cosplayer
   becomeCosplayer: async (cosplayerData) => {
     try {
+      console.log('🔄 API: Converting to cosplayer with data:', cosplayerData);
+      
       const response = await api.post('/cosplayers/become-cosplayer', cosplayerData);
+      
+      console.log('✅ API: Become cosplayer response:', {
+        status: response.status,
+        hasData: !!response.data
+      });
+      
       return {
         success: true,
         data: response.data.data || response.data,
         message: response.data.message || 'Successfully became a cosplayer'
       };
     } catch (error) {
+      console.error('❌ API: Error becoming cosplayer:', error);
+      
       return {
         success: false,
         message: error.response?.data?.message || 'Failed to become cosplayer',
@@ -120,10 +208,12 @@ export const cosplayerAPI = {
         message: response.data.message || 'Services loaded successfully'
       };
     } catch (error) {
+      // FIX: Don't fail completely if services can't be loaded
+      console.warn('⚠️ API: Could not load services:', error.response?.data?.message);
       return {
-        success: false,
-        message: error.response?.data?.message || 'Failed to load services',
-        errors: error.response?.data?.errors || {}
+        success: true, // Return success with empty array instead of failing
+        data: [],
+        message: 'No services available'
       };
     }
   },
@@ -257,10 +347,12 @@ export const cosplayerMediaAPI = {
         message: response.data.message || 'Photos loaded successfully'
       };
     } catch (error) {
+      // FIX: Don't fail completely if photos can't be loaded
+      console.warn('⚠️ API: Could not load photos:', error.response?.data?.message);
       return {
-        success: false,
-        message: error.response?.data?.message || 'Failed to load photos',
-        errors: error.response?.data?.errors || {}
+        success: true, // Return success with empty array instead of failing
+        data: { photos: [] },
+        message: 'No photos available'
       };
     }
   },
@@ -341,10 +433,12 @@ export const cosplayerMediaAPI = {
         message: response.data.message || 'Videos loaded successfully'
       };
     } catch (error) {
+      // FIX: Don't fail completely if videos can't be loaded
+      console.warn('⚠️ API: Could not load videos:', error.response?.data?.message);
       return {
-        success: false,
-        message: error.response?.data?.message || 'Failed to load videos',
-        errors: error.response?.data?.errors || {}
+        success: true, // Return success with empty array instead of failing
+        data: { videos: [] },
+        message: 'No videos available'
       };
     }
   },

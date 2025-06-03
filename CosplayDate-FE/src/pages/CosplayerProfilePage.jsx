@@ -1,4 +1,4 @@
-// src/pages/CosplayerProfilePage.jsx
+// src/pages/CosplayerProfilePage.jsx - COMPLETE FIXED VERSION
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import {
@@ -30,6 +30,7 @@ const CosplayerProfilePage = () => {
   const navigate = useNavigate();
   const location = useLocation();
   
+  // State management
   const [user, setUser] = useState(null);
   const [profileUser, setProfileUser] = useState(null);
   const [activeTab, setActiveTab] = useState('overview');
@@ -42,76 +43,161 @@ const CosplayerProfilePage = () => {
   const [showBecomeCosplayer, setShowBecomeCosplayer] = useState(false);
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
 
-  const isOwnProfile = !userId || (user?.id && parseInt(userId) === parseInt(user.id));
+  // FIX: Improved user ID comparison logic - handle both id and userId fields
+  const isOwnProfile = !userId || (user && (
+    parseInt(userId) === parseInt(user.id || user.userId)
+  ));
 
+  // Initialize user data and handle route corrections
   useEffect(() => {
     const storedUser = localStorage.getItem('user');
     if (storedUser) {
       try {
         const parsedUser = JSON.parse(storedUser);
         setUser(parsedUser);
+        
+        console.log('👤 User loaded:', {
+          id: parsedUser.id || parsedUser.userId,
+          userType: parsedUser.userType,
+          urlUserId: userId,
+          isOwnProfile: !userId || (parseInt(userId) === parseInt(parsedUser.id || parsedUser.userId))
+        });
+        
+        // FIX: Auto-redirect to proper profile URL if needed
+        if (!userId && parsedUser.userType === 'Cosplayer' && (parsedUser.id || parsedUser.userId)) {
+          const userIdValue = parsedUser.id || parsedUser.userId;
+          console.log('🔄 Redirecting to profile with user ID:', userIdValue);
+          navigate(`/profile/${userIdValue}`, { replace: true });
+          return;
+        }
+        
+        // FIX: If customer is on cosplayer profile route, redirect to customer profile
+        if (userId && parsedUser.userType === 'Customer' && 
+            parseInt(userId) === parseInt(parsedUser.id || parsedUser.userId)) {
+          console.log('🔄 Customer on cosplayer route, redirecting to customer profile');
+          navigate(`/customer-profile/${userId}`, { replace: true });
+          return;
+        }
+        
       } catch (error) {
-        console.error('Error parsing stored user:', error);
+        console.error('❌ Error parsing stored user:', error);
         localStorage.removeItem('user');
+        navigate('/login');
+        return;
       }
     }
 
+    // Handle success messages from navigation state
     if (location.state?.message) {
       showSnackbar(location.state.message, 'success');
     }
-  }, [location.state]);
+  }, [location.state, userId, navigate]);
 
+  // Main profile loading effect
   useEffect(() => {
     const loadProfile = async () => {
-      if (isOwnProfile && !user) return;
+      // FIX: Don't proceed if we don't have user data yet for own profile
+      if (isOwnProfile && !user) {
+        setLoading(false);
+        return;
+      }
 
       try {
         setLoading(true);
         setError(null);
+        setShowBecomeCosplayer(false);
 
-        const targetUserId = userId || user?.id;
+        const targetUserId = userId || user?.id || user?.userId;
         if (!targetUserId) {
+          console.error('❌ No target user ID found');
           setError('User ID not found');
+          setLoading(false);
           return;
         }
 
-        const result = await cosplayerAPI.getCosplayerDetails(targetUserId);
-        
-        if (result.success) {
-          setProfileUser(result.data);
+        console.log('🔍 Loading profile for:', {
+          targetUserId,
+          isOwnProfile,
+          userType: user?.userType
+        });
+
+        // FIX: Enhanced error handling - don't let API errors trigger redirects
+        try {
+          const result = await cosplayerAPI.getCosplayerDetails(targetUserId);
           
-          if (isOwnProfile) {
-            const updatedUser = { ...user, ...result.data };
-            localStorage.setItem('user', JSON.stringify(updatedUser));
-            setUser(updatedUser);
+          console.log('📊 API Result:', {
+            success: result.success,
+            hasData: !!result.data,
+            error: result.message
+          });
+          
+          if (result.success) {
+            setProfileUser(result.data);
+            
+            // Update local storage for own profile
+            if (isOwnProfile) {
+              const updatedUser = { ...user, ...result.data };
+              localStorage.setItem('user', JSON.stringify(updatedUser));
+              setUser(updatedUser);
+            }
+            
+            console.log('✅ Profile loaded successfully');
+          } else {
+            // FIX: Handle different error scenarios gracefully
+            if (isOwnProfile && user?.userType === 'Cosplayer') {
+              // User is marked as cosplayer but no profile found - show become cosplayer form
+              console.log('👤 User marked as cosplayer but no profile found, showing become cosplayer form');
+              setShowBecomeCosplayer(true);
+            } else if (isOwnProfile) {
+              // Customer viewing own profile but using cosplayer route - redirect to customer profile
+              console.log('🔄 Customer on cosplayer route, redirecting to customer profile');
+              navigate(`/customer-profile/${targetUserId}`, { replace: true });
+              return;
+            } else {
+              // Viewing someone else's profile that doesn't exist
+              console.log('❌ Other user profile not found');
+              setError(result.message || 'Cosplayer profile not found');
+            }
           }
-        } else {
-          if (isOwnProfile && result.message?.includes('not found')) {
+        } catch (apiError) {
+          console.error('🚨 API Error:', apiError);
+          
+          // FIX: Don't show errors for own profile - show become cosplayer form instead
+          if (isOwnProfile && user?.userType === 'Cosplayer') {
+            console.log('🔧 API error for own profile, showing become cosplayer form');
             setShowBecomeCosplayer(true);
           } else {
-            setError(result.message || 'Failed to load profile');
+            setError('Unable to load profile. Please try again.');
           }
         }
 
       } catch (err) {
-        console.error('Profile loading error:', err);
-        setError('Unable to load profile. Please try again.');
+        console.error('💥 Profile loading error:', err);
+        
+        if (isOwnProfile && user?.userType === 'Cosplayer') {
+          setShowBecomeCosplayer(true);
+        } else {
+          setError('Unable to load profile. Please try again.');
+        }
       } finally {
         setLoading(false);
       }
     };
 
-    if (!isOwnProfile || user) {
+    // Only load if we have user data or it's not own profile
+    if (user || !isOwnProfile) {
       loadProfile();
     }
-  }, [userId, user?.id, isOwnProfile]);
+  }, [userId, user, isOwnProfile, navigate]);
 
+  // Load media when profile user changes or tab changes
   useEffect(() => {
     if (profileUser?.id) {
       loadMedia();
     }
   }, [profileUser?.id, activeTab]);
 
+  // Media loading function
   const loadMedia = async () => {
     if (!profileUser?.id || (activeTab !== 'gallery' && activeTab !== 'videos')) return;
 
@@ -129,13 +215,16 @@ const CosplayerProfilePage = () => {
         }
       }
     } catch (err) {
-      console.error('Media loading error:', err);
+      console.error('📷 Media loading error:', err);
+      // Don't show errors for media loading failures
     } finally {
       setMediaLoading(false);
     }
   };
 
+  // Event handlers
   const handleLogout = () => {
+    console.log('👋 Logging out user');
     setUser(null);
     localStorage.removeItem('user');
     localStorage.removeItem('token');
@@ -143,6 +232,7 @@ const CosplayerProfilePage = () => {
   };
 
   const handleTabChange = (event, newValue) => {
+    console.log('📑 Tab changed to:', newValue);
     setActiveTab(newValue);
   };
 
@@ -156,6 +246,7 @@ const CosplayerProfilePage = () => {
   };
 
   const handleBecomeCosplayerSuccess = (updatedUser, cosplayerData) => {
+    console.log('🎭 Successfully became cosplayer:', cosplayerData);
     setUser(updatedUser);
     setShowBecomeCosplayer(false);
     setProfileUser(cosplayerData);
@@ -170,6 +261,7 @@ const CosplayerProfilePage = () => {
     setSnackbar({ ...snackbar, open: false });
   };
 
+  // Tab configuration
   const cosplayerTabs = [
     {
       id: 'overview',
@@ -199,6 +291,7 @@ const CosplayerProfilePage = () => {
     }
   ];
 
+  // Tab content renderer
   const renderTabContent = () => {
     switch (activeTab) {
       case 'overview':
@@ -241,7 +334,9 @@ const CosplayerProfilePage = () => {
     }
   };
 
+  // FIX: Show become cosplayer form if needed
   if (showBecomeCosplayer && isOwnProfile) {
+    console.log('🎭 Rendering become cosplayer form');
     return (
       <ThemeProvider theme={cosplayTheme}>
         <Box sx={{ minHeight: '100vh', backgroundColor: '#FFE8F5' }}>
@@ -258,7 +353,9 @@ const CosplayerProfilePage = () => {
     );
   }
 
+  // Loading state
   if (loading) {
+    console.log('⏳ Rendering loading state');
     return (
       <ThemeProvider theme={cosplayTheme}>
         <Box sx={{ minHeight: '100vh', backgroundColor: '#FFE8F5' }}>
@@ -275,7 +372,9 @@ const CosplayerProfilePage = () => {
     );
   }
 
+  // Error state
   if (error) {
+    console.log('❌ Rendering error state:', error);
     return (
       <ThemeProvider theme={cosplayTheme}>
         <Box sx={{ minHeight: '100vh', backgroundColor: '#FFE8F5' }}>
@@ -292,6 +391,34 @@ const CosplayerProfilePage = () => {
             >
               {error}
             </Alert>
+            <Box sx={{ textAlign: 'center', mt: 4 }}>
+              <Button
+                variant="contained"
+                onClick={() => navigate('/cosplayers')}
+                sx={{
+                  background: 'linear-gradient(45deg, #E91E63, #9C27B0)',
+                  borderRadius: '12px',
+                  textTransform: 'none',
+                  fontWeight: 600,
+                  mr: 2
+                }}
+              >
+                Xem tất cả Cosplayer
+              </Button>
+              <Button
+                variant="outlined"
+                onClick={() => navigate('/')}
+                sx={{
+                  borderColor: 'primary.main',
+                  color: 'primary.main',
+                  borderRadius: '12px',
+                  textTransform: 'none',
+                  fontWeight: 600,
+                }}
+              >
+                Về trang chủ
+              </Button>
+            </Box>
           </Container>
           <Footer />
         </Box>
@@ -299,17 +426,21 @@ const CosplayerProfilePage = () => {
     );
   }
 
+  // Main profile view
+  console.log('✅ Rendering main profile view');
   return (
     <ThemeProvider theme={cosplayTheme}>
       <Box sx={{ minHeight: '100vh', backgroundColor: '#FFE8F5' }}>
         <Header user={user} onLogout={handleLogout} />
         
         <Container maxWidth="lg" sx={{ py: 4 }}>
+          {/* Profile Header */}
           <CosplayerProfileHeader
             user={profileUser}
             isOwnProfile={isOwnProfile}
           />
 
+          {/* Navigation Tabs */}
           <ProfileTabs
             activeTab={activeTab}
             onTabChange={handleTabChange}
@@ -317,11 +448,13 @@ const CosplayerProfilePage = () => {
             customTabs={cosplayerTabs}
           />
 
+          {/* Tab Content */}
           <Box sx={{ minHeight: '400px' }}>
             {renderTabContent()}
           </Box>
         </Container>
 
+        {/* Floating Add Button for Media Tabs */}
         {isOwnProfile && (activeTab === 'gallery' || activeTab === 'videos') && (
           <Fab
             color="primary"
@@ -330,6 +463,9 @@ const CosplayerProfilePage = () => {
               bottom: 24,
               right: 24,
               background: 'linear-gradient(45deg, #E91E63, #9C27B0)',
+              '&:hover': {
+                background: 'linear-gradient(45deg, #AD1457, #7B1FA2)',
+              },
             }}
             onClick={() => setUploadDialog({ 
               open: true, 
@@ -342,6 +478,7 @@ const CosplayerProfilePage = () => {
 
         <Footer />
 
+        {/* Media Upload Dialog */}
         <MediaUploadDialog
           open={uploadDialog.open}
           onClose={() => setUploadDialog({ ...uploadDialog, open: false })}
@@ -349,6 +486,7 @@ const CosplayerProfilePage = () => {
           onUploadSuccess={handleUploadSuccess}
         />
 
+        {/* Success/Error Snackbar */}
         <Snackbar
           open={snackbar.open}
           autoHideDuration={6000}
