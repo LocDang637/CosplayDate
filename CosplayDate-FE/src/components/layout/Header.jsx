@@ -1,4 +1,4 @@
-// src/components/layout/Header.jsx - FIXED VERSION
+// src/components/layout/Header.jsx - FIXED PROFILE NAVIGATION
 import React, { useState } from 'react';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
 import {
@@ -74,80 +74,100 @@ const Header = ({ user = null, onLogout }) => {
     navigate('/');
   };
 
-  // ✅ FIX: Completely rewritten profile path logic with better error handling
+  // ✅ FIXED: Completely rewritten profile path logic
   const getProfilePath = () => {
     if (!user) {
       console.warn('❌ Header: No user data available');
       return '/login';
     }
     
-    // FIX: Handle both id and userId fields more robustly
-    const userId = user.id || user.userId;
-    const userType = user.userType || user.role;
+    // FIXED: More robust user ID detection
+    const userId = user.id || user.userId || user.accountId;
+    const userType = user.userType || user.role || user.type;
     
     console.log('🔍 Header Profile Path Debug:', {
       userId: userId,
       userType: userType,
-      userObject: {
-        id: user.id,
-        userId: user.userId,
-        userType: user.userType,
-        role: user.role
-      }
+      fullUser: user
     });
     
-    // FIX: Ensure we have a valid user ID
+    // FIXED: If no user ID but user exists, use generic profile routes
     if (!userId) {
-      console.error('❌ Header: No valid user ID found in user object:', user);
-      // Instead of redirecting to login, try to get profile without ID
-      // This allows the profile page to handle the redirect logic
-      if (userType === 'Cosplayer') {
-        return '/profile';
+      console.warn('⚠️ Header: No user ID found, using generic profile routes');
+      if (userType === 'Cosplayer' || userType === 'cosplayer') {
+        return '/profile'; // Generic cosplayer profile route
       } else {
-        return '/customer-profile';
+        return '/customer-profile'; // Generic customer profile route
       }
     }
     
-    // FIX: Determine correct profile route based on user type
-    switch (userType) {
-      case 'Customer':
+    // FIXED: Determine correct profile route based on user type with fallbacks
+    const normalizedUserType = (userType || '').toLowerCase();
+    
+    switch (normalizedUserType) {
+      case 'customer':
         console.log('👤 Header: Customer profile path:', `/customer-profile/${userId}`);
         return `/customer-profile/${userId}`;
-      case 'Cosplayer':
+      case 'cosplayer':
         console.log('🎭 Header: Cosplayer profile path:', `/profile/${userId}`);
         return `/profile/${userId}`;
       default:
-        // FIX: Better fallback logic
         console.warn('⚠️ Header: Unknown user type:', userType);
-        // Check if user has cosplayer-related properties
-        if (user.displayName || user.pricePerHour || user.category) {
-          console.log('🎭 Header: Detected cosplayer properties, using cosplayer route');
+        
+        // FIXED: Better detection logic based on user properties
+        const hasCosplayerProps = user.displayName || user.pricePerHour || user.category || 
+                                 user.skills || user.portfolio || user.characterTypes;
+        const hasCustomerProps = user.preferences || user.bookingHistory || user.orders;
+        
+        if (hasCosplayerProps && !hasCustomerProps) {
+          console.log('🎭 Header: Detected cosplayer from properties, using cosplayer route');
           return `/profile/${userId}`;
+        } else if (hasCustomerProps && !hasCosplayerProps) {
+          console.log('👤 Header: Detected customer from properties, using customer route');
+          return `/customer-profile/${userId}`;
         } else {
-          console.log('👤 Header: Defaulting to customer route');
+          // FIXED: Default to customer profile if uncertain
+          console.log('👤 Header: Defaulting to customer route due to uncertainty');
           return `/customer-profile/${userId}`;
         }
     }
   };
 
-  // FIX: Improved profile navigation handler with error handling
+  // ✅ FIXED: Simplified profile navigation with better error handling
   const handleProfileNavigation = () => {
     try {
+      // FIXED: Early validation
+      if (!user) {
+        console.error('❌ Header: No user data available for profile navigation');
+        handleNavigation('/login');
+        return;
+      }
+
       const profilePath = getProfilePath();
       console.log('📱 Header: Profile navigation to:', profilePath);
       
-      // FIX: Validate path before navigation
-      if (!profilePath || profilePath === '/login') {
-        console.error('❌ Header: Invalid profile path, redirecting to login');
-        handleNavigation('/login');
+      // FIXED: Don't redirect to login if we have a user but no specific ID
+      if (profilePath === '/login' && user) {
+        console.error('❌ Header: Profile path resolved to login despite having user data');
+        // Try fallback routes
+        const fallbackPath = user.userType === 'Cosplayer' ? '/profile' : '/customer-profile';
+        console.log('🔄 Header: Using fallback path:', fallbackPath);
+        handleNavigation(fallbackPath);
         return;
       }
       
       handleNavigation(profilePath);
     } catch (error) {
       console.error('💥 Header: Error in profile navigation:', error);
-      // Fallback to login if something goes wrong
-      handleNavigation('/login');
+      // FIXED: Only fallback to login if there's really no user
+      if (!user) {
+        handleNavigation('/login');
+      } else {
+        // Try a safe fallback for authenticated users
+        const safeFallback = user.userType === 'Cosplayer' ? '/profile' : '/customer-profile';
+        console.log('🔄 Header: Using safe fallback:', safeFallback);
+        handleNavigation(safeFallback);
+      }
     }
   };
 
@@ -157,7 +177,7 @@ const Header = ({ user = null, onLogout }) => {
     { label: 'Dịch vụ', path: '/services', icon: <Favorite /> },
   ];
 
-  // FIX: Updated auth menu items with better profile handling
+  // ✅ FIXED: Updated auth menu items 
   const authMenuItems = isAuthenticated ? [
     { 
       label: 'Hồ sơ của tôi', 
@@ -425,7 +445,6 @@ const Header = ({ user = null, onLogout }) => {
               borderRadius: '12px',
               border: '1px solid rgba(233, 30, 99, 0.1)',
               boxShadow: '0 8px 24px rgba(233, 30, 99, 0.15)',
-              // Force positioning to stay on right side
               right: 0,
               left: 'auto !important',
             }
@@ -446,7 +465,7 @@ const Header = ({ user = null, onLogout }) => {
                   {user.userType === 'Customer' ? '👤 Khách hàng' : '🎭 Cosplayer'}
                 </Typography>
               )}
-              {/* ✅ FIX: Enhanced debug info for development */}
+              {/* ✅ Enhanced debug info for development */}
               {process.env.NODE_ENV === 'development' && (
                 <Box sx={{ mt: 0.5, p: 1, backgroundColor: 'rgba(0,0,0,0.02)', borderRadius: '4px' }}>
                   <Typography variant="body2" sx={{ color: 'text.secondary', fontSize: '10px' }}>
