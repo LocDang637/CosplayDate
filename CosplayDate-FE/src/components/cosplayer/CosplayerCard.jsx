@@ -10,11 +10,12 @@ import {
   Box,
   Chip,
   Rating,
-  Avatar
+  Avatar,
+  IconButton
 } from '@mui/material';
-import { Message, LocationOn } from '@mui/icons-material';
+import { Message, LocationOn, Favorite, FavoriteBorder } from '@mui/icons-material';
 
-const CosplayerCard = ({ cosplayer, onBooking, onMessage }) => {
+const CosplayerCard = ({ cosplayer, onBooking, onMessage, onFavorite, isFavorite = false }) => {
   const navigate = useNavigate();
 
   const formatPrice = (price) => {
@@ -33,6 +34,11 @@ const CosplayerCard = ({ cosplayer, onBooking, onMessage }) => {
   const handleMessageClick = (e) => {
     e.stopPropagation();
     onMessage?.(cosplayer);
+  };
+
+  const handleFavoriteClick = (e) => {
+    e.stopPropagation();
+    onFavorite?.(cosplayer.id);
   };
 
   return (
@@ -54,14 +60,13 @@ const CosplayerCard = ({ cosplayer, onBooking, onMessage }) => {
         mx: 'auto',
       }}
     >
-      {/* Profile Image */}
       <Box sx={{ position: 'relative' }}>
-        {cosplayer.profilePicture ? (
+        {cosplayer.featuredPhotoUrl || cosplayer.avatarUrl ? (
           <CardMedia
             component="img"
             height="200"
-            image={cosplayer.profilePicture}
-            alt={cosplayer.stageName}
+            image={cosplayer.featuredPhotoUrl || cosplayer.avatarUrl}
+            alt={cosplayer.displayName}
             sx={{
               objectFit: 'cover',
             }}
@@ -84,20 +89,35 @@ const CosplayerCard = ({ cosplayer, onBooking, onMessage }) => {
                 fontSize: '2rem',
               }}
             >
-              {cosplayer.stageName?.[0] || cosplayer.firstName?.[0] || '?'}
+              {cosplayer.displayName?.[0] || '?'}
             </Avatar>
           </Box>
         )}
 
-        {/* Online Status */}
-        {cosplayer.isOnline && (
+        <IconButton
+          onClick={handleFavoriteClick}
+          sx={{
+            position: 'absolute',
+            top: 8,
+            right: 8,
+            backgroundColor: 'rgba(255,255,255,0.9)',
+            color: isFavorite ? '#E91E63' : 'text.secondary',
+            width: 32,
+            height: 32,
+            '&:hover': { backgroundColor: 'rgba(255,255,255,1)' },
+          }}
+        >
+          {isFavorite ? <Favorite sx={{ fontSize: 18 }} /> : <FavoriteBorder sx={{ fontSize: 18 }} />}
+        </IconButton>
+
+        {cosplayer.isAvailable && (
           <Chip
-            label="Online"
+            label="Sẵn sàng"
             size="small"
             sx={{
               position: 'absolute',
               top: 8,
-              right: 8,
+              left: 8,
               backgroundColor: '#4CAF50',
               color: 'white',
               fontSize: '10px',
@@ -108,7 +128,6 @@ const CosplayerCard = ({ cosplayer, onBooking, onMessage }) => {
       </Box>
       
       <CardContent sx={{ p: 2 }}>
-        {/* Name */}
         <Typography
           variant="h6"
           sx={{
@@ -119,26 +138,31 @@ const CosplayerCard = ({ cosplayer, onBooking, onMessage }) => {
             lineHeight: 1.2,
           }}
         >
-          {cosplayer.stageName || `${cosplayer.firstName} ${cosplayer.lastName}`}
+          {cosplayer.displayName}
         </Typography>
 
-        {/* Rating */}
-        {cosplayer.averageRating && (
+        <Typography
+          variant="body2"
+          sx={{
+            color: 'text.secondary',
+            textAlign: 'center',
+            mb: 1,
+            fontSize: '12px',
+          }}
+        >
+          {cosplayer.category}
+        </Typography>
+
+        {cosplayer.rating && (
           <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', mb: 1 }}>
-            <Rating 
-              value={cosplayer.averageRating} 
-              size="small" 
-              readOnly 
-              precision={0.1}
-            />
+            <Rating value={cosplayer.rating} size="small" readOnly precision={0.1} />
             <Typography variant="body2" sx={{ ml: 0.5, fontSize: '12px', color: 'text.secondary' }}>
               ({cosplayer.totalReviews || 0})
             </Typography>
           </Box>
         )}
 
-        {/* Price */}
-        {cosplayer.hourlyRate && (
+        {cosplayer.pricePerHour && (
           <Typography
             variant="body1"
             sx={{
@@ -149,11 +173,10 @@ const CosplayerCard = ({ cosplayer, onBooking, onMessage }) => {
               fontSize: '14px',
             }}
           >
-            {formatPrice(cosplayer.hourlyRate)}
+            {formatPrice(cosplayer.pricePerHour)}
           </Typography>
         )}
 
-        {/* Location */}
         {cosplayer.location && (
           <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', mb: 2 }}>
             <LocationOn sx={{ fontSize: 14, color: 'text.secondary', mr: 0.5 }} />
@@ -163,7 +186,6 @@ const CosplayerCard = ({ cosplayer, onBooking, onMessage }) => {
           </Box>
         )}
 
-        {/* Specialties */}
         {cosplayer.specialties && cosplayer.specialties.length > 0 && (
           <Box sx={{ display: 'flex', justifyContent: 'center', mb: 2, flexWrap: 'wrap', gap: 0.5 }}>
             {cosplayer.specialties.slice(0, 2).map((specialty, index) => (
@@ -182,9 +204,7 @@ const CosplayerCard = ({ cosplayer, onBooking, onMessage }) => {
           </Box>
         )}
 
-        {/* Action Buttons */}
         <Box sx={{ display: 'flex', gap: 1 }}>
-          {/* Message Button */}
           <Button
             variant="outlined"
             size="small"
@@ -206,7 +226,6 @@ const CosplayerCard = ({ cosplayer, onBooking, onMessage }) => {
             Nhắn tin
           </Button>
 
-          {/* Booking Button */}
           <Button
             variant="contained"
             size="small"

@@ -1,18 +1,12 @@
-// src/pages/CosplayersPage.jsx
+// src/pages/CosplayersPage.jsx - Complete implementation
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
   Box,
   Container,
   Typography,
-  Grid,
   Card,
-  CardContent,
-  CardMedia,
   Button,
-  Chip,
-  Rating,
-  IconButton,
   Pagination,
   Checkbox,
   FormGroup,
@@ -23,12 +17,13 @@ import {
   TextField,
   InputAdornment,
   Skeleton,
-  Alert
+  Alert,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem
 } from '@mui/material';
 import {
-  Message,
-  Favorite,
-  FavoriteBorder,
   Search,
   ExpandMore
 } from '@mui/icons-material';
@@ -36,6 +31,7 @@ import { ThemeProvider } from '@mui/material/styles';
 import { cosplayTheme } from '../theme/cosplayTheme';
 import Header from '../components/layout/Header';
 import Footer from '../components/layout/Footer';
+import CosplayerCard from '../components/cosplayer/CosplayerCard';
 import { cosplayerAPI } from '../services/cosplayerAPI';
 
 const CosplayersPage = () => {
@@ -47,26 +43,55 @@ const CosplayersPage = () => {
   const [error, setError] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
+  const [totalCount, setTotalCount] = useState(0);
   const [favorites, setFavorites] = useState(new Set());
   const [searchTerm, setSearchTerm] = useState('');
   const [filters, setFilters] = useState({
     gender: [],
     categories: [],
-    priceRange: []
+    minPrice: '',
+    maxPrice: '',
+    minRating: '',
+    location: '',
+    specialties: [],
+    isAvailable: null
   });
+  const [sortBy, setSortBy] = useState('rating');
+  const [sortOrder, setSortOrder] = useState('desc');
   
   const itemsPerPage = 12;
+
+  const categories = [
+    'Anime', 'Game', 'Movie', 'TV Show', 'Comic', 'Original Character',
+    'Fantasy', 'Sci-Fi', 'Historical', 'Gothic', 'Kawaii', 'Maid',
+    'School Uniform', 'Traditional', 'Modern', 'Other'
+  ];
+
+  const specialties = [
+    'Costume Making', 'Prop Making', 'Wig Styling', 'Makeup Artist',
+    'Photography', 'Performance', 'Voice Acting', 'Dancing'
+  ];
+
+  const locations = [
+    'Hà Nội', 'TP. Hồ Chí Minh', 'Đà Nẵng', 'Cần Thơ', 'Hải Phòng', 'Nha Trang'
+  ];
 
   useEffect(() => {
     const storedUser = localStorage.getItem('user');
     if (storedUser) {
       setUser(JSON.parse(storedUser));
     }
+    
+    const initialFilters = Object.fromEntries(searchParams);
+    if (Object.keys(initialFilters).length > 0) {
+      setFilters(prev => ({ ...prev, ...initialFilters }));
+      setSearchTerm(initialFilters.searchTerm || '');
+    }
   }, []);
 
   useEffect(() => {
     loadCosplayers();
-  }, [currentPage, searchTerm, filters]);
+  }, [currentPage, searchTerm, filters, sortBy, sortOrder]);
 
   const loadCosplayers = async () => {
     try {
@@ -76,22 +101,31 @@ const CosplayersPage = () => {
       const queryParams = {
         page: currentPage,
         pageSize: itemsPerPage,
-        searchTerm: searchTerm || undefined,
+        sortBy: sortBy,
+        sortOrder: sortOrder,
+        ...(searchTerm && { searchTerm }),
         ...(filters.gender.length > 0 && { gender: filters.gender.join(',') }),
-        ...(filters.categories.length > 0 && { categories: filters.categories.join(',') }),
-        ...(filters.priceRange.length > 0 && { priceRange: filters.priceRange.join(',') })
+        ...(filters.categories.length > 0 && { category: filters.categories.join(',') }),
+        ...(filters.location && { location: filters.location }),
+        ...(filters.minPrice && { minPrice: parseFloat(filters.minPrice) }),
+        ...(filters.maxPrice && { maxPrice: parseFloat(filters.maxPrice) }),
+        ...(filters.minRating && { minRating: parseFloat(filters.minRating) }),
+        ...(filters.specialties.length > 0 && { specialties: filters.specialties.join(',') }),
+        ...(filters.isAvailable !== null && { isAvailable: filters.isAvailable })
       };
 
       const result = await cosplayerAPI.getCosplayers(queryParams);
 
       if (result.success) {
-        setCosplayers(result.data.items || result.data || []);
-        setTotalPages(Math.ceil((result.data.totalCount || result.data.length) / itemsPerPage));
+        const data = result.data;
+        setCosplayers(data.cosplayers || data.items || data || []);
+        setTotalCount(data.totalCount || data.length || 0);
+        setTotalPages(data.totalPages || Math.ceil((data.totalCount || data.length || 0) / itemsPerPage));
       } else {
         setError(result.message);
       }
     } catch (err) {
-      setError('Failed to load cosplayers');
+      setError('Không thể tải danh sách cosplayer');
     } finally {
       setLoading(false);
     }
@@ -100,17 +134,35 @@ const CosplayersPage = () => {
   const handleSearch = (value) => {
     setSearchTerm(value);
     setCurrentPage(1);
+    updateSearchParams({ ...filters, searchTerm: value });
   };
 
   const handleFilterChange = (filterType, value, checked) => {
-    const newFilters = { ...filters };
-    if (checked) {
-      newFilters[filterType] = [...newFilters[filterType], value];
+    let newFilters = { ...filters };
+    
+    if (Array.isArray(newFilters[filterType])) {
+      if (checked) {
+        newFilters[filterType] = [...newFilters[filterType], value];
+      } else {
+        newFilters[filterType] = newFilters[filterType].filter(item => item !== value);
+      }
     } else {
-      newFilters[filterType] = newFilters[filterType].filter(item => item !== value);
+      newFilters[filterType] = value;
     }
+    
     setFilters(newFilters);
     setCurrentPage(1);
+    updateSearchParams({ ...newFilters, searchTerm });
+  };
+
+  const updateSearchParams = (newFilters) => {
+    const params = new URLSearchParams();
+    Object.entries(newFilters).forEach(([key, value]) => {
+      if (value && (Array.isArray(value) ? value.length > 0 : true)) {
+        params.set(key, Array.isArray(value) ? value.join(',') : value);
+      }
+    });
+    setSearchParams(params);
   };
 
   const handlePageChange = (event, value) => {
@@ -128,8 +180,12 @@ const CosplayersPage = () => {
     setFavorites(newFavorites);
   };
 
-  const handleViewCosplayer = (cosplayerId) => {
-    navigate(`/cosplayer/${cosplayerId}`);
+  const handleBooking = (cosplayer) => {
+    navigate(`/booking/${cosplayer.id}`);
+  };
+
+  const handleMessage = (cosplayer) => {
+    navigate(`/messages/${cosplayer.id}`);
   };
 
   const handleLogout = () => {
@@ -138,138 +194,32 @@ const CosplayersPage = () => {
     localStorage.removeItem('token');
   };
 
-  const formatPrice = (price) => {
-    return new Intl.NumberFormat('vi-VN').format(price) + 'đ/giờ';
+  const clearFilters = () => {
+    setFilters({
+      gender: [],
+      categories: [],
+      minPrice: '',
+      maxPrice: '',
+      minRating: '',
+      location: '',
+      specialties: [],
+      isAvailable: null
+    });
+    setSearchTerm('');
+    setCurrentPage(1);
+    setSearchParams(new URLSearchParams());
   };
 
   const CosplayerSkeleton = () => (
-    <Card sx={{ borderRadius: '16px', overflow: 'hidden', width: 200, height: 330 }}>
+    <Card sx={{ borderRadius: '16px', overflow: 'hidden', width: 240, height: 380 }}>
       <Skeleton variant="rectangular" height={200} />
-      <CardContent sx={{ p: 2 }}>
+      <Box sx={{ p: 2 }}>
         <Skeleton variant="text" sx={{ fontSize: '1rem', mb: 1 }} />
         <Skeleton variant="text" width="60%" sx={{ mb: 1 }} />
         <Skeleton variant="rectangular" height={32} sx={{ borderRadius: '16px' }} />
-      </CardContent>
+      </Box>
     </Card>
   );
-
-  const CosplayerCard = ({ cosplayer }) => {
-    const isFavorite = favorites.has(cosplayer.id);
-
-    return (
-      <Card
-        onClick={() => handleViewCosplayer(cosplayer.id)}
-        sx={{
-          borderRadius: '16px',
-          overflow: 'hidden',
-          background: 'white',
-          boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
-          transition: 'all 0.3s ease',
-          cursor: 'pointer',
-          '&:hover': {
-            transform: 'translateY(-4px)',
-            boxShadow: '0 8px 24px rgba(233, 30, 99, 0.15)',
-          },
-          width: 200,
-          height: 330,
-          display: 'flex',
-          flexDirection: 'column',
-        }}
-      >
-        <Box sx={{ position: 'relative' }}>
-          <CardMedia
-            component="img"
-            height="180"
-            image={cosplayer.profilePicture || '/src/assets/default-avatar.png'}
-            alt={cosplayer.stageName}
-            sx={{ objectFit: 'cover' }}
-          />
-          <IconButton
-            onClick={(e) => {
-              e.stopPropagation();
-              handleFavorite(cosplayer.id);
-            }}
-            sx={{
-              position: 'absolute',
-              top: 8,
-              right: 8,
-              backgroundColor: 'rgba(255,255,255,0.9)',
-              color: isFavorite ? '#D200C4' : 'text.secondary',
-              width: 32,
-              height: 32,
-              '&:hover': { backgroundColor: 'rgba(255,255,255,1)' },
-            }}
-          >
-            {isFavorite ? <Favorite sx={{ fontSize: 18 }} /> : <FavoriteBorder sx={{ fontSize: 18 }} />}
-          </IconButton>
-        </Box>
-        
-        <CardContent sx={{ 
-          flex: 1, 
-          display: 'flex', 
-          flexDirection: 'column', 
-          p: 1.5,
-          justifyContent: 'space-between'
-        }}>
-          <Box>
-            <Typography variant="h6" sx={{ 
-              fontWeight: 600, 
-              mb: 0.5, 
-              fontSize: '14px',
-              textAlign: 'center',
-              lineHeight: 1.2
-            }}>
-              {cosplayer.stageName}
-            </Typography>
-
-            <Typography
-              variant="h6"
-              sx={{
-                color: '#D200C4',
-                fontWeight: 600,
-                mb: 1,
-                fontSize: '12px',
-                textAlign: 'center',
-              }}
-            >
-              {formatPrice(cosplayer.hourlyRate)}
-            </Typography>
-
-            {cosplayer.averageRating && (
-              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', mb: 1 }}>
-                <Rating value={cosplayer.averageRating} size="small" readOnly />
-                <Typography variant="body2" sx={{ fontSize: '10px', ml: 0.5 }}>
-                  ({cosplayer.totalReviews || 0})
-                </Typography>
-              </Box>
-            )}
-          </Box>
-
-          <Button
-            variant="contained"
-            fullWidth
-            onClick={(e) => {
-              e.stopPropagation();
-              handleViewCosplayer(cosplayer.id);
-            }}
-            sx={{
-              background: '#D200C4',
-              color: 'white',
-              fontSize: '11px',
-              fontWeight: 600,
-              borderRadius: '16px',
-              textTransform: 'none',
-              py: 0.8,
-              minHeight: 32,
-              '&:hover': { background: '#B8009B' },
-            }}
-          >
-            Xem chi tiết
-          </Button>
-        </CardContent>
-      </Card>
-    );
-  };
 
   return (
     <ThemeProvider theme={cosplayTheme}>
@@ -289,21 +239,19 @@ const CosplayersPage = () => {
           <Box
             sx={{
               width: '350px',
-              height: '870px',
+              height: 'fit-content',
               backgroundColor: '#FBCDFF',
               position: 'sticky',
               top: '84px',
               p: 3,
-              overflowY: 'auto',
               borderRadius: '16px',
               mt: 2,
-              mb: 2,
               flexShrink: 0,
             }}
           >
             <TextField
               fullWidth
-              placeholder="Tên Cosplayer"
+              placeholder="Tìm kiếm cosplayer..."
               value={searchTerm}
               onChange={(e) => handleSearch(e.target.value)}
               size="small"
@@ -328,6 +276,40 @@ const CosplayersPage = () => {
             <Accordion defaultExpanded sx={{ backgroundColor: 'transparent', boxShadow: 'none', mb: 2 }}>
               <AccordionSummary expandIcon={<ExpandMore />} sx={{ px: 0 }}>
                 <Typography variant="h6" sx={{ fontWeight: 600, fontSize: '16px', color: '#333' }}>
+                  Sắp xếp
+                </Typography>
+              </AccordionSummary>
+              <AccordionDetails sx={{ px: 0, pt: 0 }}>
+                <FormControl fullWidth size="small" sx={{ mb: 2 }}>
+                  <InputLabel>Sắp xếp theo</InputLabel>
+                  <Select
+                    value={sortBy}
+                    onChange={(e) => setSortBy(e.target.value)}
+                    label="Sắp xếp theo"
+                  >
+                    <MenuItem value="rating">Đánh giá</MenuItem>
+                    <MenuItem value="price">Giá</MenuItem>
+                    <MenuItem value="name">Tên</MenuItem>
+                    <MenuItem value="created_date">Ngày tham gia</MenuItem>
+                  </Select>
+                </FormControl>
+                <FormControl fullWidth size="small">
+                  <InputLabel>Thứ tự</InputLabel>
+                  <Select
+                    value={sortOrder}
+                    onChange={(e) => setSortOrder(e.target.value)}
+                    label="Thứ tự"
+                  >
+                    <MenuItem value="desc">Giảm dần</MenuItem>
+                    <MenuItem value="asc">Tăng dần</MenuItem>
+                  </Select>
+                </FormControl>
+              </AccordionDetails>
+            </Accordion>
+
+            <Accordion defaultExpanded sx={{ backgroundColor: 'transparent', boxShadow: 'none', mb: 2 }}>
+              <AccordionSummary expandIcon={<ExpandMore />} sx={{ px: 0 }}>
+                <Typography variant="h6" sx={{ fontWeight: 600, fontSize: '16px', color: '#333' }}>
                   Bộ lọc
                 </Typography>
               </AccordionSummary>
@@ -335,7 +317,7 @@ const CosplayersPage = () => {
                 <Typography variant="subtitle1" sx={{ fontWeight: 600, fontSize: '14px', color: '#333', mb: 1 }}>
                   Giới tính
                 </Typography>
-                <FormGroup>
+                <FormGroup sx={{ mb: 2 }}>
                   {['Male', 'Female', 'Other'].map((gender) => (
                     <FormControlLabel
                       key={gender}
@@ -343,6 +325,7 @@ const CosplayersPage = () => {
                         <Checkbox
                           checked={filters.gender.includes(gender)}
                           onChange={(e) => handleFilterChange('gender', gender, e.target.checked)}
+                          size="small"
                         />
                       }
                       label={gender === 'Male' ? 'Nam' : gender === 'Female' ? 'Nữ' : 'Khác'}
@@ -350,12 +333,81 @@ const CosplayersPage = () => {
                     />
                   ))}
                 </FormGroup>
+
+                <Typography variant="subtitle1" sx={{ fontWeight: 600, fontSize: '14px', color: '#333', mb: 1 }}>
+                  Danh mục
+                </Typography>
+                <FormGroup sx={{ mb: 2, maxHeight: 150, overflowY: 'auto' }}>
+                  {categories.slice(0, 5).map((category) => (
+                    <FormControlLabel
+                      key={category}
+                      control={
+                        <Checkbox
+                          checked={filters.categories.includes(category)}
+                          onChange={(e) => handleFilterChange('categories', category, e.target.checked)}
+                          size="small"
+                        />
+                      }
+                      label={category}
+                      sx={{ '& .MuiFormControlLabel-label': { fontSize: '14px' } }}
+                    />
+                  ))}
+                </FormGroup>
+
+                <Typography variant="subtitle1" sx={{ fontWeight: 600, fontSize: '14px', color: '#333', mb: 1 }}>
+                  Khoảng giá (VNĐ/giờ)
+                </Typography>
+                <Box sx={{ display: 'flex', gap: 1, mb: 2 }}>
+                  <TextField
+                    size="small"
+                    placeholder="Từ"
+                    type="number"
+                    value={filters.minPrice}
+                    onChange={(e) => handleFilterChange('minPrice', e.target.value)}
+                    sx={{ flex: 1 }}
+                  />
+                  <TextField
+                    size="small"
+                    placeholder="Đến"
+                    type="number"
+                    value={filters.maxPrice}
+                    onChange={(e) => handleFilterChange('maxPrice', e.target.value)}
+                    sx={{ flex: 1 }}
+                  />
+                </Box>
+
+                <FormControl fullWidth size="small" sx={{ mb: 2 }}>
+                  <InputLabel>Khu vực</InputLabel>
+                  <Select
+                    value={filters.location}
+                    onChange={(e) => handleFilterChange('location', e.target.value)}
+                    label="Khu vực"
+                  >
+                    <MenuItem value="">Tất cả</MenuItem>
+                    {locations.map((location) => (
+                      <MenuItem key={location} value={location}>{location}</MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+
+                <FormControlLabel
+                  control={
+                    <Checkbox
+                      checked={filters.isAvailable === true}
+                      onChange={(e) => handleFilterChange('isAvailable', e.target.checked ? true : null)}
+                      size="small"
+                    />
+                  }
+                  label="Chỉ cosplayer sẵn sàng"
+                  sx={{ '& .MuiFormControlLabel-label': { fontSize: '14px' } }}
+                />
               </AccordionDetails>
             </Accordion>
 
             <Button
               variant="contained"
-              onClick={() => setFilters({ gender: [], categories: [], priceRange: [] })}
+              onClick={clearFilters}
+              fullWidth
               sx={{
                 background: '#333',
                 color: 'white',
@@ -402,14 +454,27 @@ const CosplayersPage = () => {
                   fontWeight: 400,
                   fontSize: { xs: '1.2rem', md: '1.5rem' },
                   color: '#D200C4',
+                  mb: 2,
                 }}
               >
                 Khám phá ngay
               </Typography>
+              
+              {totalCount > 0 && (
+                <Typography
+                  variant="body1"
+                  sx={{
+                    color: 'text.secondary',
+                    fontSize: '16px',
+                  }}
+                >
+                  Tìm thấy {totalCount} cosplayer phù hợp
+                </Typography>
+              )}
             </Box>
 
             {error && (
-              <Alert severity="error" sx={{ mb: 3, borderRadius: '12px' }}>
+              <Alert severity="error" sx={{ mb: 3, borderRadius: '12px', width: '100%' }}>
                 {error}
               </Alert>
             )}
@@ -418,9 +483,10 @@ const CosplayersPage = () => {
               <Box
                 sx={{
                   display: 'grid',
-                  gridTemplateColumns: 'repeat(3, 200px)',
-                  gap: '65px 65px',
+                  gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
+                  gap: '24px',
                   justifyContent: 'center',
+                  width: '100%',
                   maxWidth: '900px',
                 }}
               >
@@ -432,14 +498,22 @@ const CosplayersPage = () => {
               <Box
                 sx={{
                   display: 'grid',
-                  gridTemplateColumns: 'repeat(3, 200px)',
-                  gap: '65px 65px',
+                  gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
+                  gap: '24px',
                   justifyContent: 'center',
+                  width: '100%',
                   maxWidth: '900px',
                 }}
               >
                 {cosplayers.map((cosplayer) => (
-                  <CosplayerCard key={cosplayer.id} cosplayer={cosplayer} />
+                  <CosplayerCard 
+                    key={cosplayer.id} 
+                    cosplayer={cosplayer}
+                    onBooking={handleBooking}
+                    onMessage={handleMessage}
+                    onFavorite={handleFavorite}
+                    isFavorite={favorites.has(cosplayer.id)}
+                  />
                 ))}
               </Box>
             ) : (
@@ -447,9 +521,21 @@ const CosplayersPage = () => {
                 <Typography variant="h6" sx={{ color: 'text.secondary', mb: 2 }}>
                   Không tìm thấy cosplayer nào
                 </Typography>
-                <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+                <Typography variant="body2" sx={{ color: 'text.secondary', mb: 3 }}>
                   Hãy thử thay đổi bộ lọc tìm kiếm
                 </Typography>
+                <Button
+                  variant="contained"
+                  onClick={clearFilters}
+                  sx={{
+                    background: 'linear-gradient(45deg, #E91E63, #9C27B0)',
+                    borderRadius: '12px',
+                    textTransform: 'none',
+                    fontWeight: 600,
+                  }}
+                >
+                  Xóa tất cả bộ lọc
+                </Button>
               </Box>
             )}
 
@@ -461,6 +547,11 @@ const CosplayersPage = () => {
                   onChange={handlePageChange}
                   color="primary"
                   size="large"
+                  sx={{
+                    '& .MuiPaginationItem-root': {
+                      borderRadius: '8px',
+                    },
+                  }}
                 />
               </Box>
             )}

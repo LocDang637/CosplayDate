@@ -1,26 +1,28 @@
+// src/components/cosplayer/CosplayerCarousel.jsx
 import React, { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Box,
   Typography,
   IconButton,
-  Button
+  Button,
+  Skeleton
 } from '@mui/material';
 import { ArrowForward, ArrowBack } from '@mui/icons-material';
 import CosplayerCard from './CosplayerCard';
 
-const CosplayerCarousel = ({ title = "Cosplayer nổi bật", cosplayers = [], onSeeAll }) => {
+const CosplayerCarousel = ({ title = "Cosplayer nổi bật", cosplayers = [], onSeeAll, loading = false }) => {
   const navigate = useNavigate();
   const [currentIndex, setCurrentIndex] = useState(0);
   const carouselRef = useRef(null);
 
   const handleNext = () => {
-    const maxIndex = Math.max(0, cosplayers.length - 4); // Show 4 cards at a time
+    const maxIndex = Math.max(0, cosplayers.length - 4);
     const nextIndex = Math.min(currentIndex + 1, maxIndex);
     setCurrentIndex(nextIndex);
     
     if (carouselRef.current) {
-      const cardWidth = 260; // 240px card + 20px gap
+      const cardWidth = 260;
       carouselRef.current.scrollTo({
         left: nextIndex * cardWidth,
         behavior: 'smooth'
@@ -33,7 +35,7 @@ const CosplayerCarousel = ({ title = "Cosplayer nổi bật", cosplayers = [], o
     setCurrentIndex(prevIndex);
     
     if (carouselRef.current) {
-      const cardWidth = 260; // 240px card + 20px gap
+      const cardWidth = 260;
       carouselRef.current.scrollTo({
         left: prevIndex * cardWidth,
         behavior: 'smooth'
@@ -42,14 +44,10 @@ const CosplayerCarousel = ({ title = "Cosplayer nổi bật", cosplayers = [], o
   };
 
   const handleBooking = (cosplayer) => {
-    console.log('Booking cosplayer:', cosplayer);
-    // Navigate to booking page or open booking modal
     navigate(`/booking/${cosplayer.id}`);
   };
 
   const handleMessage = (cosplayer) => {
-    console.log('Message cosplayer:', cosplayer);
-    // Navigate to messages or open chat
     navigate(`/messages/${cosplayer.id}`);
   };
 
@@ -57,7 +55,6 @@ const CosplayerCarousel = ({ title = "Cosplayer nổi bật", cosplayers = [], o
     if (onSeeAll) {
       onSeeAll();
     } else {
-      // Default navigation to cosplayers page
       navigate('/cosplayers');
     }
   };
@@ -65,9 +62,19 @@ const CosplayerCarousel = ({ title = "Cosplayer nổi bật", cosplayers = [], o
   const canScrollNext = currentIndex < Math.max(0, cosplayers.length - 4);
   const canScrollPrev = currentIndex > 0;
 
+  const CosplayerSkeleton = () => (
+    <Box sx={{ width: 240, flexShrink: 0 }}>
+      <Skeleton variant="rectangular" height={200} sx={{ borderRadius: '16px' }} />
+      <Box sx={{ p: 2 }}>
+        <Skeleton variant="text" sx={{ fontSize: '1rem', mb: 1 }} />
+        <Skeleton variant="text" width="60%" sx={{ mb: 1 }} />
+        <Skeleton variant="rectangular" height={32} sx={{ borderRadius: '16px' }} />
+      </Box>
+    </Box>
+  );
+
   return (
     <Box sx={{ mb: 6 }}>
-      {/* Header */}
       <Box sx={{ 
         display: 'flex', 
         justifyContent: 'space-between', 
@@ -101,51 +108,46 @@ const CosplayerCarousel = ({ title = "Cosplayer nổi bật", cosplayers = [], o
             Xem tất cả
           </Button>
           
-          <Box sx={{ display: 'flex', gap: 1 }}>
-            <IconButton
-              onClick={handlePrev}
-              disabled={!canScrollPrev}
-              sx={{
-                backgroundColor: canScrollPrev ? 'white' : 'rgba(0,0,0,0.05)',
-                color: canScrollPrev ? 'primary.main' : 'text.disabled',
-                width: 40,
-                height: 40,
-                boxShadow: canScrollPrev ? '0 2px 8px rgba(0,0,0,0.1)' : 'none',
-                '&:hover': {
-                  backgroundColor: canScrollPrev ? 'rgba(233, 30, 99, 0.05)' : 'rgba(0,0,0,0.05)',
-                },
-                '&:disabled': {
-                  backgroundColor: 'rgba(0,0,0,0.05)',
-                },
-              }}
-            >
-              <ArrowBack />
-            </IconButton>
-            
-            <IconButton
-              onClick={handleNext}
-              disabled={!canScrollNext}
-              sx={{
-                backgroundColor: canScrollNext ? 'white' : 'rgba(0,0,0,0.05)',
-                color: canScrollNext ? 'primary.main' : 'text.disabled',
-                width: 40,
-                height: 40,
-                boxShadow: canScrollNext ? '0 2px 8px rgba(0,0,0,0.1)' : 'none',
-                '&:hover': {
-                  backgroundColor: canScrollNext ? 'rgba(233, 30, 99, 0.05)' : 'rgba(0,0,0,0.05)',
-                },
-                '&:disabled': {
-                  backgroundColor: 'rgba(0,0,0,0.05)',
-                },
-              }}
-            >
-              <ArrowForward />
-            </IconButton>
-          </Box>
+          {!loading && cosplayers.length > 4 && (
+            <Box sx={{ display: 'flex', gap: 1 }}>
+              <IconButton
+                onClick={handlePrev}
+                disabled={!canScrollPrev}
+                sx={{
+                  backgroundColor: canScrollPrev ? 'white' : 'rgba(0,0,0,0.05)',
+                  color: canScrollPrev ? 'primary.main' : 'text.disabled',
+                  width: 40,
+                  height: 40,
+                  boxShadow: canScrollPrev ? '0 2px 8px rgba(0,0,0,0.1)' : 'none',
+                  '&:hover': {
+                    backgroundColor: canScrollPrev ? 'rgba(233, 30, 99, 0.05)' : 'rgba(0,0,0,0.05)',
+                  },
+                }}
+              >
+                <ArrowBack />
+              </IconButton>
+              
+              <IconButton
+                onClick={handleNext}
+                disabled={!canScrollNext}
+                sx={{
+                  backgroundColor: canScrollNext ? 'white' : 'rgba(0,0,0,0.05)',
+                  color: canScrollNext ? 'primary.main' : 'text.disabled',
+                  width: 40,
+                  height: 40,
+                  boxShadow: canScrollNext ? '0 2px 8px rgba(0,0,0,0.1)' : 'none',
+                  '&:hover': {
+                    backgroundColor: canScrollNext ? 'rgba(233, 30, 99, 0.05)' : 'rgba(0,0,0,0.05)',
+                  },
+                }}
+              >
+                <ArrowForward />
+              </IconButton>
+            </Box>
+          )}
         </Box>
       </Box>
 
-      {/* Carousel */}
       <Box
         ref={carouselRef}
         sx={{
@@ -153,7 +155,7 @@ const CosplayerCarousel = ({ title = "Cosplayer nổi bật", cosplayers = [], o
           gap: 2.5,
           overflowX: 'hidden',
           scrollBehavior: 'smooth',
-          paddingRight: '20px', // Add padding to prevent cutoff
+          paddingRight: '20px',
           '&::-webkit-scrollbar': {
             display: 'none',
           },
@@ -161,14 +163,31 @@ const CosplayerCarousel = ({ title = "Cosplayer nổi bật", cosplayers = [], o
           scrollbarWidth: 'none',
         }}
       >
-        {cosplayers.map((cosplayer, index) => (
-          <CosplayerCard
-            key={cosplayer.id}
-            cosplayer={cosplayer}
-            onBooking={handleBooking}
-            onMessage={handleMessage}
-          />
-        ))}
+        {loading ? (
+          Array.from({ length: 4 }).map((_, index) => (
+            <CosplayerSkeleton key={index} />
+          ))
+        ) : cosplayers.length > 0 ? (
+          cosplayers.map((cosplayer) => (
+            <CosplayerCard
+              key={cosplayer.id}
+              cosplayer={cosplayer}
+              onBooking={handleBooking}
+              onMessage={handleMessage}
+            />
+          ))
+        ) : (
+          <Box sx={{ 
+            textAlign: 'center', 
+            py: 4, 
+            width: '100%',
+            color: 'text.secondary' 
+          }}>
+            <Typography variant="h6">
+              Chưa có cosplayer nào
+            </Typography>
+          </Box>
+        )}
       </Box>
     </Box>
   );
