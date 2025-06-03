@@ -1,5 +1,4 @@
-// In src/components/layout/Header.jsx - Update profile navigation logic
-
+// src/components/layout/Header.jsx - FIXED VERSION
 import React, { useState } from 'react';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
 import {
@@ -62,52 +61,94 @@ const Header = ({ user = null, onLogout }) => {
   };
 
   const handleNavigation = (path) => {
+    console.log('🔄 Header: Navigating to:', path);
     navigate(path);
     handleProfileMenuClose();
     setMobileMenuOpen(false);
   };
 
   const handleLogout = () => {
+    console.log('👋 Header: Logging out');
     onLogout?.();
     handleProfileMenuClose();
     navigate('/');
   };
 
-  // ✅ FIX: Improved role-based profile navigation
+  // ✅ FIX: Completely rewritten profile path logic with better error handling
   const getProfilePath = () => {
-    if (!user) return '/login';
-    
-    // Handle both id and userId fields
-    const userId = user.id || user.userId;
-    if (!userId) {
-      console.warn('No user ID found, redirecting to login');
+    if (!user) {
+      console.warn('❌ Header: No user data available');
       return '/login';
     }
     
-    const userType = user.userType || user.role; // Support both possible field names
+    // FIX: Handle both id and userId fields more robustly
+    const userId = user.id || user.userId;
+    const userType = user.userType || user.role;
     
-    console.log('🔍 Header Profile Navigation:', {
+    console.log('🔍 Header Profile Path Debug:', {
       userId: userId,
       userType: userType,
-      user: user
+      userObject: {
+        id: user.id,
+        userId: user.userId,
+        userType: user.userType,
+        role: user.role
+      }
     });
     
+    // FIX: Ensure we have a valid user ID
+    if (!userId) {
+      console.error('❌ Header: No valid user ID found in user object:', user);
+      // Instead of redirecting to login, try to get profile without ID
+      // This allows the profile page to handle the redirect logic
+      if (userType === 'Cosplayer') {
+        return '/profile';
+      } else {
+        return '/customer-profile';
+      }
+    }
+    
+    // FIX: Determine correct profile route based on user type
     switch (userType) {
       case 'Customer':
+        console.log('👤 Header: Customer profile path:', `/customer-profile/${userId}`);
         return `/customer-profile/${userId}`;
       case 'Cosplayer':
+        console.log('🎭 Header: Cosplayer profile path:', `/profile/${userId}`);
         return `/profile/${userId}`;
       default:
-        // Fallback based on user properties or default to customer
-        console.warn('Unknown user type:', userType, 'Defaulting to customer profile');
-        return `/customer-profile/${userId}`;
+        // FIX: Better fallback logic
+        console.warn('⚠️ Header: Unknown user type:', userType);
+        // Check if user has cosplayer-related properties
+        if (user.displayName || user.pricePerHour || user.category) {
+          console.log('🎭 Header: Detected cosplayer properties, using cosplayer route');
+          return `/profile/${userId}`;
+        } else {
+          console.log('👤 Header: Defaulting to customer route');
+          return `/customer-profile/${userId}`;
+        }
     }
   };
 
+  // FIX: Improved profile navigation handler with error handling
   const handleProfileNavigation = () => {
-    const profilePath = getProfilePath();
-    console.log('📱 Navigating to profile:', profilePath);
-    handleNavigation(profilePath);
+    try {
+      const profilePath = getProfilePath();
+      console.log('📱 Header: Profile navigation to:', profilePath);
+      
+      // FIX: Validate path before navigation
+      if (!profilePath || profilePath === '/login') {
+        console.error('❌ Header: Invalid profile path, redirecting to login');
+        handleNavigation('/login');
+        return;
+      }
+      
+      handleNavigation(profilePath);
+    } catch (error) {
+      console.error('💥 Header: Error in profile navigation:', error);
+      // Fallback to login if something goes wrong
+      handleNavigation('/login');
+    }
   };
 
   const navigationItems = [
@@ -116,10 +157,10 @@ const Header = ({ user = null, onLogout }) => {
     { label: 'Dịch vụ', path: '/services', icon: <Favorite /> },
   ];
 
-  // Updated auth menu items with role-based profile navigation
+  // FIX: Updated auth menu items with better profile handling
   const authMenuItems = isAuthenticated ? [
     { 
-      label: 'Tài khoản', 
+      label: 'Hồ sơ của tôi', 
       action: handleProfileNavigation, 
       icon: user?.userType === 'Cosplayer' ? <PersonIcon /> : <AccountCircle />
     },
@@ -134,11 +175,25 @@ const Header = ({ user = null, onLogout }) => {
   const NavButton = ({ item, isMobile = false }) => {
     const isActive = currentPath === item.path;
     
+    const handleClick = () => {
+      try {
+        if (item.action) {
+          console.log('🔄 Header: Executing action for:', item.label);
+          item.action();
+        } else if (item.path) {
+          console.log('🔄 Header: Navigating to path:', item.path);
+          handleNavigation(item.path);
+        }
+      } catch (error) {
+        console.error('💥 Header: Error in nav button click:', error);
+      }
+    };
+    
     if (isMobile) {
       return (
         <ListItem disablePadding>
           <ListItemButton
-            onClick={() => item.action ? item.action() : handleNavigation(item.path)}
+            onClick={handleClick}
             sx={{
               py: 1.5,
               px: 2,
@@ -167,7 +222,7 @@ const Header = ({ user = null, onLogout }) => {
 
     return (
       <Button
-        onClick={() => item.action ? item.action() : handleNavigation(item.path)}
+        onClick={handleClick}
         sx={{
           color: isActive ? 'primary.main' : 'text.primary',
           fontWeight: isActive ? 600 : 500,
@@ -391,11 +446,22 @@ const Header = ({ user = null, onLogout }) => {
                   {user.userType === 'Customer' ? '👤 Khách hàng' : '🎭 Cosplayer'}
                 </Typography>
               )}
-              {/* ✅ ADD: Debug info for development */}
+              {/* ✅ FIX: Enhanced debug info for development */}
               {process.env.NODE_ENV === 'development' && (
-                <Typography variant="body2" sx={{ color: 'text.secondary', fontSize: '10px', mt: 0.5 }}>
-                  ID: {user?.id || user?.userId || 'N/A'}
-                </Typography>
+                <Box sx={{ mt: 0.5, p: 1, backgroundColor: 'rgba(0,0,0,0.02)', borderRadius: '4px' }}>
+                  <Typography variant="body2" sx={{ color: 'text.secondary', fontSize: '10px' }}>
+                    Debug Info:
+                  </Typography>
+                  <Typography variant="body2" sx={{ color: 'text.secondary', fontSize: '10px' }}>
+                    ID: {user?.id || 'N/A'} | UserID: {user?.userId || 'N/A'}
+                  </Typography>
+                  <Typography variant="body2" sx={{ color: 'text.secondary', fontSize: '10px' }}>
+                    Type: {user?.userType || user?.role || 'N/A'}
+                  </Typography>
+                  <Typography variant="body2" sx={{ color: 'text.secondary', fontSize: '10px' }}>
+                    Profile Path: {getProfilePath()}
+                  </Typography>
+                </Box>
               )}
             </Box>
             <Divider />
@@ -405,7 +471,19 @@ const Header = ({ user = null, onLogout }) => {
         {authMenuItems.map((item, index) => (
           <MenuItem
             key={index}
-            onClick={() => item.action ? item.action() : handleNavigation(item.path)}
+            onClick={() => {
+              try {
+                if (item.action) {
+                  console.log('🔄 Header Menu: Executing action for:', item.label);
+                  item.action();
+                } else if (item.path) {
+                  console.log('🔄 Header Menu: Navigating to:', item.path);
+                  handleNavigation(item.path);
+                }
+              } catch (error) {
+                console.error('💥 Header Menu: Error in menu item click:', error);
+              }
+            }}
             sx={{ py: 1, px: 2 }}
           >
             <ListItemIcon sx={{ minWidth: 36 }}>
@@ -479,6 +557,12 @@ const Header = ({ user = null, onLogout }) => {
               {user?.userType && (
                 <Typography variant="body2" sx={{ color: 'primary.main', fontSize: '11px', fontWeight: 500, mt: 0.5 }}>
                   {user.userType === 'Customer' ? '👤 Khách hàng' : '🎭 Cosplayer'}
+                </Typography>
+              )}
+              {/* Mobile debug info */}
+              {process.env.NODE_ENV === 'development' && (
+                <Typography variant="body2" sx={{ color: 'text.secondary', fontSize: '10px', mt: 0.5 }}>
+                  Profile: {getProfilePath()}
                 </Typography>
               )}
             </Box>
