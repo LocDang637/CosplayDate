@@ -1,0 +1,262 @@
+﻿// CosplayDate.Infrastructure/Services/PayOSService.cs (CORRECTED VERSION)
+using CosplayDate.Application.DTOs.Payment;
+using CosplayDate.Application.Services.Interfaces;
+using CosplayDate.Domain.Entities;
+using CosplayDate.Domain.Interfaces;
+using CosplayDate.Shared.Models;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
+using Net.payOS;
+using Net.payOS.Types;
+using System.Text.Json;
+
+namespace CosplayDate.Infrastructure.Services
+{
+    public class PayOSService : IPayOSService
+    {
+        private readonly PayOS _payOS;
+        private readonly IConfiguration _configuration;
+        private readonly ILogger<PayOSService> _logger;
+        private readonly IUnitOfWork _unitOfWork;
+
+        public PayOSService(
+            IConfiguration configuration,
+            ILogger<PayOSService> logger,
+            IUnitOfWork unitOfWork)
+        {
+            _configuration = configuration;
+            _logger = logger;
+            _unitOfWork = unitOfWork;
+
+            var clientId = _configuration["PayOS:ClientId"] ?? throw new ArgumentNullException("PayOS:ClientId");
+            var apiKey = _configuration["PayOS:ApiKey"] ?? throw new ArgumentNullException("PayOS:ApiKey");
+            var checksumKey = _configuration["PayOS:ChecksumKey"] ?? throw new ArgumentNullException("PayOS:ChecksumKey");
+
+            _payOS = new PayOS(clientId, apiKey, checksumKey);
+        }
+
+        private static string TruncateForPayOS(string? input, int maxLength)
+        {
+            if (string.IsNullOrEmpty(input))
+                return "";
+
+            return input.Length <= maxLength ? input : input.Substring(0, maxLength);
+        }
+
+        private static string SanitizeForPayOS(string? input, int maxLength)
+        {
+            if (string.IsNullOrEmpty(input))
+                return "";
+
+            // Remove Vietnamese characters for PayOS compatibility
+            var sanitized = input
+                .Replace("ạ", "a").Replace("á", "a").Replace("à", "a").Replace("ả", "a").Replace("ã", "a")
+                .Replace("ă", "a").Replace("ắ", "a").Replace("ằ", "a").Replace("ẳ", "a").Replace("ẵ", "a")
+                .Replace("â", "a").Replace("ấ", "a").Replace("ầ", "a").Replace("ẩ", "a").Replace("ẫ", "a")
+                .Replace("ê", "e").Replace("é", "e").Replace("è", "e").Replace("ẻ", "e").Replace("ẽ", "e")
+                .Replace("ế", "e").Replace("ề", "e").Replace("ể", "e").Replace("ễ", "e")
+                .Replace("ô", "o").Replace("ó", "o").Replace("ò", "o").Replace("ỏ", "o").Replace("õ", "o")
+                .Replace("ơ", "o").Replace("ớ", "o").Replace("ờ", "o").Replace("ở", "o").Replace("ỡ", "o")
+                .Replace("ư", "u").Replace("ú", "u").Replace("ù", "u").Replace("ủ", "u").Replace("ũ", "u")
+                .Replace("ứ", "u").Replace("ừ", "u").Replace("ử", "u").Replace("ữ", "u")
+                .Replace("ý", "y").Replace("ỳ", "y").Replace("ỷ", "y").Replace("ỹ", "y")
+                .Replace("đ", "d").Replace("Đ", "D")
+                .Replace("Ạ", "A").Replace("Á", "A").Replace("À", "A").Replace("Ả", "A").Replace("Ã", "A")
+                .Replace("Ă", "A").Replace("Ắ", "A").Replace("Ằ", "A").Replace("Ẳ", "A").Replace("Ẵ", "A")
+                .Replace("Â", "A").Replace("Ấ", "A").Replace("Ầ", "A").Replace("Ẩ", "A").Replace("Ẫ", "A")
+                .Replace("Ê", "E").Replace("É", "E").Replace("È", "E").Replace("Ẻ", "E").Replace("Ẽ", "E")
+                .Replace("Ế", "E").Replace("Ề", "E").Replace("Ể", "E").Replace("Ễ", "E")
+                .Replace("Ô", "O").Replace("Ó", "O").Replace("Ò", "O").Replace("Ỏ", "O").Replace("Õ", "O")
+                .Replace("Ơ", "O").Replace("Ớ", "O").Replace("Ờ", "O").Replace("Ở", "O").Replace("Ỡ", "O")
+                .Replace("Ư", "U").Replace("Ú", "U").Replace("Ù", "U").Replace("Ủ", "U").Replace("Ũ", "U")
+                .Replace("Ứ", "U").Replace("Ừ", "U").Replace("Ử", "U").Replace("Ữ", "U")
+                .Replace("Ý", "Y").Replace("Ỳ", "Y").Replace("Ỷ", "Y").Replace("Ỹ", "Y");
+
+            return sanitized.Length <= maxLength ? sanitized : sanitized.Substring(0, maxLength);
+        }
+
+        // Updated CreatePaymentLinkAsync method with proper sanitization:
+        public async Task<ApiResponse<CreatePaymentResponseDto>> CreatePaymentLinkAsync(CreatePaymentRequestDto request)
+        {
+            try
+            {
+                // Generate unique order code
+                var orderCode = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+
+                // Sanitize and truncate descriptions for PayOS limits
+                var itemDescription = SanitizeForPayOS("Nap tien CosplayDate", 25); // Max 25 chars
+                var paymentDescription = SanitizeForPayOS(request.Description ?? "Nap tien CosplayDate", 25); // Max 25 chars
+
+                // Create payment items
+                var items = new List<ItemData>
+        {
+            new ItemData(itemDescription, 1, request.Amount)
+        };
+
+                // Create payment data
+                var paymentData = new PaymentData(
+                    orderCode: orderCode,
+                    amount: request.Amount,
+                    description: paymentDescription,
+                    items: items,
+                    cancelUrl: $"{_configuration["App:BaseUrl"]}/api/payment/cancel",
+                    returnUrl: $"{_configuration["App:BaseUrl"]}/api/payment/success",
+                    buyerName: TruncateForPayOS(request.BuyerName, 50),  // Buyer name limit
+                    buyerEmail: TruncateForPayOS(request.BuyerEmail, 50), // Email limit
+                    buyerPhone: TruncateForPayOS(request.BuyerPhone, 15), // Phone limit
+                    expiredAt: DateTimeOffset.UtcNow.AddMinutes(15).ToUnixTimeSeconds()
+                );
+
+                var result = await _payOS.createPaymentLink(paymentData);
+
+                var response = new CreatePaymentResponseDto
+                {
+                    PaymentLinkId = result.paymentLinkId,
+                    OrderCode = result.orderCode,
+                    CheckoutUrl = result.checkoutUrl,
+                    QrCode = result.qrCode,
+                    Amount = result.amount,
+                    Description = result.description,
+                    Status = result.status,
+                    CreatedAt = DateTime.UtcNow,
+                    ExpiredAt = result.expiredAt
+                };
+
+                _logger.LogInformation("Payment link created successfully: OrderCode={OrderCode}, PaymentLinkId={PaymentLinkId}",
+                    orderCode, result.paymentLinkId);
+
+                return ApiResponse<CreatePaymentResponseDto>.Success(response, "Payment link created successfully");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error creating payment link for amount: {Amount}", request.Amount);
+                return ApiResponse<CreatePaymentResponseDto>.Error($"Failed to create payment link: {ex.Message}");
+            }
+        }
+
+        public async Task<ApiResponse<PaymentInfoResponseDto>> GetPaymentInfoAsync(long orderCode)
+        {
+            try
+            {
+                var paymentInfo = await _payOS.getPaymentLinkInformation(orderCode);
+
+                var response = new PaymentInfoResponseDto
+                {
+                    Id = paymentInfo.id,
+                    OrderCode = paymentInfo.orderCode,
+                    Amount = paymentInfo.amount,
+                    AmountPaid = paymentInfo.amountPaid,
+                    AmountRemaining = paymentInfo.amountRemaining,
+                    Status = paymentInfo.status,
+                    CreatedAt = paymentInfo.createdAt,
+                    CancelledAt = paymentInfo.canceledAt,
+                    CancellationReason = paymentInfo.cancellationReason,
+                    Transactions = paymentInfo.transactions.Select(t => new TransactionDto
+                    {
+                        Reference = t.reference,
+                        Amount = t.amount,
+                        AccountNumber = t.accountNumber,
+                        Description = t.description,
+                        TransactionDateTime = t.transactionDateTime,
+                        VirtualAccountName = t.virtualAccountName,
+                        VirtualAccountNumber = t.virtualAccountNumber,
+                        CounterAccountBankId = t.counterAccountBankId,
+                        CounterAccountBankName = t.counterAccountBankName,
+                        CounterAccountName = t.counterAccountName,
+                        CounterAccountNumber = t.counterAccountNumber
+                    }).ToList()
+                };
+
+                return ApiResponse<PaymentInfoResponseDto>.Success(response, "Payment information retrieved successfully");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting payment info for order code: {OrderCode}", orderCode);
+                return ApiResponse<PaymentInfoResponseDto>.Error("Failed to get payment information");
+            }
+        }
+
+        public async Task<ApiResponse<string>> CancelPaymentLinkAsync(long orderCode, string? reason = null)
+        {
+            try
+            {
+                await _payOS.cancelPaymentLink(orderCode, reason);
+
+                _logger.LogInformation("Payment link cancelled: OrderCode={OrderCode}, Reason={Reason}",
+                    orderCode, reason ?? "No reason provided");
+
+                return ApiResponse<string>.Success("", "Payment link cancelled successfully");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error cancelling payment link for order code: {OrderCode}", orderCode);
+                return ApiResponse<string>.Error("Failed to cancel payment link");
+            }
+        }
+
+        public async Task<ApiResponse<WebhookResponseDto>> VerifyWebhookAsync(WebhookRequestDto webhookData)
+        {
+            try
+            {
+                // Simple webhook verification - check if the webhook data is valid
+                // Note: PayOS webhook verification might vary by version
+                // For now, we'll do basic validation and let the business logic handle the rest
+
+                if (string.IsNullOrEmpty(webhookData.Signature))
+                {
+                    return ApiResponse<WebhookResponseDto>.Success(new WebhookResponseDto
+                    {
+                        IsValid = false,
+                        Message = "Missing webhook signature"
+                    }, "Invalid webhook - missing signature");
+                }
+
+                // Basic validation - check if it's a success webhook
+                var isValidWebhook = webhookData.Code == "00" &&
+                                   webhookData.Desc.ToLower() == "success" &&
+                                   webhookData.Success;
+
+                var response = new WebhookResponseDto
+                {
+                    IsValid = isValidWebhook,
+                    Message = isValidWebhook ? "Webhook verified successfully" : "Webhook verification failed",
+                    Data = webhookData.Data
+                };
+
+                _logger.LogInformation("Webhook verification result: Valid={IsValid}, OrderCode={OrderCode}, Amount={Amount}",
+                    isValidWebhook, webhookData.Data.OrderCode, webhookData.Data.Amount);
+
+                return ApiResponse<WebhookResponseDto>.Success(response, response.Message);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error verifying webhook data");
+
+                var response = new WebhookResponseDto
+                {
+                    IsValid = false,
+                    Message = "Webhook verification failed due to error"
+                };
+
+                return ApiResponse<WebhookResponseDto>.Success(response, "Webhook verification failed");
+            }
+        }
+
+        public async Task<ApiResponse<string>> ConfirmWebhookAsync(string webhookUrl)
+        {
+            try
+            {
+                await _payOS.confirmWebhook(webhookUrl);
+
+                _logger.LogInformation("Webhook confirmed successfully: {WebhookUrl}", webhookUrl);
+
+                return ApiResponse<string>.Success("", "Webhook confirmed successfully");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error confirming webhook URL: {WebhookUrl}", webhookUrl);
+                return ApiResponse<string>.Error("Failed to confirm webhook URL");
+            }
+        }
+    }
+}

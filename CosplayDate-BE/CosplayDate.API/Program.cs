@@ -92,6 +92,8 @@ builder.Services.AddScoped<ISupabaseService, SupabaseService>();
 builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<ICosplayerService, CosplayerService>();
 builder.Services.AddScoped<ICosplayerMediaService, CosplayerMediaService>();
+builder.Services.AddScoped<IPayOSService, PayOSService>();
+builder.Services.AddScoped<IWalletService, WalletService>();
 
 // JWT Authentication Configuration
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
