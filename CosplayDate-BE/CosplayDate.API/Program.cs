@@ -17,7 +17,7 @@ var builder = WebApplication.CreateBuilder(args);
 // ===== ENHANCED CONFIGURATION SETUP =====
 builder.Configuration
     .SetBasePath(Directory.GetCurrentDirectory())
-    .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true)
+    .AddJsonFile("appsettings.json", optional: true, reloadOnChange: true) // Made optional for production
     .AddJsonFile($"appsettings.{builder.Environment.EnvironmentName}.json", optional: true, reloadOnChange: true)
     .AddEnvironmentVariables();
 
@@ -114,7 +114,8 @@ builder.Services.AddHttpClient();
 // ===== DATABASE CONFIGURATION =====
 builder.Services.AddDbContext<CosplayDateDbContext>(options =>
 {
-    var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
+    var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
+                         ?? builder.Configuration["DATABASE_CONNECTION_STRING"]; // Fallback to env var
     options.UseSqlServer(connectionString);
 
     // Add additional configurations for production
@@ -147,16 +148,20 @@ builder.Services.AddScoped<IWalletService, WalletService>();
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
     {
+        var jwtKey = builder.Configuration["Jwt:Key"] ?? builder.Configuration["JWT_SECRET_KEY"];
+        var jwtIssuer = builder.Configuration["Jwt:Issuer"] ?? "CosplayDate";
+        var jwtAudience = builder.Configuration["Jwt:Audience"] ?? "CosplayDate";
+
         options.TokenValidationParameters = new TokenValidationParameters
         {
             ValidateIssuer = true,
             ValidateAudience = true,
             ValidateLifetime = true,
             ValidateIssuerSigningKey = true,
-            ValidIssuer = builder.Configuration["Jwt:Issuer"],
-            ValidAudience = builder.Configuration["Jwt:Audience"],
+            ValidIssuer = jwtIssuer,
+            ValidAudience = jwtAudience,
             IssuerSigningKey = new SymmetricSecurityKey(
-                Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Key"]!)),
+                Encoding.UTF8.GetBytes(jwtKey!)),
             ClockSkew = TimeSpan.Zero
         };
 
@@ -234,7 +239,7 @@ builder.Services.AddCors(options =>
         if (builder.Environment.IsProduction())
         {
             // Production CORS - specific origins only
-            var frontendUrl = builder.Configuration["App:FrontendUrl"];
+            var frontendUrl = builder.Configuration["FRONTEND_URL"] ?? builder.Configuration["App:FrontendUrl"];
             var allowedOrigins = new List<string>();
 
             if (!string.IsNullOrEmpty(frontendUrl))
@@ -245,7 +250,7 @@ builder.Services.AddCors(options =>
             // Add your production domains
             allowedOrigins.AddRange(new[]
             {
-                "https://your-frontend.vercel.app",
+                "https://cosplay-date.vercel.app", // Your actual Vercel frontend
                 "https://cosplaydate.com",
                 "https://www.cosplaydate.com"
             });
@@ -298,19 +303,16 @@ else
     app.UseHsts();
 }
 
-// Swagger configuration
-if (app.Environment.IsDevelopment() || app.Environment.IsStaging())
+// ===== SWAGGER CONFIGURATION - ENABLED IN PRODUCTION FOR TESTING =====
+app.UseSwagger();
+app.UseSwaggerUI(c =>
 {
-    app.UseSwagger();
-    app.UseSwaggerUI(c =>
-    {
-        c.SwaggerEndpoint("/swagger/v1/swagger.json", "CosplayDate API V1");
-        c.RoutePrefix = "swagger";
-        c.DocumentTitle = "CosplayDate API Documentation";
-        c.DocExpansion(Swashbuckle.AspNetCore.SwaggerUI.DocExpansion.None);
-        c.DefaultModelsExpandDepth(-1);
-    });
-}
+    c.SwaggerEndpoint("/swagger/v1/swagger.json", "CosplayDate API V1");
+    c.RoutePrefix = "swagger";
+    c.DocumentTitle = "CosplayDate API Documentation";
+    c.DocExpansion(Swashbuckle.AspNetCore.SwaggerUI.DocExpansion.None);
+    c.DefaultModelsExpandDepth(-1);
+});
 
 // Security headers for production
 if (app.Environment.IsProduction())
@@ -340,6 +342,41 @@ app.UseRateLimiter();
 // Authentication & Authorization (Order is important!)
 app.UseAuthentication();
 app.UseAuthorization();
+
+// ===== ADDITIONAL ENDPOINTS FOR TESTING =====
+// Root endpoint
+app.MapGet("/", () => Results.Ok(new
+{
+    message = "CosplayDate API is running!",
+    environment = app.Environment.EnvironmentName,
+    endpoints = new
+    {
+        swagger = "/swagger",
+        health = "/health",
+        healthReady = "/health/ready",
+        testConfig = "/test-config",
+        api = "/api"
+    },
+    timestamp = DateTime.UtcNow
+})).AllowAnonymous();
+
+// Test configuration endpoint
+app.MapGet("/test-config", () => Results.Ok(new
+{
+    environment = app.Environment.EnvironmentName,
+    configuration = new
+    {
+        hasSupabaseUrl = !string.IsNullOrEmpty(app.Configuration["SUPABASE_URL"]),
+        hasDatabaseConnection = !string.IsNullOrEmpty(app.Configuration["DATABASE_CONNECTION_STRING"]),
+        hasJwtSecret = !string.IsNullOrEmpty(app.Configuration["JWT_SECRET_KEY"]),
+        frontendUrl = app.Configuration["FRONTEND_URL"],
+        backendUrl = app.Configuration["BACKEND_URL"]
+    },
+    cors = new
+    {
+        allowedOrigins = app.Configuration["FRONTEND_URL"]
+    }
+})).AllowAnonymous();
 
 // Health checks
 app.MapHealthChecks("/health");
