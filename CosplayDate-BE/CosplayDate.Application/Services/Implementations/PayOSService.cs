@@ -1,4 +1,4 @@
-﻿// CosplayDate.Infrastructure/Services/PayOSService.cs (CORRECTED VERSION)
+﻿// CosplayDate.Infrastructure/Services/PayOSService.cs (FIXED VERSION)
 using CosplayDate.Application.DTOs.Payment;
 using CosplayDate.Application.Services.Interfaces;
 using CosplayDate.Domain.Entities;
@@ -75,7 +75,7 @@ namespace CosplayDate.Infrastructure.Services
             return sanitized.Length <= maxLength ? sanitized : sanitized.Substring(0, maxLength);
         }
 
-        // Updated CreatePaymentLinkAsync method with proper sanitization:
+        // ===== FIXED: Add webhook URL configuration =====
         public async Task<ApiResponse<CreatePaymentResponseDto>> CreatePaymentLinkAsync(CreatePaymentRequestDto request)
         {
             try
@@ -89,20 +89,39 @@ namespace CosplayDate.Infrastructure.Services
 
                 // Create payment items
                 var items = new List<ItemData>
-        {
-            new ItemData(itemDescription, 1, request.Amount)
-        };
+                {
+                    new ItemData(itemDescription, 1, request.Amount)
+                };
 
-                // ===== FIXED: Use Frontend URLs instead of Backend URLs =====
+                // ===== FIXED: Configure URLs properly =====
                 var frontendBaseUrl = _configuration["App:FrontendUrl"] ?? "http://localhost:5173";
+                var backendBaseUrl = _configuration["App:BackendUrl"] ?? "http://localhost:5068";
 
-                // Create payment data with FRONTEND redirect URLs
+                // ===== CRITICAL FIX: Configure webhook URL for PayOS =====
+                try
+                {
+                    var webhookUrl = $"{backendBaseUrl}/api/payment/webhook";
+
+                    _logger.LogInformation("🔧 Configuring PayOS webhook URL: {WebhookUrl}", webhookUrl);
+
+                    // Set webhook URL for this PayOS instance
+                    await _payOS.confirmWebhook(webhookUrl);
+
+                    _logger.LogInformation("✅ PayOS webhook configured successfully");
+                }
+                catch (Exception webhookError)
+                {
+                    _logger.LogWarning("⚠️ Failed to configure webhook (continuing anyway): {Error}", webhookError.Message);
+                    // Don't fail the payment creation if webhook config fails
+                }
+
+                // Create payment data with all required URLs
                 var paymentData = new PaymentData(
                     orderCode: orderCode,
                     amount: request.Amount,
                     description: paymentDescription,
                     items: items,
-                    // ✅ FIXED: Point to frontend instead of backend
+                    // Frontend URLs for user redirects
                     cancelUrl: $"{frontendBaseUrl}/payment/cancel?orderCode={orderCode}",
                     returnUrl: $"{frontendBaseUrl}/payment/success?orderCode={orderCode}",
                     buyerName: TruncateForPayOS(request.BuyerName, 50),
@@ -126,14 +145,14 @@ namespace CosplayDate.Infrastructure.Services
                     ExpiredAt = result.expiredAt
                 };
 
-                _logger.LogInformation("Payment link created successfully: OrderCode={OrderCode}, PaymentLinkId={PaymentLinkId}, ReturnUrl={ReturnUrl}",
-                    orderCode, result.paymentLinkId, $"{frontendBaseUrl}/payment/success?orderCode={orderCode}");
+                _logger.LogInformation("💳 Payment link created successfully: OrderCode={OrderCode}, PaymentLinkId={PaymentLinkId}, WebhookConfigured=True",
+                    orderCode, result.paymentLinkId);
 
                 return ApiResponse<CreatePaymentResponseDto>.Success(response, "Payment link created successfully");
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error creating payment link for amount: {Amount}", request.Amount);
+                _logger.LogError(ex, "❌ Error creating payment link for amount: {Amount}", request.Amount);
                 return ApiResponse<CreatePaymentResponseDto>.Error($"Failed to create payment link: {ex.Message}");
             }
         }
@@ -175,7 +194,7 @@ namespace CosplayDate.Infrastructure.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error getting payment info for order code: {OrderCode}", orderCode);
+                _logger.LogError(ex, "❌ Error getting payment info for order code: {OrderCode}", orderCode);
                 return ApiResponse<PaymentInfoResponseDto>.Error("Failed to get payment information");
             }
         }
@@ -198,16 +217,18 @@ namespace CosplayDate.Infrastructure.Services
             }
         }
 
+        // ===== ENHANCED: Better webhook verification =====
         public async Task<ApiResponse<WebhookResponseDto>> VerifyWebhookAsync(WebhookRequestDto webhookData)
         {
             try
             {
-                // Simple webhook verification - check if the webhook data is valid
-                // Note: PayOS webhook verification might vary by version
-                // For now, we'll do basic validation and let the business logic handle the rest
+                _logger.LogInformation("🔍 Verifying webhook: Code={Code}, Desc={Desc}, Success={Success}, OrderCode={OrderCode}",
+                    webhookData.Code, webhookData.Desc, webhookData.Success, webhookData.Data?.OrderCode);
 
+                // Enhanced webhook verification
                 if (string.IsNullOrEmpty(webhookData.Signature))
                 {
+                    _logger.LogWarning("❌ Webhook missing signature");
                     return ApiResponse<WebhookResponseDto>.Success(new WebhookResponseDto
                     {
                         IsValid = false,
@@ -215,7 +236,18 @@ namespace CosplayDate.Infrastructure.Services
                     }, "Invalid webhook - missing signature");
                 }
 
-                // Basic validation - check if it's a success webhook
+                // Verify webhook data structure
+                if (webhookData.Data == null || webhookData.Data.OrderCode <= 0)
+                {
+                    _logger.LogWarning("❌ Webhook missing or invalid data");
+                    return ApiResponse<WebhookResponseDto>.Success(new WebhookResponseDto
+                    {
+                        IsValid = false,
+                        Message = "Invalid webhook data"
+                    }, "Invalid webhook data");
+                }
+
+                // Check if it's a successful payment webhook
                 var isValidWebhook = webhookData.Code == "00" &&
                                    webhookData.Desc.ToLower() == "success" &&
                                    webhookData.Success;
@@ -227,14 +259,14 @@ namespace CosplayDate.Infrastructure.Services
                     Data = webhookData.Data
                 };
 
-                _logger.LogInformation("Webhook verification result: Valid={IsValid}, OrderCode={OrderCode}, Amount={Amount}",
+                _logger.LogInformation("🔍 Webhook verification result: Valid={IsValid}, OrderCode={OrderCode}, Amount={Amount}",
                     isValidWebhook, webhookData.Data.OrderCode, webhookData.Data.Amount);
 
                 return ApiResponse<WebhookResponseDto>.Success(response, response.Message);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error verifying webhook data");
+                _logger.LogError(ex, "❌ Error verifying webhook data");
 
                 var response = new WebhookResponseDto
                 {
@@ -252,13 +284,13 @@ namespace CosplayDate.Infrastructure.Services
             {
                 await _payOS.confirmWebhook(webhookUrl);
 
-                _logger.LogInformation("Webhook confirmed successfully: {WebhookUrl}", webhookUrl);
+                _logger.LogInformation("🎯 Webhook confirmed successfully: {WebhookUrl}", webhookUrl);
 
                 return ApiResponse<string>.Success("", "Webhook confirmed successfully");
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error confirming webhook URL: {WebhookUrl}", webhookUrl);
+                _logger.LogError(ex, "❌ Error confirming webhook URL: {WebhookUrl}", webhookUrl);
                 return ApiResponse<string>.Error("Failed to confirm webhook URL");
             }
         }

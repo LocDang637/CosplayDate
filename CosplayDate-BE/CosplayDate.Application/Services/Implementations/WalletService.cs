@@ -1,4 +1,5 @@
-﻿using CosplayDate.Application.DTOs.Payment;
+﻿// CosplayDate.Application/Services/Implementations/WalletService.cs (ENHANCED)
+using CosplayDate.Application.DTOs.Payment;
 using CosplayDate.Application.Services.Interfaces;
 using CosplayDate.Domain.Entities;
 using CosplayDate.Domain.Interfaces;
@@ -106,14 +107,14 @@ namespace CosplayDate.Application.Services.Implementations
                     CreatedAt = paymentResult.Data.CreatedAt
                 };
 
-                _logger.LogInformation("Top-up request created for user {UserId}: Package={Package}, OrderCode={OrderCode}",
+                _logger.LogInformation("💰 Top-up request created for user {UserId}: Package={Package}, OrderCode={OrderCode}",
                     userId, request.Package, paymentResult.Data.OrderCode);
 
                 return ApiResponse<WalletTopUpResponseDto>.Success(response, "Top-up request created successfully");
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error creating top-up request for user {UserId}", userId);
+                _logger.LogError(ex, "❌ Error creating top-up request for user {UserId}", userId);
                 return ApiResponse<WalletTopUpResponseDto>.Error("An error occurred while creating top-up request");
             }
         }
@@ -159,37 +160,73 @@ namespace CosplayDate.Application.Services.Implementations
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error getting wallet balance for user {UserId}", userId);
+                _logger.LogError(ex, "❌ Error getting wallet balance for user {UserId}", userId);
                 return ApiResponse<WalletBalanceResponseDto>.Error("An error occurred while retrieving wallet balance");
             }
         }
 
+        // ===== ENHANCED: Better webhook processing with more logging =====
         public async Task<ApiResponse<string>> ProcessPaymentWebhookAsync(WebhookDataDto webhookData)
         {
             try
             {
+                _logger.LogInformation("🔄 Processing webhook for OrderCode: {OrderCode}, Amount: {Amount}, Code: {Code}, Desc: {Desc}",
+                    webhookData.OrderCode, webhookData.Amount, webhookData.Code, webhookData.Desc);
+
                 // Find the pending transaction
                 var pendingTransaction = await _unitOfWork.WalletTransactions
                     .FirstOrDefaultAsync(wt => wt.ReferenceId == webhookData.OrderCode.ToString() && wt.Status == "Pending");
 
                 if (pendingTransaction == null)
                 {
-                    _logger.LogWarning("No pending transaction found for OrderCode: {OrderCode}", webhookData.OrderCode);
-                    return ApiResponse<string>.Success("", "No pending transaction found");
+                    _logger.LogWarning("⚠️ No pending transaction found for OrderCode: {OrderCode}", webhookData.OrderCode);
+
+                    // ===== ENHANCED: Check if this transaction was already processed =====
+                    var completedTransaction = await _unitOfWork.WalletTransactions
+                        .FirstOrDefaultAsync(wt => wt.ReferenceId == webhookData.OrderCode.ToString() && wt.Status == "Completed");
+
+                    if (completedTransaction != null)
+                    {
+                        _logger.LogInformation("✅ Transaction already processed: {OrderCode}", webhookData.OrderCode);
+                        return ApiResponse<string>.Success("", "Transaction already processed");
+                    }
+
+                    // ===== ENHANCED: Try to find by transaction reference if available =====
+                    if (!string.IsNullOrEmpty(webhookData.Reference))
+                    {
+                        pendingTransaction = await _unitOfWork.WalletTransactions
+                            .FirstOrDefaultAsync(wt => wt.ReferenceId == webhookData.Reference && wt.Status == "Pending");
+
+                        if (pendingTransaction != null)
+                        {
+                            _logger.LogInformation("🔍 Found pending transaction by reference: {Reference}", webhookData.Reference);
+                        }
+                    }
+
+                    if (pendingTransaction == null)
+                    {
+                        _logger.LogError("❌ Could not find any pending transaction for OrderCode: {OrderCode}, Reference: {Reference}",
+                            webhookData.OrderCode, webhookData.Reference);
+                        return ApiResponse<string>.Error("No pending transaction found");
+                    }
                 }
 
                 var user = await _unitOfWork.Users.GetByIdAsync(pendingTransaction.UserId);
                 if (user == null)
                 {
-                    _logger.LogError("User not found for transaction: {TransactionCode}", pendingTransaction.TransactionCode);
+                    _logger.LogError("❌ User not found for transaction: {TransactionCode}", pendingTransaction.TransactionCode);
                     return ApiResponse<string>.Error("User not found");
                 }
 
                 // Check if payment was successful
                 if (webhookData.Code == "00" && webhookData.Desc.ToLower() == "success")
                 {
+                    _logger.LogInformation("✅ Payment successful, updating user balance for UserId: {UserId}, Amount: {Amount}",
+                        user.Id, pendingTransaction.Amount);
+
                     // Update user wallet balance
-                    var newBalance = (user.WalletBalance ?? 0) + pendingTransaction.Amount;
+                    var oldBalance = user.WalletBalance ?? 0;
+                    var newBalance = oldBalance + pendingTransaction.Amount;
                     user.WalletBalance = newBalance;
                     user.UpdatedAt = DateTime.UtcNow;
 
@@ -201,7 +238,8 @@ namespace CosplayDate.Application.Services.Implementations
 
                     // Add loyalty points (1 point per 1000 VND spent)
                     var pointsToAdd = (int)(webhookData.Amount / 1000);
-                    user.LoyaltyPoints = (user.LoyaltyPoints ?? 0) + pointsToAdd;
+                    var oldPoints = user.LoyaltyPoints ?? 0;
+                    user.LoyaltyPoints = oldPoints + pointsToAdd;
 
                     // Update membership tier if needed
                     user.MembershipTier = CalculateMembershipTier(user.LoyaltyPoints ?? 0);
@@ -225,13 +263,16 @@ namespace CosplayDate.Application.Services.Implementations
                     await _unitOfWork.WalletTransactions.AddAsync(completedTransaction);
                     await _unitOfWork.SaveChangesAsync();
 
-                    _logger.LogInformation("Payment webhook processed successfully: User={UserId}, Amount={Amount}, NewBalance={NewBalance}",
-                        user.Id, pendingTransaction.Amount, newBalance);
+                    _logger.LogInformation("🎉 Payment webhook processed successfully: User={UserId}, Amount={Amount}, OldBalance={OldBalance}, NewBalance={NewBalance}, PointsAdded={PointsAdded}",
+                        user.Id, pendingTransaction.Amount, oldBalance, newBalance, pointsToAdd);
 
                     return ApiResponse<string>.Success("", "Payment processed successfully");
                 }
                 else
                 {
+                    _logger.LogWarning("❌ Payment failed for OrderCode: {OrderCode}, Code: {Code}, Desc: {Desc}",
+                        webhookData.OrderCode, webhookData.Code, webhookData.Desc);
+
                     // Payment failed - update transaction status
                     pendingTransaction.Status = "Failed";
                     pendingTransaction.Description += $" - Failed: {webhookData.Desc}";
@@ -239,15 +280,12 @@ namespace CosplayDate.Application.Services.Implementations
                     _unitOfWork.WalletTransactions.Update(pendingTransaction);
                     await _unitOfWork.SaveChangesAsync();
 
-                    _logger.LogWarning("Payment failed for OrderCode: {OrderCode}, Reason: {Reason}",
-                        webhookData.OrderCode, webhookData.Desc);
-
                     return ApiResponse<string>.Success("", "Payment failed");
                 }
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error processing payment webhook for OrderCode: {OrderCode}", webhookData.OrderCode);
+                _logger.LogError(ex, "❌ Error processing payment webhook for OrderCode: {OrderCode}", webhookData.OrderCode);
                 return ApiResponse<string>.Error("An error occurred while processing payment webhook");
             }
         }

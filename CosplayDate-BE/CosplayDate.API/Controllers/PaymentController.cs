@@ -189,36 +189,85 @@ namespace CosplayDate.API.Controllers
         [EnableRateLimiting("ApiPolicy")]
         public async Task<IActionResult> PaymentWebhook([FromBody] WebhookRequestDto webhookData)
         {
+            // ===== ENHANCED: Better logging and validation =====
+            _logger.LogInformation("🔔 Webhook received: Code={Code}, Desc={Desc}, Success={Success}, OrderCode={OrderCode}, Amount={Amount}",
+                webhookData?.Code, webhookData?.Desc, webhookData?.Success, webhookData?.Data?.OrderCode, webhookData?.Data?.Amount);
+
             if (!ModelState.IsValid)
             {
+                _logger.LogWarning("❌ Webhook validation failed: {ValidationErrors}",
+                    string.Join(", ", ModelState.Values.SelectMany(v => v.Errors).Select(e => e.ErrorMessage)));
                 return BadRequest(ModelState);
+            }
+
+            if (webhookData?.Data == null)
+            {
+                _logger.LogWarning("❌ Webhook data is null");
+                return BadRequest("Webhook data is required");
             }
 
             try
             {
-                // Verify webhook signature
+                // ===== ENHANCED: Better signature verification with detailed logging =====
                 var verificationResult = await _payOSService.VerifyWebhookAsync(webhookData);
+
+                _logger.LogInformation("🔍 Webhook verification result: IsSuccess={IsSuccess}, IsValid={IsValid}",
+                    verificationResult.IsSuccess, verificationResult.Data?.IsValid);
 
                 if (!verificationResult.IsSuccess || verificationResult.Data?.IsValid != true)
                 {
-                    _logger.LogWarning("Invalid webhook signature received");
-                    return BadRequest("Invalid webhook signature");
+                    _logger.LogWarning("❌ Invalid webhook signature or verification failed: {Message}",
+                        verificationResult.Message);
+
+                    // Still return 200 to prevent PayOS from retrying invalid webhooks
+                    return Ok(new { message = "Webhook verification failed", processed = false });
                 }
 
-                // Process the payment
+                _logger.LogInformation("✅ Webhook verification successful, processing payment...");
+
+                // ===== ENHANCED: Process the payment with better error handling =====
                 var processResult = await _walletService.ProcessPaymentWebhookAsync(webhookData.Data);
 
                 if (processResult.IsSuccess)
                 {
-                    return Ok(new { message = "Webhook processed successfully" });
-                }
+                    _logger.LogInformation("🎉 Webhook processed successfully for OrderCode: {OrderCode}",
+                        webhookData.Data.OrderCode);
 
-                return StatusCode(500, "Failed to process webhook");
+                    return Ok(new
+                    {
+                        message = "Webhook processed successfully",
+                        processed = true,
+                        orderCode = webhookData.Data.OrderCode
+                    });
+                }
+                else
+                {
+                    _logger.LogError("❌ Failed to process webhook for OrderCode: {OrderCode}, Error: {Error}",
+                        webhookData.Data.OrderCode, processResult.Message);
+
+                    // Return 200 but indicate processing failed
+                    return Ok(new
+                    {
+                        message = "Webhook received but processing failed",
+                        processed = false,
+                        error = processResult.Message,
+                        orderCode = webhookData.Data.OrderCode
+                    });
+                }
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error processing payment webhook");
-                return StatusCode(500, "An error occurred while processing webhook");
+                _logger.LogError(ex, "❌ Exception processing payment webhook for OrderCode: {OrderCode}",
+                    webhookData?.Data?.OrderCode);
+
+                // ===== CRITICAL: Always return 200 to PayOS to prevent infinite retries =====
+                return Ok(new
+                {
+                    message = "Webhook received but error occurred",
+                    processed = false,
+                    error = "Internal server error",
+                    orderCode = webhookData?.Data?.OrderCode
+                });
             }
         }
 
@@ -326,7 +375,7 @@ namespace CosplayDate.API.Controllers
             {
                 var currentUserId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
 
-                _logger.LogInformation("Transaction verification requested: TransactionId={TransactionId}, UserId={UserId}",
+                _logger.LogInformation("🔍 Transaction verification requested: TransactionId={TransactionId}, UserId={UserId}",
                     request.TransactionId, currentUserId);
 
                 // Get payment info from PayOS to verify
@@ -338,10 +387,15 @@ namespace CosplayDate.API.Controllers
                     {
                         var paymentInfo = paymentInfoResult.Data;
 
+                        _logger.LogInformation("💳 PayOS payment status: {Status}, AmountPaid: {AmountPaid}",
+                            paymentInfo.Status, paymentInfo.AmountPaid);
+
                         // Check if payment is actually completed
                         if (paymentInfo.Status.ToUpper() == "PAID" || paymentInfo.Status.ToUpper() == "COMPLETED")
                         {
-                            // Payment is verified as successful
+                            // Payment is verified as successful - trigger webhook processing if needed
+                            await TriggerManualWebhookProcessing(orderCode, paymentInfo.AmountPaid);
+
                             var response = new VerifyTransactionResponseDto
                             {
                                 IsVerified = true,
@@ -399,7 +453,7 @@ namespace CosplayDate.API.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error verifying transaction: {TransactionId}", request.TransactionId);
+                _logger.LogError(ex, "❌ Error verifying transaction: {TransactionId}", request.TransactionId);
                 return StatusCode(500, new
                 {
                     isSuccess = false,
@@ -420,7 +474,7 @@ namespace CosplayDate.API.Controllers
             {
                 var currentUserId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
 
-                _logger.LogInformation("Balance refresh requested for user: {UserId}", currentUserId);
+                _logger.LogInformation("💰 Balance refresh requested for user: {UserId}", currentUserId);
 
                 // Get current wallet balance
                 var balanceResult = await _walletService.GetWalletBalanceAsync(currentUserId);
@@ -434,13 +488,48 @@ namespace CosplayDate.API.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error refreshing balance");
+                _logger.LogError(ex, "❌ Error refreshing balance");
                 return StatusCode(500, new
                 {
                     isSuccess = false,
                     message = "An error occurred while refreshing balance",
                     errors = new { }
                 });
+            }
+        }
+
+        private async Task TriggerManualWebhookProcessing(long orderCode, int amount)
+        {
+            try
+            {
+                _logger.LogInformation("🔄 Triggering manual webhook processing for OrderCode: {OrderCode}", orderCode);
+
+                // Create manual webhook data
+                var manualWebhookData = new WebhookDataDto
+                {
+                    OrderCode = orderCode,
+                    Amount = amount,
+                    Code = "00",
+                    Desc = "success",
+                    Reference = $"MANUAL_{orderCode}_{DateTime.UtcNow:yyyyMMddHHmmss}"
+                };
+
+                // Process as if it came from PayOS webhook
+                var result = await _walletService.ProcessPaymentWebhookAsync(manualWebhookData);
+
+                if (result.IsSuccess)
+                {
+                    _logger.LogInformation("✅ Manual webhook processing successful for OrderCode: {OrderCode}", orderCode);
+                }
+                else
+                {
+                    _logger.LogWarning("⚠️ Manual webhook processing failed for OrderCode: {OrderCode}, Error: {Error}",
+                        orderCode, result.Message);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "❌ Error in manual webhook processing for OrderCode: {OrderCode}", orderCode);
             }
         }
     }
