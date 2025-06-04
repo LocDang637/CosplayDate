@@ -1,13 +1,18 @@
- 
 {
-  "buildCommand": "cd CosplayDate-FE && npm run build",
-  "outputDirectory": "CosplayDate-FE/dist",
-  "installCommand": "cd CosplayDate-FE && npm install",
-  "framework": "vite",
-  "rewrites": [
+  "version": 2,
+  "builds": [
     {
-      "source": "/(.*)",
-      "destination": "/index.html"
+      "src": "CosplayDate-FE/package.json",
+      "use": "@vercel/static-build",
+      "config": {
+        "distDir": "dist"
+      }
+    }
+  ],
+  "routes": [
+    {
+      "src": "/(.*)",
+      "dest": "/index.html"
     }
   ],
   "headers": [
