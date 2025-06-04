@@ -1,4 +1,4 @@
-// File: src/components/profile/CustomerWallet.jsx (Complete Implementation)
+// File: src/components/profile/CustomerWallet.jsx (Fixed Version)
 import React, { useState, useEffect } from 'react';
 import {
   Box,
@@ -102,24 +102,56 @@ const CustomerWallet = ({
     }
   };
 
+  // ===== FIXED: Enhanced loadPackages function =====
   const loadPackages = async () => {
     setLoading(true);
+    setError('');
+    
     try {
+      console.log('🔄 Loading payment packages...');
       const result = await paymentAPI.getTopUpPackages();
-      if (result.success) {
-        setPackages(result.data);
+      
+      if (result.success && Array.isArray(result.data)) {
+        // Validate and sanitize package data
+        const validPackages = result.data.filter(pkg => {
+          const isValid = pkg && 
+            typeof pkg.PayAmount === 'number' && 
+            typeof pkg.ReceiveAmount === 'number' &&
+            pkg.PayAmount > 0 && 
+            pkg.ReceiveAmount > 0 &&
+            pkg.Package;
+          
+          if (!isValid) {
+            console.warn('⚠️ Invalid package filtered out:', pkg);
+          }
+          
+          return isValid;
+        });
+
+        if (validPackages.length === 0) {
+          throw new Error('Không có gói thanh toán hợp lệ');
+        }
+
+        console.log('✅ Valid packages loaded:', validPackages.length);
+        setPackages(validPackages);
+        
         // Auto-select popular package
-        const popularPackage = result.data.find(pkg => pkg.Popular);
+        const popularPackage = validPackages.find(pkg => pkg.Popular);
         if (popularPackage) {
           setSelectedPackage(popularPackage);
-        } else if (result.data.length > 0) {
-          setSelectedPackage(result.data[0]);
+          console.log('📌 Auto-selected popular package:', popularPackage.Package);
+        } else if (validPackages.length > 0) {
+          setSelectedPackage(validPackages[0]);
+          console.log('📌 Auto-selected first package:', validPackages[0].Package);
         }
       } else {
-        setError(result.message);
+        throw new Error(result.message || 'Không thể tải danh sách gói thanh toán');
       }
     } catch (err) {
-      setError('Failed to load packages');
+      console.error('❌ Load packages error:', err);
+      setError(err.message || 'Lỗi tải gói thanh toán');
+      setPackages([]);
+      setSelectedPackage(null);
     } finally {
       setLoading(false);
     }
@@ -205,18 +237,24 @@ const CustomerWallet = ({
     }
   ];
 
+  // ===== FIXED: Null-safe currency formatting =====
   const formatCurrency = (amount) => {
+    const validAmount = typeof amount === 'number' && !isNaN(amount) ? amount : 0;
+    
     return new Intl.NumberFormat('vi-VN', {
       style: 'currency',
       currency: 'VND'
-    }).format(amount);
+    }).format(validAmount);
   };
 
+  // ===== FIXED: Safe calculation functions =====
   const getBonusMultiplier = (pkg) => {
+    if (!pkg?.ReceiveAmount || !pkg?.PayAmount || pkg.PayAmount === 0) return 1;
     return Math.round(pkg.ReceiveAmount / pkg.PayAmount);
   };
 
   const getSavingsAmount = (pkg) => {
+    if (!pkg?.ReceiveAmount || !pkg?.PayAmount) return 0;
     return pkg.ReceiveAmount - pkg.PayAmount;
   };
 
@@ -268,39 +306,122 @@ const CustomerWallet = ({
   const startIndex = (currentPage - 1) * transactionsPerPage;
   const currentTransactions = filteredTransactions.slice(startIndex, startIndex + transactionsPerPage);
 
-  const handleTopUpOpen = () => {
+  // ===== FIXED: Enhanced top-up handler =====
+  const handleTopUpOpen = async () => {
     setTopUpDialog(true);
-    loadPackages();
+    setError('');
+    setSelectedPackage(null);
+    await loadPackages();
   };
 
   const handlePackageSelect = (pkg) => {
-    setSelectedPackage(pkg);
-  };
-
-  const handleProceedToPayment = async () => {
-    if (!selectedPackage) return;
-
-    setProcessingPayment(true);
-    setError('');
-
-    try {
-      const result = await paymentAPI.createTopUp({
-        Package: selectedPackage.Package
-      });
-
-      if (result.success && result.data?.CheckoutUrl) {
-        // Close dialog and redirect to PayOS
-        setTopUpDialog(false);
-        window.location.href = result.data.CheckoutUrl;
-      } else {
-        setError(result.message || 'Failed to create payment');
-      }
-    } catch (err) {
-      setError('Payment creation failed');
-    } finally {
-      setProcessingPayment(false);
+    if (pkg && pkg.PayAmount && pkg.ReceiveAmount) {
+      setSelectedPackage(pkg);
+      console.log('📦 Package selected:', pkg.Package);
     }
   };
+
+  // ===== FIXED: Enhanced payment processing =====
+  const handleProceedToPayment = async () => {
+  // Comprehensive validation
+  if (!selectedPackage) {
+    setError('Vui lòng chọn gói thanh toán');
+    return;
+  }
+
+  if (!selectedPackage.Package) {
+    setError('Gói thanh toán không hợp lệ');
+    return;
+  }
+
+  if (!selectedPackage.PayAmount || selectedPackage.PayAmount <= 0) {
+    setError('Số tiền thanh toán không hợp lệ');
+    return;
+  }
+
+  if (!selectedPackage.ReceiveAmount || selectedPackage.ReceiveAmount <= 0) {
+    setError('Số tiền nhận không hợp lệ');
+    return;
+  }
+
+  setProcessingPayment(true);
+  setError('');
+
+  try {
+    const paymentData = {
+      Package: selectedPackage.Package
+    };
+
+    console.log('🔄 Creating payment for package:', selectedPackage.Package);
+
+    const result = await paymentAPI.createTopUp(paymentData);
+
+    console.log('💳 Payment creation result:', result);
+
+    if (result.success) {
+      // ===== UPDATED: Handle your specific response structure =====
+      const checkoutUrl = result.data?.CheckoutUrl || 
+                         result.data?.checkoutUrl || 
+                         result.data?.checkout_url;
+
+      if (checkoutUrl) {
+        try {
+          const url = new URL(checkoutUrl);
+          
+          console.log('🔍 Validating checkout URL:', {
+            protocol: url.protocol,
+            hostname: url.hostname,
+            fullUrl: checkoutUrl
+          });
+          
+          // Enhanced URL validation for PayOS
+          if (url.protocol === 'https:' && 
+              (url.hostname.includes('payos') || 
+               url.hostname.includes('pay.os') ||
+               url.hostname.includes('dev.payos') ||
+               url.hostname === 'pay.payos.vn')) {
+            
+            console.log('✅ Valid PayOS URL, redirecting...');
+            
+            // Store payment info for success page
+            sessionStorage.setItem('pendingPayment', JSON.stringify({
+              package: selectedPackage.Package,
+              amount: selectedPackage.PayAmount,
+              orderCode: result.data.orderCode,
+              paymentLinkId: result.data.paymentLinkId,
+              timestamp: new Date().toISOString()
+            }));
+            
+            setTopUpDialog(false);
+            window.location.href = checkoutUrl;
+          } else {
+            console.error('❌ Invalid payment URL domain:', url.hostname);
+            setError('URL thanh toán không hợp lệ - domain không được phép');
+          }
+        } catch (urlError) {
+          console.error('❌ Invalid checkout URL format:', checkoutUrl, urlError);
+          setError('Định dạng URL thanh toán không hợp lệ');
+        }
+      } else {
+        console.error('❌ No checkout URL in response:', result.data);
+        
+        // Show detailed error for debugging
+        const availableFields = Object.keys(result.data || {});
+        setError(`Không nhận được link thanh toán. Available fields: ${availableFields.join(', ')}`);
+        
+        // Log the full response for debugging
+        console.log('🔍 Full payment response for debugging:', JSON.stringify(result, null, 2));
+      }
+    } else {
+      setError(result.message || 'Không thể tạo thanh toán');
+    }
+  } catch (err) {
+    console.error('❌ Payment creation error:', err.message);
+    setError('Lỗi tạo thanh toán. Vui lòng thử lại.');
+  } finally {
+    setProcessingPayment(false);
+  }
+};
 
   const handleWithdraw = () => {
     // Handle withdrawal logic
@@ -318,7 +439,33 @@ const CustomerWallet = ({
     setSnackbar({ ...snackbar, open: false });
   };
 
+  // ===== FIXED: Enhanced PackageCard component =====
   const PackageCard = ({ pkg, isSelected, onSelect }) => {
+    // Add validation to prevent NaN issues
+    if (!pkg || typeof pkg.PayAmount !== 'number' || typeof pkg.ReceiveAmount !== 'number') {
+      return (
+        <Card
+          sx={{
+            border: '1px solid rgba(0,0,0,0.12)',
+            borderRadius: '12px',
+            p: 2,
+            textAlign: 'center',
+            minHeight: '140px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
+        >
+          <Box>
+            <CircularProgress size={24} />
+            <Typography variant="body2" sx={{ mt: 1, color: 'text.secondary' }}>
+              Đang tải...
+            </Typography>
+          </Box>
+        </Card>
+      );
+    }
+
     const bonusMultiplier = getBonusMultiplier(pkg);
     const savings = getSavingsAmount(pkg);
     
@@ -335,6 +482,7 @@ const CustomerWallet = ({
           borderRadius: '12px',
           transition: 'all 0.2s ease',
           position: 'relative',
+          minHeight: '140px',
           '&:hover': {
             transform: 'translateY(-2px)',
             boxShadow: '0 4px 12px rgba(233, 30, 99, 0.15)',
@@ -376,7 +524,7 @@ const CustomerWallet = ({
         <CardContent sx={{ textAlign: 'center', p: 2 }}>
           {/* Package Name */}
           <Typography variant="h6" sx={{ fontWeight: 700, mb: 1 }}>
-            {pkg.Package}
+            {pkg.Package || 'Gói thanh toán'}
           </Typography>
           
           {/* Payment Amount */}
@@ -390,16 +538,18 @@ const CustomerWallet = ({
           </Typography>
           
           {/* Bonus */}
-          <Chip
-            label={`${bonusMultiplier}x`}
-            size="small"
-            sx={{
-              backgroundColor: '#4CAF50',
-              color: 'white',
-              fontSize: '10px',
-              height: '20px',
-            }}
-          />
+          {savings > 0 && (
+            <Chip
+              label={`Tiết kiệm ${formatCurrency(savings)}`}
+              size="small"
+              sx={{
+                backgroundColor: '#4CAF50',
+                color: 'white',
+                fontSize: '10px',
+                height: '20px',
+              }}
+            />
+          )}
         </CardContent>
       </Card>
     );

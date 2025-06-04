@@ -93,17 +93,21 @@ namespace CosplayDate.Infrastructure.Services
             new ItemData(itemDescription, 1, request.Amount)
         };
 
-                // Create payment data
+                // ===== FIXED: Use Frontend URLs instead of Backend URLs =====
+                var frontendBaseUrl = _configuration["App:FrontendUrl"] ?? "http://localhost:5173";
+
+                // Create payment data with FRONTEND redirect URLs
                 var paymentData = new PaymentData(
                     orderCode: orderCode,
                     amount: request.Amount,
                     description: paymentDescription,
                     items: items,
-                    cancelUrl: $"{_configuration["App:BaseUrl"]}/api/payment/cancel",
-                    returnUrl: $"{_configuration["App:BaseUrl"]}/api/payment/success",
-                    buyerName: TruncateForPayOS(request.BuyerName, 50),  // Buyer name limit
-                    buyerEmail: TruncateForPayOS(request.BuyerEmail, 50), // Email limit
-                    buyerPhone: TruncateForPayOS(request.BuyerPhone, 15), // Phone limit
+                    // ✅ FIXED: Point to frontend instead of backend
+                    cancelUrl: $"{frontendBaseUrl}/payment/cancel?orderCode={orderCode}",
+                    returnUrl: $"{frontendBaseUrl}/payment/success?orderCode={orderCode}",
+                    buyerName: TruncateForPayOS(request.BuyerName, 50),
+                    buyerEmail: TruncateForPayOS(request.BuyerEmail, 50),
+                    buyerPhone: TruncateForPayOS(request.BuyerPhone, 15),
                     expiredAt: DateTimeOffset.UtcNow.AddMinutes(15).ToUnixTimeSeconds()
                 );
 
@@ -122,8 +126,8 @@ namespace CosplayDate.Infrastructure.Services
                     ExpiredAt = result.expiredAt
                 };
 
-                _logger.LogInformation("Payment link created successfully: OrderCode={OrderCode}, PaymentLinkId={PaymentLinkId}",
-                    orderCode, result.paymentLinkId);
+                _logger.LogInformation("Payment link created successfully: OrderCode={OrderCode}, PaymentLinkId={PaymentLinkId}, ReturnUrl={ReturnUrl}",
+                    orderCode, result.paymentLinkId, $"{frontendBaseUrl}/payment/success?orderCode={orderCode}");
 
                 return ApiResponse<CreatePaymentResponseDto>.Success(response, "Payment link created successfully");
             }

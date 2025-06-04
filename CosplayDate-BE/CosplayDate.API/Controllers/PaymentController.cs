@@ -254,7 +254,7 @@ namespace CosplayDate.API.Controllers
                         <p>Your wallet has been topped up successfully.</p>
                         {(orderCode.HasValue ? $"<div class='order-code'><strong>Order Code:</strong> {orderCode}</div>" : "")}
                         <p>Your digital balance has been updated and you can now use it for bookings!</p>
-                        <a href='http://localhost:3000/wallet' class='btn'>View Wallet</a>
+                        <a href='http://localhost:5173/wallet' class='btn'>View Wallet</a>
                     </div>
                 </body>
                 </html>";
@@ -299,7 +299,7 @@ namespace CosplayDate.API.Controllers
                         <p>Your payment was cancelled. No charges were made to your account.</p>
                         {(orderCode.HasValue ? $"<div class='order-code'><strong>Order Code:</strong> {orderCode}</div>" : "")}
                         <p>You can try again or choose a different payment method.</p>
-                        <a href='http://localhost:3000/wallet' class='btn'>Try Again</a>
+                        <a href='http://localhost:5173/wallet' class='btn'>Try Again</a>
                     </div>
                 </body>
                 </html>";
@@ -310,6 +310,137 @@ namespace CosplayDate.API.Controllers
             {
                 _logger.LogError(ex, "Error in payment cancel callback");
                 return Content("Payment was cancelled.", "text/plain");
+            }
+        }
+
+        [HttpPost("verify")]
+        [EnableRateLimiting("ApiPolicy")]
+        public async Task<IActionResult> VerifyTransaction([FromBody] VerifyTransactionRequestDto request)
+        {
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(ModelState);
+            }
+
+            try
+            {
+                var currentUserId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
+
+                _logger.LogInformation("Transaction verification requested: TransactionId={TransactionId}, UserId={UserId}",
+                    request.TransactionId, currentUserId);
+
+                // Get payment info from PayOS to verify
+                if (long.TryParse(request.TransactionId, out long orderCode))
+                {
+                    var paymentInfoResult = await _payOSService.GetPaymentInfoAsync(orderCode);
+
+                    if (paymentInfoResult.IsSuccess && paymentInfoResult.Data != null)
+                    {
+                        var paymentInfo = paymentInfoResult.Data;
+
+                        // Check if payment is actually completed
+                        if (paymentInfo.Status.ToUpper() == "PAID" || paymentInfo.Status.ToUpper() == "COMPLETED")
+                        {
+                            // Payment is verified as successful
+                            var response = new VerifyTransactionResponseDto
+                            {
+                                IsVerified = true,
+                                TransactionId = request.TransactionId,
+                                OrderCode = paymentInfo.OrderCode,
+                                Amount = paymentInfo.Amount,
+                                Status = paymentInfo.Status,
+                                VerifiedAt = DateTime.UtcNow,
+                                Message = "Payment verified successfully"
+                            };
+
+                            return Ok(new
+                            {
+                                isSuccess = true,
+                                message = "Transaction verified successfully",
+                                data = response
+                            });
+                        }
+                        else
+                        {
+                            // Payment not completed yet
+                            return Ok(new
+                            {
+                                isSuccess = false,
+                                message = $"Payment not completed. Current status: {paymentInfo.Status}",
+                                data = new VerifyTransactionResponseDto
+                                {
+                                    IsVerified = false,
+                                    TransactionId = request.TransactionId,
+                                    Status = paymentInfo.Status,
+                                    Message = "Payment verification failed - not completed"
+                                }
+                            });
+                        }
+                    }
+                    else
+                    {
+                        return BadRequest(new
+                        {
+                            isSuccess = false,
+                            message = "Payment information not found",
+                            errors = new { }
+                        });
+                    }
+                }
+                else
+                {
+                    return BadRequest(new
+                    {
+                        isSuccess = false,
+                        message = "Invalid transaction ID format",
+                        errors = new { }
+                    });
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error verifying transaction: {TransactionId}", request.TransactionId);
+                return StatusCode(500, new
+                {
+                    isSuccess = false,
+                    message = "An error occurred while verifying transaction",
+                    errors = new { }
+                });
+            }
+        }
+
+        /// <summary>
+        /// Manual balance refresh (alternative to verification)
+        /// </summary>
+        [HttpPost("refresh-balance")]
+        [EnableRateLimiting("ApiPolicy")]
+        public async Task<IActionResult> RefreshBalance()
+        {
+            try
+            {
+                var currentUserId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
+
+                _logger.LogInformation("Balance refresh requested for user: {UserId}", currentUserId);
+
+                // Get current wallet balance
+                var balanceResult = await _walletService.GetWalletBalanceAsync(currentUserId);
+
+                if (balanceResult.IsSuccess)
+                {
+                    return Ok(balanceResult);
+                }
+
+                return BadRequest(balanceResult);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error refreshing balance");
+                return StatusCode(500, new
+                {
+                    isSuccess = false,
+                    message = "An error occurred while refreshing balance",
+                    errors = new { }
+                });
             }
         }
     }
