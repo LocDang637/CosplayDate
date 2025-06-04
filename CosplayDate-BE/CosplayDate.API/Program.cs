@@ -17,29 +17,41 @@ var builder = WebApplication.CreateBuilder(args);
 // ===== ENHANCED CONFIGURATION SETUP =====
 builder.Configuration
     .SetBasePath(Directory.GetCurrentDirectory())
-    .AddJsonFile("appsettings.json", optional: true, reloadOnChange: true) // Made optional for production
+    .AddJsonFile("appsettings.json", optional: true, reloadOnChange: true)
     .AddJsonFile($"appsettings.{builder.Environment.EnvironmentName}.json", optional: true, reloadOnChange: true)
     .AddEnvironmentVariables();
 
-// Custom configuration processor to handle ${ENV_VAR} syntax in appsettings.Production.json
+// Enhanced configuration processor to handle ${ENV_VAR} syntax
 var configuration = builder.Configuration;
 var configurationRoot = configuration as IConfigurationRoot;
+
 if (configurationRoot != null)
 {
-    foreach (var provider in configurationRoot.Providers.Reverse())
+    // Get all configuration key-value pairs
+    var allConfig = configuration.AsEnumerable().ToList();
+
+    foreach (var configItem in allConfig)
     {
-        foreach (var key in provider.GetChildKeys(Enumerable.Empty<string>(), null))
+        if (!string.IsNullOrEmpty(configItem.Value) &&
+            configItem.Value.StartsWith("${") &&
+            configItem.Value.EndsWith("}"))
         {
-            if (provider.TryGet(key, out var value) && !string.IsNullOrEmpty(value))
+            var envVarName = configItem.Value.Substring(2, configItem.Value.Length - 3);
+            var envVarValue = Environment.GetEnvironmentVariable(envVarName);
+
+            if (!string.IsNullOrEmpty(envVarValue))
             {
-                if (value.StartsWith("${") && value.EndsWith("}"))
+                configuration[configItem.Key] = envVarValue;
+                Console.WriteLine($"✓ Resolved environment variable: {configItem.Key} = {envVarName}");
+            }
+            else
+            {
+                Console.WriteLine($"⚠️  Environment variable not found: {envVarName} for key: {configItem.Key}");
+
+                // In development, this might be okay, but in production it's critical
+                if (builder.Environment.IsProduction() && configItem.Key.Contains("Connection"))
                 {
-                    var envVarName = value.Substring(2, value.Length - 3);
-                    var envVarValue = Environment.GetEnvironmentVariable(envVarName);
-                    if (!string.IsNullOrEmpty(envVarValue))
-                    {
-                        configuration[key] = envVarValue;
-                    }
+                    throw new InvalidOperationException($"Required environment variable '{envVarName}' is not set for configuration key '{configItem.Key}'");
                 }
             }
         }
@@ -50,9 +62,10 @@ if (configurationRoot != null)
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 
-// ===== HEALTH CHECKS =====
+// ===== ENHANCED HEALTH CHECKS =====
 builder.Services.AddHealthChecks()
-    .AddCheck("self", () => Microsoft.Extensions.Diagnostics.HealthChecks.HealthCheckResult.Healthy("Application is running"));
+    .AddCheck("self", () => Microsoft.Extensions.Diagnostics.HealthChecks.HealthCheckResult.Healthy("Application is running"))
+    .AddDbContextCheck<CosplayDateDbContext>("database", failureStatus: Microsoft.Extensions.Diagnostics.HealthChecks.HealthStatus.Degraded);
 
 // ===== SWAGGER CONFIGURATION =====
 builder.Services.AddSwaggerGen(c =>
@@ -111,18 +124,71 @@ builder.Services.AddSwaggerGen(c =>
 
 builder.Services.AddHttpClient();
 
-// ===== DATABASE CONFIGURATION =====
+// ===== ENHANCED DATABASE CONFIGURATION WITH RETRY LOGIC =====
 builder.Services.AddDbContext<CosplayDateDbContext>(options =>
 {
-    var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
-                         ?? builder.Configuration["DATABASE_CONNECTION_STRING"]; // Fallback to env var
-    options.UseSqlServer(connectionString);
+    // Priority order: Environment Variable -> appsettings.json -> fallback
+    var connectionString = Environment.GetEnvironmentVariable("DATABASE_CONNECTION_STRING")
+                         ?? builder.Configuration.GetConnectionString("DefaultConnection");
 
-    // Add additional configurations for production
+    if (string.IsNullOrEmpty(connectionString))
+    {
+        var errorMessage = $"Database connection string is not configured. " +
+                          $"Environment: {builder.Environment.EnvironmentName}. " +
+                          $"Please set 'DATABASE_CONNECTION_STRING' environment variable " +
+                          $"or 'ConnectionStrings:DefaultConnection' in appsettings.json";
+
+        Console.WriteLine($"❌ {errorMessage}");
+
+        // List available environment variables for debugging
+        var dbEnvVars = Environment.GetEnvironmentVariables()
+            .Cast<System.Collections.DictionaryEntry>()
+            .Where(x => x.Key.ToString().Contains("DATABASE", StringComparison.OrdinalIgnoreCase) ||
+                       x.Key.ToString().Contains("CONNECTION", StringComparison.OrdinalIgnoreCase))
+            .ToList();
+
+        Console.WriteLine($"Available DB-related environment variables: {string.Join(", ", dbEnvVars.Select(x => x.Key))}");
+
+        throw new InvalidOperationException(errorMessage);
+    }
+
+    Console.WriteLine($"✓ Using connection string from: {(Environment.GetEnvironmentVariable("DATABASE_CONNECTION_STRING") != null ? "Environment Variable" : "appsettings.json")}");
+
+    // Configure SQL Server with comprehensive retry logic for Azure SQL transient errors
+    options.UseSqlServer(connectionString, sqlOptions =>
+    {
+        // Enable retry logic with Azure SQL recommended settings
+        sqlOptions.EnableRetryOnFailure(
+            maxRetryCount: 6,           // Retry up to 6 times
+            maxRetryDelay: TimeSpan.FromSeconds(30), // Max delay between retries
+            errorNumbersToAdd: new int[] {
+                // Additional Azure SQL specific transient error codes
+                4060,   // Database unavailable
+                40197,  // Service busy
+                40501,  // Service busy  
+                40613,  // Database unavailable (auto-pause)
+                49918,  // Cannot process request
+                49919,  // Cannot process request
+                49920,  // Cannot process request
+                11001   // Network error
+            }
+        );
+
+        // Set command timeout for long-running operations
+        sqlOptions.CommandTimeout(60);
+    });
+
     if (builder.Environment.IsProduction())
     {
         options.EnableSensitiveDataLogging(false);
         options.EnableDetailedErrors(false);
+    }
+    else
+    {
+        options.EnableSensitiveDataLogging(true);
+        options.EnableDetailedErrors(true);
+        // Enable detailed logging to see retry attempts
+        options.LogTo(Console.WriteLine, LogLevel.Information);
     }
 });
 
@@ -275,7 +341,7 @@ builder.Services.AddCors(options =>
     });
 });
 
-// ===== LOGGING CONFIGURATION =====
+// ===== ENHANCED LOGGING CONFIGURATION =====
 builder.Logging.ClearProviders();
 builder.Logging.AddConsole();
 
@@ -343,7 +409,7 @@ app.UseRateLimiter();
 app.UseAuthentication();
 app.UseAuthorization();
 
-// ===== ADDITIONAL ENDPOINTS FOR TESTING =====
+// ===== ENHANCED ENDPOINTS FOR TESTING AND MONITORING =====
 // Root endpoint
 app.MapGet("/", () => Results.Ok(new
 {
@@ -354,29 +420,105 @@ app.MapGet("/", () => Results.Ok(new
         swagger = "/swagger",
         health = "/health",
         healthReady = "/health/ready",
-        testConfig = "/test-config",
+        healthDatabase = "/health/database",
+        debugConfig = "/debug/config",
+        debugEnvironment = "/debug/environment",
         api = "/api"
     },
     timestamp = DateTime.UtcNow
 })).AllowAnonymous();
 
-// Test configuration endpoint
-app.MapGet("/test-config", () => Results.Ok(new
+// Enhanced configuration test endpoint
+app.MapGet("/debug/config", () =>
 {
-    environment = app.Environment.EnvironmentName,
-    configuration = new
+    var connectionString = app.Configuration.GetConnectionString("DefaultConnection")
+                         ?? app.Configuration["DATABASE_CONNECTION_STRING"];
+
+    return Results.Ok(new
     {
-        hasSupabaseUrl = !string.IsNullOrEmpty(app.Configuration["SUPABASE_URL"]),
-        hasDatabaseConnection = !string.IsNullOrEmpty(app.Configuration["DATABASE_CONNECTION_STRING"]),
-        hasJwtSecret = !string.IsNullOrEmpty(app.Configuration["JWT_SECRET_KEY"]),
-        frontendUrl = app.Configuration["FRONTEND_URL"],
-        backendUrl = app.Configuration["BACKEND_URL"]
-    },
-    cors = new
+        environment = app.Environment.EnvironmentName,
+        hasConnectionString = !string.IsNullOrEmpty(connectionString),
+        connectionStringSource = app.Configuration.GetConnectionString("DefaultConnection") != null
+            ? "appsettings.json"
+            : app.Configuration["DATABASE_CONNECTION_STRING"] != null
+                ? "environment variable"
+                : "none",
+        availableConfigKeys = app.Configuration.AsEnumerable()
+            .Where(x => x.Key.Contains("Connection", StringComparison.OrdinalIgnoreCase) ||
+                       x.Key.Contains("DATABASE", StringComparison.OrdinalIgnoreCase))
+            .Select(x => new { Key = x.Key, HasValue = !string.IsNullOrEmpty(x.Value) })
+            .ToList()
+    });
+}).AllowAnonymous();
+
+// Environment variables debug endpoint
+app.MapGet("/debug/environment", () =>
+{
+    var envVars = Environment.GetEnvironmentVariables()
+        .Cast<System.Collections.DictionaryEntry>()
+        .Where(x => x.Key.ToString().Contains("DATABASE", StringComparison.OrdinalIgnoreCase) ||
+                   x.Key.ToString().Contains("CONNECTION", StringComparison.OrdinalIgnoreCase) ||
+                   x.Key.ToString().Contains("JWT", StringComparison.OrdinalIgnoreCase) ||
+                   x.Key.ToString().Contains("SUPABASE", StringComparison.OrdinalIgnoreCase))
+        .ToDictionary(x => x.Key.ToString(), x => string.IsNullOrEmpty(x.Value?.ToString()) ? "NULL/EMPTY" : "HAS_VALUE");
+
+    var configValues = new Dictionary<string, object>
     {
-        allowedOrigins = app.Configuration["FRONTEND_URL"]
+        { "ConnectionStrings:DefaultConnection", app.Configuration.GetConnectionString("DefaultConnection") ?? "NULL" },
+        { "DATABASE_CONNECTION_STRING (direct)", app.Configuration["DATABASE_CONNECTION_STRING"] ?? "NULL" },
+        { "DATABASE_CONNECTION_STRING (env)", Environment.GetEnvironmentVariable("DATABASE_CONNECTION_STRING") ?? "NULL" },
+        { "JWT_SECRET_KEY", app.Configuration["JWT_SECRET_KEY"] != null ? "HAS_VALUE" : "NULL" },
+        { "Jwt:Key", app.Configuration["Jwt:Key"] != null ? "HAS_VALUE" : "NULL" }
+    };
+
+    return Results.Ok(new
+    {
+        environment = app.Environment.EnvironmentName,
+        environmentVariables = envVars,
+        configurationValues = configValues,
+        allConfigKeys = app.Configuration.AsEnumerable()
+            .Select(x => new { x.Key, HasValue = !string.IsNullOrEmpty(x.Value) })
+            .Where(x => x.Key.Contains("Connection", StringComparison.OrdinalIgnoreCase) ||
+                       x.Key.Contains("DATABASE", StringComparison.OrdinalIgnoreCase) ||
+                       x.Key.Contains("JWT", StringComparison.OrdinalIgnoreCase))
+            .ToList()
+    });
+}).AllowAnonymous();
+
+// Enhanced database health check endpoint
+app.MapGet("/health/database", async (CosplayDateDbContext context, ILogger<Program> logger) =>
+{
+    try
+    {
+        var startTime = DateTime.UtcNow;
+        var canConnect = await context.Database.CanConnectAsync();
+        var duration = DateTime.UtcNow - startTime;
+
+        logger.LogInformation("Database connectivity check: {CanConnect}, Duration: {Duration}ms",
+            canConnect, duration.TotalMilliseconds);
+
+        return Results.Ok(new
+        {
+            canConnect,
+            responseTimeMs = duration.TotalMilliseconds,
+            timestamp = DateTime.UtcNow,
+            database = context.Database.GetDbConnection().Database,
+            server = context.Database.GetDbConnection().DataSource,
+            connectionString = context.Database.GetConnectionString()?.Substring(0, Math.Min(50, context.Database.GetConnectionString()?.Length ?? 0)) + "..."
+        });
     }
-})).AllowAnonymous();
+    catch (Exception ex)
+    {
+        logger.LogError(ex, "Database health check failed");
+        return Results.Ok(new
+        {
+            canConnect = false,
+            error = ex.Message,
+            timestamp = DateTime.UtcNow,
+            errorType = ex.GetType().Name
+        });
+    }
+}).AllowAnonymous();
 
 // Health checks
 app.MapHealthChecks("/health");
@@ -388,25 +530,40 @@ app.MapHealthChecks("/health/ready", new Microsoft.AspNetCore.Diagnostics.Health
 // Controllers
 app.MapControllers();
 
-// ===== DATABASE MIGRATION (Production) =====
+// ===== DATABASE MIGRATION WITH RETRY LOGIC (Production) =====
 if (app.Environment.IsProduction())
 {
     using var scope = app.Services.CreateScope();
     var context = scope.ServiceProvider.GetRequiredService<CosplayDateDbContext>();
+    var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
 
-    try
+    const int maxRetries = 3;
+    for (int attempt = 1; attempt <= maxRetries; attempt++)
     {
-        // Only run migrations if database exists
-        if (context.Database.CanConnect())
+        try
         {
-            context.Database.Migrate();
+            // Only run migrations if database exists
+            if (await context.Database.CanConnectAsync())
+            {
+                logger.LogInformation("Running database migrations (attempt {Attempt}/{MaxRetries})", attempt, maxRetries);
+                await context.Database.MigrateAsync();
+                logger.LogInformation("Database migrations completed successfully");
+                break;
+            }
         }
-    }
-    catch (Exception ex)
-    {
-        var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
-        logger.LogError(ex, "An error occurred while migrating the database.");
-        // Don't throw - let the app start even if migration fails
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Database migration failed on attempt {Attempt}/{MaxRetries}", attempt, maxRetries);
+
+            if (attempt == maxRetries)
+            {
+                logger.LogCritical("Database migration failed after {MaxRetries} attempts. Application will continue but database may not be up to date.", maxRetries);
+            }
+            else
+            {
+                await Task.Delay(TimeSpan.FromSeconds(5 * attempt)); // Progressive delay
+            }
+        }
     }
 }
 
