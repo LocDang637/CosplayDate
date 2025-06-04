@@ -408,5 +408,16 @@ FodyWeavers.xsd
 
 # Configuration files with sensitive data
 appsettings.json
-appsettings.*.json
+appsettings.Development.json
+appsettings.Local.json
+!appsettings.Production.json
 !appsettings.example.json
+
+# Environment files
+.env
+.env.local
+.env.production
+.env.staging
+
+# Docker
+docker-compose.override.yml

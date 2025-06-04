@@ -1,0 +1,38 @@
+ 
+version: '3.8'
+
+services:
+  backend:
+    build: 
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8080:8080"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Production
+      - SUPABASE_URL=${SUPABASE_URL}
+      - SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY}
+      - SUPABASE_SERVICE_KEY=${SUPABASE_SERVICE_KEY}
+      - DATABASE_CONNECTION_STRING=${DATABASE_CONNECTION_STRING}
+      - EMAIL_FROM_ADDRESS=${EMAIL_FROM_ADDRESS}
+      - EMAIL_USERNAME=${EMAIL_USERNAME}
+      - EMAIL_PASSWORD=${EMAIL_PASSWORD}
+      - BACKEND_URL=${BACKEND_URL}
+      - FRONTEND_URL=${FRONTEND_URL}
+      - PAYOS_CLIENT_ID=${PAYOS_CLIENT_ID}
+      - PAYOS_API_KEY=${PAYOS_API_KEY}
+      - PAYOS_CHECKSUM_KEY=${PAYOS_CHECKSUM_KEY}
+      - PAYOS_PARTNER_CODE=${PAYOS_PARTNER_CODE}
+      - JWT_SECRET_KEY=${JWT_SECRET_KEY}
+    volumes:
+      - app_data:/app/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+volumes:
+  app_data:

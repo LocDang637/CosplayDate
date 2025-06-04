@@ -14,11 +14,47 @@ using System.Threading.RateLimiting;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// ===== ENHANCED CONFIGURATION SETUP =====
+builder.Configuration
+    .SetBasePath(Directory.GetCurrentDirectory())
+    .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true)
+    .AddJsonFile($"appsettings.{builder.Environment.EnvironmentName}.json", optional: true, reloadOnChange: true)
+    .AddEnvironmentVariables();
+
+// Custom configuration processor to handle ${ENV_VAR} syntax in appsettings.Production.json
+var configuration = builder.Configuration;
+var configurationRoot = configuration as IConfigurationRoot;
+if (configurationRoot != null)
+{
+    foreach (var provider in configurationRoot.Providers.Reverse())
+    {
+        foreach (var key in provider.GetChildKeys(Enumerable.Empty<string>(), null))
+        {
+            if (provider.TryGet(key, out var value) && !string.IsNullOrEmpty(value))
+            {
+                if (value.StartsWith("${") && value.EndsWith("}"))
+                {
+                    var envVarName = value.Substring(2, value.Length - 3);
+                    var envVarValue = Environment.GetEnvironmentVariable(envVarName);
+                    if (!string.IsNullOrEmpty(envVarValue))
+                    {
+                        configuration[key] = envVarValue;
+                    }
+                }
+            }
+        }
+    }
+}
+
 // Add services to the container
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 
-// Swagger Configuration with JWT Authentication
+// ===== HEALTH CHECKS =====
+builder.Services.AddHealthChecks()
+    .AddCheck("self", () => Microsoft.Extensions.Diagnostics.HealthChecks.HealthCheckResult.Healthy("Application is running"));
+
+// ===== SWAGGER CONFIGURATION =====
 builder.Services.AddSwaggerGen(c =>
 {
     c.SwaggerDoc("v1", new OpenApiInfo
@@ -74,10 +110,22 @@ builder.Services.AddSwaggerGen(c =>
 });
 
 builder.Services.AddHttpClient();
-// Database
-builder.Services.AddDbContext<CosplayDateDbContext>(options =>
-    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
+// ===== DATABASE CONFIGURATION =====
+builder.Services.AddDbContext<CosplayDateDbContext>(options =>
+{
+    var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
+    options.UseSqlServer(connectionString);
+
+    // Add additional configurations for production
+    if (builder.Environment.IsProduction())
+    {
+        options.EnableSensitiveDataLogging(false);
+        options.EnableDetailedErrors(false);
+    }
+});
+
+// ===== DEPENDENCY INJECTION =====
 // Repositories
 builder.Services.AddScoped<IUserRepository, UserRepository>();
 builder.Services.AddScoped<IEmailVerificationTokenRepository, EmailVerificationTokenRepository>();
@@ -95,7 +143,7 @@ builder.Services.AddScoped<ICosplayerMediaService, CosplayerMediaService>();
 builder.Services.AddScoped<IPayOSService, PayOSService>();
 builder.Services.AddScoped<IWalletService, WalletService>();
 
-// JWT Authentication Configuration
+// ===== JWT AUTHENTICATION CONFIGURATION =====
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
     {
@@ -109,7 +157,7 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             ValidAudience = builder.Configuration["Jwt:Audience"],
             IssuerSigningKey = new SymmetricSecurityKey(
                 Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Key"]!)),
-            ClockSkew = TimeSpan.Zero // Remove delay of token when expire
+            ClockSkew = TimeSpan.Zero
         };
 
         // Handle JWT authentication events
@@ -140,7 +188,7 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
         };
     });
 
-// Authorization
+// ===== AUTHORIZATION POLICIES =====
 builder.Services.AddAuthorization(options =>
 {
     options.AddPolicy("RequireVerifiedUser", policy =>
@@ -158,12 +206,12 @@ builder.Services.AddAuthorization(options =>
               .RequireClaim("IsVerified", "True"));
 });
 
-// Rate Limiting (Simplified for .NET 8)
+// ===== RATE LIMITING =====
 builder.Services.AddRateLimiter(options =>
 {
     options.AddFixedWindowLimiter("AuthPolicy", limiterOptions =>
     {
-        limiterOptions.PermitLimit = 5;
+        limiterOptions.PermitLimit = builder.Environment.IsProduction() ? 5 : 10;
         limiterOptions.Window = TimeSpan.FromMinutes(1);
         limiterOptions.QueueProcessingOrder = QueueProcessingOrder.OldestFirst;
         limiterOptions.QueueLimit = 2;
@@ -171,49 +219,158 @@ builder.Services.AddRateLimiter(options =>
 
     options.AddFixedWindowLimiter("ApiPolicy", limiterOptions =>
     {
-        limiterOptions.PermitLimit = 100;
+        limiterOptions.PermitLimit = builder.Environment.IsProduction() ? 100 : 1000;
         limiterOptions.Window = TimeSpan.FromMinutes(1);
         limiterOptions.QueueProcessingOrder = QueueProcessingOrder.OldestFirst;
         limiterOptions.QueueLimit = 10;
     });
 });
 
-// CORS
+// ===== CORS CONFIGURATION =====
 builder.Services.AddCors(options =>
 {
-    options.AddPolicy("AllowReactApp", policy =>
+    options.AddPolicy("ProductionPolicy", policy =>
     {
-        policy.WithOrigins("http://localhost:3000", "http://localhost:5173")
-              .AllowAnyHeader()
-              .AllowAnyMethod()
-              .AllowCredentials();
+        if (builder.Environment.IsProduction())
+        {
+            // Production CORS - specific origins only
+            var frontendUrl = builder.Configuration["App:FrontendUrl"];
+            var allowedOrigins = new List<string>();
+
+            if (!string.IsNullOrEmpty(frontendUrl))
+            {
+                allowedOrigins.Add(frontendUrl);
+            }
+
+            // Add your production domains
+            allowedOrigins.AddRange(new[]
+            {
+                "https://your-frontend.vercel.app",
+                "https://cosplaydate.com",
+                "https://www.cosplaydate.com"
+            });
+
+            policy.WithOrigins(allowedOrigins.ToArray())
+                  .AllowAnyHeader()
+                  .AllowAnyMethod()
+                  .AllowCredentials();
+        }
+        else
+        {
+            // Development CORS - more permissive
+            policy.WithOrigins(
+                    "http://localhost:3000",
+                    "http://localhost:5173",
+                    "http://localhost:5000",
+                    "https://localhost:5001")
+                  .AllowAnyHeader()
+                  .AllowAnyMethod()
+                  .AllowCredentials();
+        }
     });
 });
 
+// ===== LOGGING CONFIGURATION =====
+builder.Logging.ClearProviders();
+builder.Logging.AddConsole();
+
+if (builder.Environment.IsProduction())
+{
+    builder.Logging.SetMinimumLevel(LogLevel.Warning);
+}
+else
+{
+    builder.Logging.SetMinimumLevel(LogLevel.Information);
+}
+
 var app = builder.Build();
 
-// Configure the HTTP request pipeline
+// ===== MIDDLEWARE PIPELINE =====
+
+// Exception handling
 if (app.Environment.IsDevelopment())
+{
+    app.UseDeveloperExceptionPage();
+}
+else
+{
+    app.UseExceptionHandler("/Error");
+    app.UseHsts();
+}
+
+// Swagger configuration
+if (app.Environment.IsDevelopment() || app.Environment.IsStaging())
 {
     app.UseSwagger();
     app.UseSwaggerUI(c =>
     {
         c.SwaggerEndpoint("/swagger/v1/swagger.json", "CosplayDate API V1");
-        c.RoutePrefix = "swagger"; // Access via /swagger
+        c.RoutePrefix = "swagger";
         c.DocumentTitle = "CosplayDate API Documentation";
         c.DocExpansion(Swashbuckle.AspNetCore.SwaggerUI.DocExpansion.None);
-        c.DefaultModelsExpandDepth(-1); // Hide schemas section
+        c.DefaultModelsExpandDepth(-1);
     });
 }
 
-app.UseHttpsRedirection();
-app.UseCors("AllowReactApp");
+// Security headers for production
+if (app.Environment.IsProduction())
+{
+    app.Use(async (context, next) =>
+    {
+        context.Response.Headers.Add("X-Frame-Options", "DENY");
+        context.Response.Headers.Add("X-Content-Type-Options", "nosniff");
+        context.Response.Headers.Add("Referrer-Policy", "strict-origin-when-cross-origin");
+        context.Response.Headers.Add("X-XSS-Protection", "1; mode=block");
+        await next();
+    });
+}
+
+// HTTPS redirection
+if (!app.Environment.IsDevelopment())
+{
+    app.UseHttpsRedirection();
+}
+
+// CORS
+app.UseCors("ProductionPolicy");
+
+// Rate limiting
 app.UseRateLimiter();
 
-// Authentication & Authorization middleware (Order is important!)
+// Authentication & Authorization (Order is important!)
 app.UseAuthentication();
 app.UseAuthorization();
 
+// Health checks
+app.MapHealthChecks("/health");
+app.MapHealthChecks("/health/ready", new Microsoft.AspNetCore.Diagnostics.HealthChecks.HealthCheckOptions
+{
+    Predicate = check => check.Tags.Contains("ready")
+});
+
+// Controllers
 app.MapControllers();
+
+// ===== DATABASE MIGRATION (Production) =====
+if (app.Environment.IsProduction())
+{
+    using var scope = app.Services.CreateScope();
+    var context = scope.ServiceProvider.GetRequiredService<CosplayDateDbContext>();
+
+    try
+    {
+        // Only run migrations if database exists
+        if (context.Database.CanConnect())
+        {
+            context.Database.Migrate();
+        }
+    }
+    catch (Exception ex)
+    {
+        var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
+        logger.LogError(ex, "An error occurred while migrating the database.");
+        // Don't throw - let the app start even if migration fails
+    }
+}
 
 app.Run();
