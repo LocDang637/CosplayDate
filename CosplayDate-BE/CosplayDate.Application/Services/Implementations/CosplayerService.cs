@@ -1,4 +1,6 @@
 ﻿// CosplayDate.Application/Services/Implementations/CosplayerService.cs
+// FIXED: Added GetCosplayerDetailsByUserIdAsync method
+
 using CosplayDate.Application.DTOs.Cosplayer;
 using CosplayDate.Application.Services.Interfaces;
 using CosplayDate.Domain.Entities;
@@ -35,6 +37,219 @@ namespace CosplayDate.Application.Services.Implementations
             _unitOfWork = unitOfWork;
             _logger = logger;
         }
+
+        // ... [Keep all existing methods] ...
+
+        /// <summary>
+        /// FIXED: Get cosplayer details by cosplayer ID (original method)
+        /// </summary>
+        public async Task<ApiResponse<CosplayerDetailsDto>> GetCosplayerDetailsAsync(int cosplayerId, int currentUserId = 0)
+        {
+            try
+            {
+                _logger.LogInformation("Getting cosplayer details by cosplayer ID: {CosplayerId}", cosplayerId);
+
+                var cosplayer = await _unitOfWork.Cosplayers.GetByIdAsync(cosplayerId);
+                if (cosplayer == null)
+                {
+                    _logger.LogWarning("Cosplayer not found with ID: {CosplayerId}", cosplayerId);
+                    return ApiResponse<CosplayerDetailsDto>.Error("Cosplayer not found.");
+                }
+
+                return await BuildCosplayerDetailsResponse(cosplayer, currentUserId);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting cosplayer details for ID: {CosplayerId}", cosplayerId);
+                return ApiResponse<CosplayerDetailsDto>.Error("An error occurred while retrieving cosplayer details.");
+            }
+        }
+
+        /// <summary>
+        /// FIXED: Get cosplayer details by user ID (new method to handle frontend user ID lookup)
+        /// </summary>
+        public async Task<ApiResponse<CosplayerDetailsDto>> GetCosplayerDetailsByUserIdAsync(int userId, int currentUserId = 0)
+        {
+            try
+            {
+                _logger.LogInformation("Getting cosplayer details by user ID: {UserId}", userId);
+
+                var cosplayer = await _unitOfWork.Repository<Cosplayer>()
+                    .FirstOrDefaultAsync(c => c.UserId == userId);
+
+                if (cosplayer == null)
+                {
+                    _logger.LogWarning("Cosplayer not found with user ID: {UserId}", userId);
+                    return ApiResponse<CosplayerDetailsDto>.Error("Cosplayer profile not found.");
+                }
+
+                return await BuildCosplayerDetailsResponse(cosplayer, currentUserId);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting cosplayer details for user ID: {UserId}", userId);
+                return ApiResponse<CosplayerDetailsDto>.Error("An error occurred while retrieving cosplayer details.");
+            }
+        }
+
+        /// <summary>
+        /// FIXED: Extracted common logic for building cosplayer details response
+        /// </summary>
+        private async Task<ApiResponse<CosplayerDetailsDto>> BuildCosplayerDetailsResponse(Cosplayer cosplayer, int currentUserId)
+        {
+            var user = await _unitOfWork.Users.GetByIdAsync(cosplayer.UserId);
+            if (user == null || !user.IsActive.GetValueOrDefault() || !user.IsVerified)
+            {
+                _logger.LogWarning("User not found or inactive for cosplayer: {CosplayerId}", cosplayer.Id);
+                return ApiResponse<CosplayerDetailsDto>.Error("Cosplayer profile is not available.");
+            }
+
+            // Get related data
+            var specialties = await _unitOfWork.Repository<CosplayerSpecialty>()
+                .FindAsync(cs => cs.CosplayerId == cosplayer.Id);
+
+            var services = await _unitOfWork.Repository<CosplayDate.Domain.Entities.CosplayerService>()
+                .FindAsync(cs => cs.CosplayerId == cosplayer.Id);
+
+            var photos = await _unitOfWork.Repository<CosplayerPhoto>()
+                .FindAsync(cp => cp.CosplayerId == cosplayer.Id);
+
+            var videos = await _unitOfWork.Repository<CosplayerVideo>()
+                .FindAsync(cv => cv.CosplayerId == cosplayer.Id);
+
+            var reviews = await _unitOfWork.Reviews
+                .FindAsync(r => r.CosplayerId == cosplayer.Id);
+
+            // Check if current user is following/favoriting this cosplayer
+            var isFollowing = false;
+            var isFavorite = false;
+            if (currentUserId > 0)
+            {
+                var followRecord = await _unitOfWork.UserFollows
+                    .FirstOrDefaultAsync(f => f.FollowerId == currentUserId && f.FollowedId == cosplayer.UserId);
+                isFollowing = followRecord != null;
+
+                var favoriteRecord = await _unitOfWork.Favorites
+                    .FirstOrDefaultAsync(f => f.CustomerId == currentUserId && f.CosplayerId == cosplayer.Id);
+                isFavorite = favoriteRecord != null;
+            }
+
+            // Convert to DTOs
+            var servicesDtos = services.Select(s => new CosplayerServiceDto
+            {
+                Id = s.Id,
+                ServiceName = s.ServiceName,
+                ServiceDescription = s.ServiceDescription
+            }).ToList();
+
+            var photosDtos = new List<CosplayerPhotoDto>();
+            foreach (var photo in photos.OrderBy(p => p.DisplayOrder))
+            {
+                var photoTags = await _unitOfWork.Repository<PhotoTag>()
+                    .FindAsync(pt => pt.PhotoId == photo.Id);
+
+                var isLiked = false;
+                if (currentUserId > 0)
+                {
+                    var likeRecord = await _unitOfWork.PhotoLikes
+                        .FirstOrDefaultAsync(pl => pl.PhotoId == photo.Id && pl.UserId == currentUserId);
+                    isLiked = likeRecord != null;
+                }
+
+                photosDtos.Add(new CosplayerPhotoDto
+                {
+                    Id = photo.Id,
+                    PhotoUrl = photo.PhotoUrl,
+                    Title = photo.Title,
+                    Description = photo.Description,
+                    Category = photo.Category,
+                    IsPortfolio = photo.IsPortfolio,
+                    DisplayOrder = photo.DisplayOrder,
+                    LikesCount = photo.LikesCount,
+                    ViewsCount = photo.ViewsCount,
+                    Tags = photoTags.Select(pt => pt.Tag).ToList(),
+                    IsLiked = isLiked,
+                    CreatedAt = photo.CreatedAt
+                });
+            }
+
+            var videosDtos = videos.OrderBy(v => v.DisplayOrder).Select(v => new CosplayerVideoDto
+            {
+                Id = v.Id,
+                VideoUrl = v.VideoUrl,
+                ThumbnailUrl = v.ThumbnailUrl,
+                Title = v.Title,
+                Description = v.Description,
+                Category = v.Category,
+                Duration = v.Duration,
+                ViewCount = v.ViewCount,
+                LikesCount = v.LikesCount,
+                DisplayOrder = v.DisplayOrder,
+                CreatedAt = v.CreatedAt
+            }).ToList();
+
+            var recentReviewsDtos = new List<ReviewSummaryDto>();
+            foreach (var review in reviews.OrderByDescending(r => r.CreatedAt).Take(5))
+            {
+                var customer = await _unitOfWork.Users.GetByIdAsync(review.CustomerId);
+                var reviewTags = await _unitOfWork.Repository<ReviewTag>()
+                    .FindAsync(rt => rt.ReviewId == review.Id);
+
+                recentReviewsDtos.Add(new ReviewSummaryDto
+                {
+                    Id = review.Id,
+                    CustomerName = customer != null ? $"{customer.FirstName} {customer.LastName}" : "Anonymous",
+                    CustomerAvatarUrl = customer?.AvatarUrl,
+                    Rating = review.Rating,
+                    Comment = review.Comment,
+                    IsVerified = review.IsVerified,
+                    HelpfulCount = review.HelpfulCount,
+                    OwnerResponse = review.OwnerResponse,
+                    CreatedAt = review.CreatedAt,
+                    Tags = reviewTags.Select(rt => rt.Tag).ToList()
+                });
+            }
+
+            // Calculate stats
+            var stats = await GetCosplayerStatsInternal(cosplayer.Id, cosplayer.UserId);
+
+            var detailsDto = new CosplayerDetailsDto
+            {
+                Id = cosplayer.Id,
+                UserId = cosplayer.UserId,
+                DisplayName = cosplayer.DisplayName,
+                FirstName = user.FirstName,
+                LastName = user.LastName,
+                AvatarUrl = user.AvatarUrl,
+                PricePerHour = cosplayer.PricePerHour,
+                Category = cosplayer.Category,
+                Gender = cosplayer.Gender,
+                CharacterSpecialty = cosplayer.CharacterSpecialty,
+                Rating = cosplayer.Rating,
+                TotalReviews = cosplayer.TotalReviews,
+                FollowersCount = cosplayer.FollowersCount,
+                ResponseTime = cosplayer.ResponseTime,
+                SuccessRate = cosplayer.SuccessRate,
+                IsAvailable = cosplayer.IsAvailable,
+                Location = user.Location,
+                Bio = user.Bio,
+                CreatedAt = cosplayer.CreatedAt,
+                Specialties = specialties.Select(s => s.Specialty).ToList(),
+                Tags = cosplayer.Tags?.Split(',').Select(t => t.Trim()).Where(t => !string.IsNullOrEmpty(t)).ToList() ?? new List<string>(),
+                Services = servicesDtos,
+                Photos = photosDtos,
+                Videos = videosDtos,
+                RecentReviews = recentReviewsDtos,
+                IsFollowing = isFollowing,
+                IsFavorite = isFavorite,
+                IsOwnProfile = currentUserId == cosplayer.UserId,
+                Stats = stats
+            };
+
+            return ApiResponse<CosplayerDetailsDto>.Success(detailsDto, "Cosplayer details retrieved successfully.");
+        }
+
+        // ... [Keep all existing methods - GetCosplayersAsync, UpdateCosplayerProfileAsync, BecomeCosplayerAsync, etc.] ...
 
         public async Task<ApiResponse<GetCosplayersResponseDto>> GetCosplayersAsync(GetCosplayersRequestDto request)
         {
@@ -207,172 +422,7 @@ namespace CosplayDate.Application.Services.Implementations
             }
         }
 
-        public async Task<ApiResponse<CosplayerDetailsDto>> GetCosplayerDetailsAsync(int cosplayerId, int currentUserId = 0)
-        {
-            try
-            {
-                var cosplayer = await _unitOfWork.Cosplayers.GetByIdAsync(cosplayerId);
-                if (cosplayer == null)
-                {
-                    return ApiResponse<CosplayerDetailsDto>.Error("Cosplayer not found.");
-                }
-
-                var user = await _unitOfWork.Users.GetByIdAsync(cosplayer.UserId);
-                if (user == null || !user.IsActive.GetValueOrDefault() || !user.IsVerified)
-                {
-                    return ApiResponse<CosplayerDetailsDto>.Error("Cosplayer profile is not available.");
-                }
-
-                // Get related data
-                var specialties = await _unitOfWork.Repository<CosplayerSpecialty>()
-                    .FindAsync(cs => cs.CosplayerId == cosplayer.Id);
-
-                var services = await _unitOfWork.Repository<CosplayDate.Domain.Entities.CosplayerService>()
-                    .FindAsync(cs => cs.CosplayerId == cosplayer.Id);
-
-                var photos = await _unitOfWork.Repository<CosplayerPhoto>()
-                    .FindAsync(cp => cp.CosplayerId == cosplayer.Id);
-
-                var videos = await _unitOfWork.Repository<CosplayerVideo>()
-                    .FindAsync(cv => cv.CosplayerId == cosplayer.Id);
-
-                var reviews = await _unitOfWork.Reviews
-                    .FindAsync(r => r.CosplayerId == cosplayer.Id);
-
-                // Check if current user is following/favoriting this cosplayer
-                var isFollowing = false;
-                var isFavorite = false;
-                if (currentUserId > 0)
-                {
-                    var followRecord = await _unitOfWork.UserFollows
-                        .FirstOrDefaultAsync(f => f.FollowerId == currentUserId && f.FollowedId == cosplayer.UserId);
-                    isFollowing = followRecord != null;
-
-                    var favoriteRecord = await _unitOfWork.Favorites
-                        .FirstOrDefaultAsync(f => f.CustomerId == currentUserId && f.CosplayerId == cosplayer.Id);
-                    isFavorite = favoriteRecord != null;
-                }
-
-                // Convert to DTOs
-                var servicesDtos = services.Select(s => new CosplayerServiceDto
-                {
-                    Id = s.Id,
-                    ServiceName = s.ServiceName,
-                    ServiceDescription = s.ServiceDescription
-                }).ToList();
-
-                var photosDtos = new List<CosplayerPhotoDto>();
-                foreach (var photo in photos.OrderBy(p => p.DisplayOrder))
-                {
-                    var photoTags = await _unitOfWork.Repository<PhotoTag>()
-                        .FindAsync(pt => pt.PhotoId == photo.Id);
-
-                    var isLiked = false;
-                    if (currentUserId > 0)
-                    {
-                        var likeRecord = await _unitOfWork.PhotoLikes
-                            .FirstOrDefaultAsync(pl => pl.PhotoId == photo.Id && pl.UserId == currentUserId);
-                        isLiked = likeRecord != null;
-                    }
-
-                    photosDtos.Add(new CosplayerPhotoDto
-                    {
-                        Id = photo.Id,
-                        PhotoUrl = photo.PhotoUrl,
-                        Title = photo.Title,
-                        Description = photo.Description,
-                        Category = photo.Category,
-                        IsPortfolio = photo.IsPortfolio,
-                        DisplayOrder = photo.DisplayOrder,
-                        LikesCount = photo.LikesCount,
-                        ViewsCount = photo.ViewsCount,
-                        Tags = photoTags.Select(pt => pt.Tag).ToList(),
-                        IsLiked = isLiked,
-                        CreatedAt = photo.CreatedAt
-                    });
-                }
-
-                var videosDtos = videos.OrderBy(v => v.DisplayOrder).Select(v => new CosplayerVideoDto
-                {
-                    Id = v.Id,
-                    VideoUrl = v.VideoUrl,
-                    ThumbnailUrl = v.ThumbnailUrl,
-                    Title = v.Title,
-                    Description = v.Description,
-                    Category = v.Category,
-                    Duration = v.Duration,
-                    ViewCount = v.ViewCount,
-                    LikesCount = v.LikesCount,
-                    DisplayOrder = v.DisplayOrder,
-                    CreatedAt = v.CreatedAt
-                }).ToList();
-
-                var recentReviewsDtos = new List<ReviewSummaryDto>();
-                foreach (var review in reviews.OrderByDescending(r => r.CreatedAt).Take(5))
-                {
-                    var customer = await _unitOfWork.Users.GetByIdAsync(review.CustomerId);
-                    var reviewTags = await _unitOfWork.Repository<ReviewTag>()
-                        .FindAsync(rt => rt.ReviewId == review.Id);
-
-                    recentReviewsDtos.Add(new ReviewSummaryDto
-                    {
-                        Id = review.Id,
-                        CustomerName = customer != null ? $"{customer.FirstName} {customer.LastName}" : "Anonymous",
-                        CustomerAvatarUrl = customer?.AvatarUrl,
-                        Rating = review.Rating,
-                        Comment = review.Comment,
-                        IsVerified = review.IsVerified,
-                        HelpfulCount = review.HelpfulCount,
-                        OwnerResponse = review.OwnerResponse,
-                        CreatedAt = review.CreatedAt,
-                        Tags = reviewTags.Select(rt => rt.Tag).ToList()
-                    });
-                }
-
-                // Calculate stats
-                var stats = await GetCosplayerStatsInternal(cosplayer.Id, cosplayer.UserId);
-
-                var detailsDto = new CosplayerDetailsDto
-                {
-                    Id = cosplayer.Id,
-                    UserId = cosplayer.UserId,
-                    DisplayName = cosplayer.DisplayName,
-                    FirstName = user.FirstName,
-                    LastName = user.LastName,
-                    AvatarUrl = user.AvatarUrl,
-                    PricePerHour = cosplayer.PricePerHour,
-                    Category = cosplayer.Category,
-                    Gender = cosplayer.Gender,
-                    CharacterSpecialty = cosplayer.CharacterSpecialty,
-                    Rating = cosplayer.Rating,
-                    TotalReviews = cosplayer.TotalReviews,
-                    FollowersCount = cosplayer.FollowersCount,
-                    ResponseTime = cosplayer.ResponseTime,
-                    SuccessRate = cosplayer.SuccessRate,
-                    IsAvailable = cosplayer.IsAvailable,
-                    Location = user.Location,
-                    Bio = user.Bio,
-                    CreatedAt = cosplayer.CreatedAt,
-                    Specialties = specialties.Select(s => s.Specialty).ToList(),
-                    Tags = cosplayer.Tags?.Split(',').Select(t => t.Trim()).Where(t => !string.IsNullOrEmpty(t)).ToList() ?? new List<string>(),
-                    Services = servicesDtos,
-                    Photos = photosDtos,
-                    Videos = videosDtos,
-                    RecentReviews = recentReviewsDtos,
-                    IsFollowing = isFollowing,
-                    IsFavorite = isFavorite,
-                    IsOwnProfile = currentUserId == cosplayer.UserId,
-                    Stats = stats
-                };
-
-                return ApiResponse<CosplayerDetailsDto>.Success(detailsDto, "Cosplayer details retrieved successfully.");
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error getting cosplayer details for ID: {CosplayerId}", cosplayerId);
-                return ApiResponse<CosplayerDetailsDto>.Error("An error occurred while retrieving cosplayer details.");
-            }
-        }
+        // ... [Keep all other existing methods] ...
 
         public async Task<ApiResponse<CosplayerDetailsDto>> UpdateCosplayerProfileAsync(int userId, UpdateCosplayerProfileRequestDto request)
         {

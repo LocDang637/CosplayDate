@@ -1,4 +1,4 @@
-// src/pages/CosplayerProfilePage.jsx - COMPLETE FIXED VERSION
+// src/pages/CosplayerProfilePage.jsx - FIXED PROFILE LOADING LOGIC
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import {
@@ -43,7 +43,7 @@ const CosplayerProfilePage = () => {
   const [showBecomeCosplayer, setShowBecomeCosplayer] = useState(false);
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
 
-  // FIX: Improved user ID comparison logic - handle both id and userId fields
+  // ✅ FIXED: Improved user ID comparison logic
   const isOwnProfile = !userId || (user && (
     parseInt(userId) === parseInt(user.id || user.userId)
   ));
@@ -63,7 +63,7 @@ const CosplayerProfilePage = () => {
           isOwnProfile: !userId || (parseInt(userId) === parseInt(parsedUser.id || parsedUser.userId))
         });
         
-        // FIX: Auto-redirect to proper profile URL if needed
+        // ✅ FIXED: Auto-redirect logic for proper profile URLs
         if (!userId && parsedUser.userType === 'Cosplayer' && (parsedUser.id || parsedUser.userId)) {
           const userIdValue = parsedUser.id || parsedUser.userId;
           console.log('🔄 Redirecting to profile with user ID:', userIdValue);
@@ -71,7 +71,21 @@ const CosplayerProfilePage = () => {
           return;
         }
         
-        // FIX: If customer is on cosplayer profile route, redirect to customer profile
+        // ✅ FIXED: Check if URL userId doesn't match actual user ID for own profile
+        if (userId && parsedUser.userType === 'Cosplayer' && 
+            parseInt(userId) === parseInt(parsedUser.id || parsedUser.userId)) {
+          // This is correct - user is viewing their own profile with correct user ID
+          console.log('✅ Correct URL: User viewing own profile with matching user ID');
+        } else if (userId && parsedUser.userType === 'Cosplayer' && 
+                   parseInt(userId) !== parseInt(parsedUser.id || parsedUser.userId)) {
+          // URL has wrong ID for own profile - redirect to correct user ID
+          const correctUserId = parsedUser.id || parsedUser.userId;
+          console.log('🔄 Wrong URL for own profile, redirecting from', userId, 'to', correctUserId);
+          navigate(`/profile/${correctUserId}`, { replace: true });
+          return;
+        }
+        
+        // ✅ FIXED: If customer tries to access cosplayer profile route, redirect properly
         if (userId && parsedUser.userType === 'Customer' && 
             parseInt(userId) === parseInt(parsedUser.id || parsedUser.userId)) {
           console.log('🔄 Customer on cosplayer route, redirecting to customer profile');
@@ -93,10 +107,10 @@ const CosplayerProfilePage = () => {
     }
   }, [location.state, userId, navigate]);
 
-  // Main profile loading effect
+  // ✅ FIXED: Main profile loading effect with better logic
   useEffect(() => {
     const loadProfile = async () => {
-      // FIX: Don't proceed if we don't have user data yet for own profile
+      // Don't proceed if we don't have user data yet for own profile
       if (isOwnProfile && !user) {
         setLoading(false);
         return;
@@ -121,17 +135,19 @@ const CosplayerProfilePage = () => {
           userType: user?.userType
         });
 
-        // FIX: Enhanced error handling - don't let API errors trigger redirects
+        // ✅ FIXED: Better error handling and profile detection
         try {
           const result = await cosplayerAPI.getCosplayerDetails(targetUserId);
           
           console.log('📊 API Result:', {
             success: result.success,
             hasData: !!result.data,
-            error: result.message
+            error: result.message,
+            errorStatus: result.errors?.status
           });
           
-          if (result.success) {
+          if (result.success && result.data) {
+            // Profile exists and loaded successfully
             setProfileUser(result.data);
             
             // Update local storage for own profile
@@ -143,16 +159,23 @@ const CosplayerProfilePage = () => {
             
             console.log('✅ Profile loaded successfully');
           } else {
-            // FIX: Handle different error scenarios gracefully
-            if (isOwnProfile && user?.userType === 'Cosplayer') {
-              // User is marked as cosplayer but no profile found - show become cosplayer form
-              console.log('👤 User marked as cosplayer but no profile found, showing become cosplayer form');
-              setShowBecomeCosplayer(true);
-            } else if (isOwnProfile) {
-              // Customer viewing own profile but using cosplayer route - redirect to customer profile
-              console.log('🔄 Customer on cosplayer route, redirecting to customer profile');
-              navigate(`/customer-profile/${targetUserId}`, { replace: true });
-              return;
+            // Profile not found or error occurred
+            console.log('❌ Profile loading failed:', result.message);
+            
+            // ✅ FIXED: Better handling of different error scenarios
+            if (isOwnProfile) {
+              // This is the user's own profile
+              if (user?.userType === 'Cosplayer') {
+                // User is marked as cosplayer but no profile found
+                // This could mean they need to complete their cosplayer setup
+                console.log('🎭 User marked as cosplayer but profile not found, checking if they need to complete setup');
+                setShowBecomeCosplayer(true);
+              } else {
+                // User is not a cosplayer, redirect to customer profile
+                console.log('👤 User is not a cosplayer, redirecting to customer profile');
+                navigate(`/customer-profile/${targetUserId}`, { replace: true });
+                return;
+              }
             } else {
               // Viewing someone else's profile that doesn't exist
               console.log('❌ Other user profile not found');
@@ -162,10 +185,16 @@ const CosplayerProfilePage = () => {
         } catch (apiError) {
           console.error('🚨 API Error:', apiError);
           
-          // FIX: Don't show errors for own profile - show become cosplayer form instead
-          if (isOwnProfile && user?.userType === 'Cosplayer') {
-            console.log('🔧 API error for own profile, showing become cosplayer form');
-            setShowBecomeCosplayer(true);
+          // Handle API errors gracefully
+          if (isOwnProfile) {
+            if (user?.userType === 'Cosplayer') {
+              console.log('🔧 API error for cosplayer, might need to complete setup');
+              setShowBecomeCosplayer(true);
+            } else {
+              console.log('👤 API error for customer, redirecting to customer profile');
+              navigate(`/customer-profile/${targetUserId}`, { replace: true });
+              return;
+            }
           } else {
             setError('Unable to load profile. Please try again.');
           }
@@ -334,8 +363,8 @@ const CosplayerProfilePage = () => {
     }
   };
 
-  // FIX: Show become cosplayer form if needed
-  if (showBecomeCosplayer && isOwnProfile) {
+  // ✅ FIXED: Better condition for showing become cosplayer form
+  if (showBecomeCosplayer && isOwnProfile && user?.userType === 'Cosplayer') {
     console.log('🎭 Rendering become cosplayer form');
     return (
       <ThemeProvider theme={cosplayTheme}>

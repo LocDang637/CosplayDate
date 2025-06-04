@@ -1,4 +1,4 @@
-// src/components/layout/Header.jsx - FIXED CUSTOMER PROFILE NAVIGATION
+// src/components/layout/Header.jsx - FIXED PROFILE NAVIGATION
 import React, { useState } from 'react';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
 import {
@@ -74,16 +74,16 @@ const Header = ({ user = null, onLogout }) => {
     navigate('/');
   };
 
-  // ✅ FIXED: Customer profile navigation - the main fix
+  // ✅ FIXED: Correct profile path determination
   const getProfilePath = () => {
     if (!user) {
       console.warn('❌ Header: No user data available');
       return '/login';
     }
     
-    // FIXED: More robust user ID detection
+    // ✅ THE MAIN FIX: Always use user ID (not cosplayer ID) for profile routes
     const userId = user.id || user.userId || user.accountId;
-    const userType = user.userType || user.role || user.type;
+    const userType = (user.userType || user.role || '').toLowerCase();
     
     console.log('🔍 Header Profile Path Debug:', {
       userId: userId,
@@ -91,41 +91,36 @@ const Header = ({ user = null, onLogout }) => {
       fullUser: user
     });
     
-    // FIXED: Determine correct profile route based on user type
-    const normalizedUserType = (userType || '').toLowerCase();
-    
-    // ✅ THE MAIN FIX: Proper routing logic for customers
-    if (normalizedUserType === 'customer') {
-      const profilePath = userId ? `/customer-profile/${userId}` : '/customer-profile';
-      console.log('👤 Header: Customer profile path:', profilePath);
-      return profilePath;
-    } else if (normalizedUserType === 'cosplayer') {
+    // ✅ FIXED: Correct routing logic using USER ID
+    if (userType === 'cosplayer') {
+      // For cosplayers, use cosplayer profile route with USER ID
       const profilePath = userId ? `/profile/${userId}` : '/profile';
       console.log('🎭 Header: Cosplayer profile path:', profilePath);
       return profilePath;
+    } else if (userType === 'customer') {
+      // For customers, use customer profile route with USER ID  
+      const profilePath = userId ? `/customer-profile/${userId}` : '/customer-profile';
+      console.log('👤 Header: Customer profile path:', profilePath);
+      return profilePath;
     } else {
-      // FIXED: Better detection logic based on user properties for unknown user types
+      // ✅ FIXED: Better fallback logic based on user properties
       const hasCosplayerProps = user.displayName || user.pricePerHour || user.category || 
                                user.skills || user.portfolio || user.characterTypes;
       const hasCustomerProps = user.preferences || user.bookingHistory || user.orders;
       
       if (hasCosplayerProps && !hasCustomerProps) {
-        console.log('🎭 Header: Detected cosplayer from properties, using cosplayer route');
-        const profilePath = userId ? `/profile/${userId}` : '/profile';
-        return profilePath;
+        console.log('🎭 Header: Detected cosplayer from properties');
+        return userId ? `/profile/${userId}` : '/profile';
       } else {
-        // FIXED: Default to customer profile for unknown/uncertain user types
-        console.log('👤 Header: Defaulting to customer route due to uncertainty or detected customer properties');
-        const profilePath = userId ? `/customer-profile/${userId}` : '/customer-profile';
-        return profilePath;
+        console.log('👤 Header: Defaulting to customer profile');
+        return userId ? `/customer-profile/${userId}` : '/customer-profile';
       }
     }
   };
 
-  // ✅ FIXED: Simplified profile navigation with better error handling
+  // ✅ FIXED: Simplified profile navigation
   const handleProfileNavigation = () => {
     try {
-      // FIXED: Early validation
       if (!user) {
         console.error('❌ Header: No user data available for profile navigation');
         handleNavigation('/login');
@@ -134,31 +129,15 @@ const Header = ({ user = null, onLogout }) => {
 
       const profilePath = getProfilePath();
       console.log('📱 Header: Profile navigation to:', profilePath);
-      
-      // FIXED: Don't redirect to login if we have a user but no specific ID
-      if (profilePath === '/login' && user) {
-        console.error('❌ Header: Profile path resolved to login despite having user data');
-        // Try fallback routes based on user type
-        const userType = (user.userType || '').toLowerCase();
-        const fallbackPath = userType === 'cosplayer' ? '/profile' : '/customer-profile';
-        console.log('🔄 Header: Using fallback path:', fallbackPath);
-        handleNavigation(fallbackPath);
-        return;
-      }
-      
       handleNavigation(profilePath);
+      
     } catch (error) {
       console.error('💥 Header: Error in profile navigation:', error);
-      // FIXED: Only fallback to login if there's really no user
-      if (!user) {
-        handleNavigation('/login');
-      } else {
-        // Try a safe fallback for authenticated users based on their actual user type
-        const userType = (user.userType || '').toLowerCase();
-        const safeFallback = userType === 'cosplayer' ? '/profile' : '/customer-profile';
-        console.log('🔄 Header: Using safe fallback:', safeFallback);
-        handleNavigation(safeFallback);
-      }
+      // Fallback to safe route based on user type
+      const userType = (user.userType || '').toLowerCase();
+      const safeFallback = userType === 'cosplayer' ? '/profile' : '/customer-profile';
+      console.log('🔄 Header: Using safe fallback:', safeFallback);
+      handleNavigation(safeFallback);
     }
   };
 
@@ -168,7 +147,7 @@ const Header = ({ user = null, onLogout }) => {
     { label: 'Dịch vụ', path: '/services', icon: <Favorite /> },
   ];
 
-  // ✅ FIXED: Updated auth menu items 
+  // ✅ FIXED: Updated auth menu items with correct profile action
   const authMenuItems = isAuthenticated ? [
     { 
       label: 'Hồ sơ của tôi', 
@@ -456,7 +435,7 @@ const Header = ({ user = null, onLogout }) => {
                   {user.userType === 'Customer' ? '👤 Khách hàng' : '🎭 Cosplayer'}
                 </Typography>
               )}
-              {/* ✅ Enhanced debug info for development */}
+              {/* Enhanced debug info for development */}
               {process.env.NODE_ENV === 'development' && (
                 <Box sx={{ mt: 0.5, p: 1, backgroundColor: 'rgba(0,0,0,0.02)', borderRadius: '4px' }}>
                   <Typography variant="body2" sx={{ color: 'text.secondary', fontSize: '10px' }}>

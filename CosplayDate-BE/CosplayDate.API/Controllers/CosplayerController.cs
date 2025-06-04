@@ -46,7 +46,7 @@ namespace CosplayDate.API.Controllers
         }
 
         /// <summary>
-        /// Get cosplayer details by ID
+        /// Get cosplayer details by ID - FIXED to handle both cosplayer ID and user ID
         /// </summary>
         [HttpGet("{id}")]
         public async Task<IActionResult> GetCosplayerDetails(int id)
@@ -59,6 +59,7 @@ namespace CosplayDate.API.Controllers
                     currentUserId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
                 }
 
+                // FIXED: Try to get cosplayer details by cosplayer ID first
                 var result = await _cosplayerService.GetCosplayerDetailsAsync(id, currentUserId);
 
                 if (result.IsSuccess)
@@ -66,11 +67,21 @@ namespace CosplayDate.API.Controllers
                     return Ok(result);
                 }
 
+                // FIXED: If not found by cosplayer ID, try to find by user ID
+                // This handles cases where frontend passes user ID instead of cosplayer ID
+                var resultByUserId = await _cosplayerService.GetCosplayerDetailsByUserIdAsync(id, currentUserId);
+
+                if (resultByUserId.IsSuccess)
+                {
+                    return Ok(resultByUserId);
+                }
+
+                // Return the original error if both attempts fail
                 return NotFound(result);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error getting cosplayer details for ID: {CosplayerId}", id);
+                _logger.LogError(ex, "Error getting cosplayer details for ID: {Id}", id);
                 return StatusCode(500, "An error occurred while retrieving cosplayer details");
             }
         }

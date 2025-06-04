@@ -1,4 +1,4 @@
-// src/pages/CosplayerDetailsPage.jsx
+// src/pages/CosplayerDetailsPage.jsx (FIXED VERSION)
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import {
@@ -41,7 +41,7 @@ const CosplayerDetailsPage = ({ user, onLogout }) => {
   
   const [cosplayer, setCosplayer] = useState(null);
   const [photos, setPhotos] = useState([]);
-  const [services, setServices] = useState([]);
+  const [services, setServices] = useState([]); // ✅ Initialize as empty array
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
@@ -58,28 +58,58 @@ const CosplayerDetailsPage = ({ user, onLogout }) => {
       setLoading(true);
       setError(null);
       
-      const [cosplayerResult, photosResult, servicesResult] = await Promise.all([
-        cosplayerAPI.getCosplayerDetails(id),
-        cosplayerMediaAPI.getPhotos(id),
-        cosplayerAPI.getServices(id)
-      ]);
+      console.log('🔄 Loading cosplayer data for ID:', id);
 
-      if (cosplayerResult.success) {
-        setCosplayer(cosplayerResult.data);
-      } else {
-        setError(cosplayerResult.message);
+      // ✅ FIX: Load cosplayer details first, then handle optional data
+      const cosplayerResult = await cosplayerAPI.getCosplayerDetails(id);
+      
+      if (!cosplayerResult.success) {
+        console.error('❌ Failed to load cosplayer:', cosplayerResult.message);
+        setError(cosplayerResult.message || 'Không thể tải thông tin cosplayer');
         return;
       }
 
-      if (photosResult.success) {
-        setPhotos(photosResult.data || []);
+      console.log('✅ Cosplayer loaded:', cosplayerResult.data);
+      setCosplayer(cosplayerResult.data);
+
+      // ✅ FIX: Load photos and services with error handling - don't fail if these fail
+      try {
+        const photosResult = await cosplayerMediaAPI.getPhotos(id);
+        if (photosResult.success && Array.isArray(photosResult.data?.photos)) {
+          setPhotos(photosResult.data.photos);
+          console.log('✅ Photos loaded:', photosResult.data.photos.length);
+        } else if (photosResult.success && Array.isArray(photosResult.data)) {
+          setPhotos(photosResult.data);
+          console.log('✅ Photos loaded:', photosResult.data.length);
+        } else {
+          console.warn('⚠️ No photos or invalid photos data:', photosResult);
+          setPhotos([]); // ✅ Ensure it's an array
+        }
+      } catch (photoError) {
+        console.warn('⚠️ Could not load photos:', photoError);
+        setPhotos([]); // ✅ Fallback to empty array
       }
 
-      if (servicesResult.success) {
-        setServices(servicesResult.data || []);
+      // ✅ FIX: Load services with proper error handling
+      try {
+        const servicesResult = await cosplayerAPI.getServices(id);
+        if (servicesResult.success && Array.isArray(servicesResult.data)) {
+          setServices(servicesResult.data);
+          console.log('✅ Services loaded:', servicesResult.data.length);
+        } else if (servicesResult.success && servicesResult.data && Array.isArray(servicesResult.data.services)) {
+          setServices(servicesResult.data.services);
+          console.log('✅ Services loaded:', servicesResult.data.services.length);
+        } else {
+          console.warn('⚠️ No services or invalid services data:', servicesResult);
+          setServices([]); // ✅ Ensure it's an array
+        }
+      } catch (serviceError) {
+        console.warn('⚠️ Could not load services:', serviceError);
+        setServices([]); // ✅ Fallback to empty array
       }
       
     } catch (err) {
+      console.error('❌ Error loading cosplayer data:', err);
       setError('Không thể tải thông tin cosplayer');
     } finally {
       setLoading(false);
@@ -125,7 +155,69 @@ const CosplayerDetailsPage = ({ user, onLogout }) => {
   };
 
   const formatPrice = (price) => {
+    if (!price || isNaN(price)) return 'Liên hệ';
     return new Intl.NumberFormat('vi-VN').format(price) + 'đ/giờ';
+  };
+
+  // ✅ FIX: Add safe rendering checks
+  const renderServices = () => {
+    if (!Array.isArray(services)) {
+      console.warn('⚠️ Services is not an array:', services);
+      return (
+        <Typography variant="body2" sx={{ textAlign: 'center', color: 'text.secondary', py: 4 }}>
+          Không thể tải danh sách dịch vụ
+        </Typography>
+      );
+    }
+
+    if (services.length === 0) {
+      return (
+        <Typography variant="body2" sx={{ textAlign: 'center', color: 'text.secondary', py: 4 }}>
+          Chưa có dịch vụ nào
+        </Typography>
+      );
+    }
+
+    return (
+      <Grid container spacing={2}>
+        {services.map((service, index) => (
+          <Grid item xs={6} key={service.id || index}>
+            <Box
+              sx={{
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                p: 2,
+                backgroundColor: 'rgba(255,255,255,0.7)',
+                borderRadius: '12px',
+                cursor: 'pointer',
+                transition: 'all 0.3s ease',
+                '&:hover': {
+                  backgroundColor: 'rgba(255,255,255,0.9)',
+                  transform: 'translateY(-2px)',
+                },
+              }}
+            >
+              <Typography variant="body2" sx={{ fontWeight: 600, textAlign: 'center', color: 'text.primary', fontSize: '12px' }}>
+                {service.name || service.serviceName || 'Dịch vụ'}
+              </Typography>
+              <Typography variant="caption" sx={{ color: 'text.secondary', fontSize: '10px' }}>
+                {formatPrice(service.price || service.pricePerHour)}
+              </Typography>
+            </Box>
+          </Grid>
+        ))}
+      </Grid>
+    );
+  };
+
+  const renderPhotos = () => {
+    if (!Array.isArray(photos)) {
+      console.warn('⚠️ Photos is not an array:', photos);
+      return null;
+    }
+
+    return photos;
   };
 
   if (loading) {
@@ -166,8 +258,23 @@ const CosplayerDetailsPage = ({ user, onLogout }) => {
   }
 
   if (!cosplayer) {
-    return null;
+    return (
+      <Box sx={{ minHeight: '100vh', backgroundColor: '#FFE8F5' }}>
+        <Header user={user} onLogout={onLogout} />
+        <Container maxWidth="lg" sx={{ py: 8, textAlign: 'center' }}>
+          <Alert severity="warning">
+            Không tìm thấy thông tin cosplayer
+          </Alert>
+          <Button onClick={handleGoBack} sx={{ mt: 2 }}>
+            Quay lại
+          </Button>
+        </Container>
+        <Footer />
+      </Box>
+    );
   }
+
+  const safePhotos = renderPhotos();
 
   return (
     <Box sx={{ minHeight: '100vh', backgroundColor: '#FFE8F5' }}>
@@ -202,17 +309,19 @@ const CosplayerDetailsPage = ({ user, onLogout }) => {
             >
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
                 <Avatar
-                  src={cosplayer.profilePicture}
+                  src={cosplayer.profilePicture || cosplayer.avatar || cosplayer.avatarUrl}
                   sx={{
                     width: 64,
                     height: 64,
                     border: '3px solid white',
                   }}
-                />
+                >
+                  {cosplayer.stageName ? cosplayer.stageName[0] : cosplayer.firstName?.[0] || '?'}
+                </Avatar>
                 <Box sx={{ flex: 1 }}>
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
                     <Typography variant="h5" sx={{ fontWeight: 700, color: 'text.primary' }}>
-                      {cosplayer.stageName}
+                      {cosplayer.stageName || `${cosplayer.firstName} ${cosplayer.lastName}` || 'Cosplayer'}
                     </Typography>
                     <Chip
                       label={cosplayer.isOnline ? 'Đang hoạt động' : 'Ngoại tuyến'}
@@ -230,7 +339,7 @@ const CosplayerDetailsPage = ({ user, onLogout }) => {
                       <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
                         <Rating value={cosplayer.averageRating} size="small" readOnly />
                         <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-                          {cosplayer.totalReviews || 0}
+                          ({cosplayer.totalReviews || 0})
                         </Typography>
                       </Box>
                     )}
@@ -245,11 +354,12 @@ const CosplayerDetailsPage = ({ user, onLogout }) => {
               </Box>
             </Paper>
 
-            {photos.length > 0 && (
+            {/* ✅ FIX: Safe photo rendering */}
+            {safePhotos && safePhotos.length > 0 && (
               <Paper sx={{ borderRadius: '16px', overflow: 'hidden', position: 'relative', mb: 3 }}>
                 <Box
                   component="img"
-                  src={photos[currentImageIndex]?.url}
+                  src={safePhotos[currentImageIndex]?.url || safePhotos[currentImageIndex]?.imageUrl}
                   sx={{
                     width: '100%',
                     height: '400px',
@@ -257,7 +367,7 @@ const CosplayerDetailsPage = ({ user, onLogout }) => {
                   }}
                 />
                 
-                {photos.length > 1 && (
+                {safePhotos.length > 1 && (
                   <>
                     <IconButton
                       onClick={() => handleImageNavigation('prev')}
@@ -298,11 +408,11 @@ const CosplayerDetailsPage = ({ user, onLogout }) => {
                         justifyContent: 'center',
                       }}
                     >
-                      {photos.slice(0, 4).map((photo, index) => (
+                      {safePhotos.slice(0, 4).map((photo, index) => (
                         <Box
-                          key={photo.id}
+                          key={photo.id || index}
                           component="img"
-                          src={photo.url}
+                          src={photo.url || photo.imageUrl}
                           onClick={() => setCurrentImageIndex(index)}
                           sx={{
                             width: 60,
@@ -327,7 +437,7 @@ const CosplayerDetailsPage = ({ user, onLogout }) => {
                 Giới thiệu
               </Typography>
               <Typography variant="body2" sx={{ color: 'text.secondary', lineHeight: 1.6 }}>
-                {cosplayer.bio || "Chưa có thông tin giới thiệu."}
+                {cosplayer.bio || cosplayer.description || "Chưa có thông tin giới thiệu."}
               </Typography>
             </Paper>
           </Grid>
@@ -353,37 +463,7 @@ const CosplayerDetailsPage = ({ user, onLogout }) => {
               </Tabs>
 
               <Box sx={{ p: 3, backgroundColor: '#F8BBD9' }}>
-                {selectedTab === 0 && (
-                  <Grid container spacing={2}>
-                    {services.map((service, index) => (
-                      <Grid item xs={6} key={service.id || index}>
-                        <Box
-                          sx={{
-                            display: 'flex',
-                            flexDirection: 'column',
-                            alignItems: 'center',
-                            p: 2,
-                            backgroundColor: 'rgba(255,255,255,0.7)',
-                            borderRadius: '12px',
-                            cursor: 'pointer',
-                            transition: 'all 0.3s ease',
-                            '&:hover': {
-                              backgroundColor: 'rgba(255,255,255,0.9)',
-                              transform: 'translateY(-2px)',
-                            },
-                          }}
-                        >
-                          <Typography variant="body2" sx={{ fontWeight: 600, textAlign: 'center', color: 'text.primary', fontSize: '12px' }}>
-                            {service.name}
-                          </Typography>
-                          <Typography variant="caption" sx={{ color: 'text.secondary', fontSize: '10px' }}>
-                            {formatPrice(service.price)}
-                          </Typography>
-                        </Box>
-                      </Grid>
-                    ))}
-                  </Grid>
-                )}
+                {selectedTab === 0 && renderServices()}
 
                 {selectedTab === 1 && (
                   <Typography variant="body2" sx={{ textAlign: 'center', color: 'text.secondary', py: 4 }}>
@@ -428,7 +508,8 @@ const CosplayerDetailsPage = ({ user, onLogout }) => {
               </Box>
             </Paper>
 
-            {photos.length > 4 && (
+            {/* ✅ FIX: Safe photo grid rendering */}
+            {safePhotos && safePhotos.length > 4 && (
               <Paper sx={{ borderRadius: '16px', p: 3 }}>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
                   <CameraAlt sx={{ color: 'text.secondary' }} />
@@ -438,11 +519,11 @@ const CosplayerDetailsPage = ({ user, onLogout }) => {
                 </Box>
                 
                 <Grid container spacing={2}>
-                  {photos.slice(0, 6).map((photo, index) => (
-                    <Grid item xs={6} key={photo.id}>
+                  {safePhotos.slice(0, 6).map((photo, index) => (
+                    <Grid item xs={6} key={photo.id || index}>
                       <Box
                         component="img"
-                        src={photo.url}
+                        src={photo.url || photo.imageUrl}
                         sx={{
                           width: '100%',
                           height: '120px',

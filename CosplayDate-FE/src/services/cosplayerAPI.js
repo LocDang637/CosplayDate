@@ -1,4 +1,4 @@
-// src/services/cosplayerAPI.js - FIXED VERSION with better error handling
+// src/services/cosplayerAPI.js - FIXED VERSION with better user ID handling
 import axios from 'axios';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5068/api';
@@ -62,35 +62,81 @@ export const cosplayerAPI = {
     }
   },
 
-  // FIX: Better error handling for cosplayer details
+  // ✅ FIXED: Better error handling and user ID support for cosplayer details
   getCosplayerDetails: async (id) => {
     try {
       console.log('🔍 API: Getting cosplayer details for ID:', id);
       
       const response = await api.get(`/cosplayers/${id}`);
       
-      console.log('✅ API: Cosplayer details response:', {
+      console.log('✅ API: Raw response:', {
         status: response.status,
-        hasData: !!response.data
+        data: response.data,
+        dataStructure: {
+          isSuccess: response.data?.isSuccess,
+          hasData: !!response.data?.data,
+          dataKeys: response.data?.data ? Object.keys(response.data.data) : 'no data keys'
+        }
       });
       
-      return {
-        success: true,
-        data: response.data.data || response.data,
-        message: response.data.message || 'Cosplayer details loaded successfully'
-      };
+      // ✅ FIXED: Handle the specific backend response format {isSuccess: true, data: {...}}
+      if (response.data && response.data.isSuccess === true && response.data.data) {
+        console.log('✅ API: Extracted cosplayer data:', response.data.data);
+        return {
+          success: true,
+          data: response.data.data,
+          message: response.data.message || 'Cosplayer details loaded successfully'
+        };
+      } 
+      // Handle case where isSuccess is not explicitly true but data exists
+      else if (response.data && response.data.data) {
+        console.log('✅ API: Extracted data without explicit isSuccess:', response.data.data);
+        return {
+          success: true,
+          data: response.data.data,
+          message: response.data.message || 'Cosplayer details loaded successfully'
+        };
+      }
+      // Handle direct data response (fallback)
+      else if (response.data && (response.data.id || response.data.displayName)) {
+        console.log('✅ API: Using direct response data:', response.data);
+        return {
+          success: true,
+          data: response.data,
+          message: 'Cosplayer details loaded successfully'
+        };
+      }
+      // Handle explicit failure response
+      else if (response.data && response.data.isSuccess === false) {
+        console.log('❌ API: Backend returned isSuccess: false');
+        return {
+          success: false,
+          message: response.data.message || 'Failed to load cosplayer details',
+          errors: response.data.errors || {}
+        };
+      }
+      // No valid data found
+      else {
+        console.error('❌ API: No valid data structure found in response:', response.data);
+        return {
+          success: false,
+          message: 'Invalid response format from server',
+          errors: { invalidFormat: true }
+        };
+      }
     } catch (error) {
       console.error('❌ API: Error getting cosplayer details:', {
         status: error.response?.status,
         message: error.response?.data?.message,
-        url: error.config?.url
+        url: error.config?.url,
+        fullResponse: error.response?.data
       });
       
-      // FIX: Handle different error cases without triggering global redirects
+      // ✅ FIXED: More specific error handling for different cases
       if (error.response?.status === 404) {
         return {
           success: false,
-          message: 'Cosplayer profile not found',
+          message: error.response?.data?.message || 'Cosplayer profile not found',
           errors: { notFound: true, status: 404 }
         };
       } else if (error.response?.status === 401) {
@@ -115,7 +161,55 @@ export const cosplayerAPI = {
     }
   },
 
-  // FIX: Add method to check if user has cosplayer profile without triggering redirects
+  // ✅ NEW: Dedicated method to get own cosplayer profile using current user data
+  getCurrentCosplayerProfile: async () => {
+    try {
+      const user = JSON.parse(localStorage.getItem('user') || '{}');
+      const userId = user.id || user.userId;
+      
+      if (!userId) {
+        return {
+          success: false,
+          message: 'User ID not found',
+          errors: { noUserId: true }
+        };
+      }
+
+      console.log('🔍 API: Getting current cosplayer profile for user:', userId);
+      
+      // Use the regular endpoint - backend now handles both cosplayer ID and user ID
+      const response = await api.get(`/cosplayers/${userId}`);
+      
+      console.log('✅ API: Current cosplayer profile response:', {
+        status: response.status,
+        hasData: !!response.data
+      });
+      
+      return {
+        success: true,
+        data: response.data.data || response.data,
+        message: response.data.message || 'Current cosplayer profile loaded successfully'
+      };
+    } catch (error) {
+      console.error('❌ API: Error getting current cosplayer profile:', error);
+      
+      if (error.response?.status === 404) {
+        return {
+          success: false,
+          message: 'Cosplayer profile not found - you may need to complete your profile setup',
+          errors: { needsSetup: true, status: 404 }
+        };
+      }
+      
+      return {
+        success: false,
+        message: error.response?.data?.message || 'Failed to load current cosplayer profile',
+        errors: error.response?.data?.errors || { status: error.response?.status }
+      };
+    }
+  },
+
+  // ✅ FIXED: Add method to check if user has cosplayer profile without triggering redirects
   checkCosplayerProfile: async (userId) => {
     try {
       console.log('🔍 API: Checking cosplayer profile for user:', userId);
@@ -181,6 +275,19 @@ export const cosplayerAPI = {
         status: response.status,
         hasData: !!response.data
       });
+      
+      // ✅ FIXED: Update local storage immediately after successful conversion
+      if (response.data.isSuccess !== false) {
+        const user = JSON.parse(localStorage.getItem('user') || '{}');
+        const updatedUser = { 
+          ...user, 
+          userType: 'Cosplayer',
+          // Add any returned cosplayer data to user object
+          ...(response.data.data || {})
+        };
+        localStorage.setItem('user', JSON.stringify(updatedUser));
+        console.log('✅ Updated user type in localStorage:', updatedUser);
+      }
       
       return {
         success: true,
