@@ -2,9 +2,6 @@
 FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
 WORKDIR /src
 
-# Copy solution file first (if exists)
-COPY CosplayDate-BE/*.sln ./CosplayDate-BE/ 2>/dev/null || true
-
 # Copy csproj files and restore dependencies
 COPY CosplayDate-BE/CosplayDate.API/*.csproj ./CosplayDate-BE/CosplayDate.API/
 COPY CosplayDate-BE/CosplayDate.Application/*.csproj ./CosplayDate-BE/CosplayDate.Application/
