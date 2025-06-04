@@ -3,14 +3,19 @@ FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
 WORKDIR /src
 
 # Copy csproj files and restore dependencies
-COPY CosplayDate-BE/*.csproj CosplayDate-BE/
-RUN dotnet restore CosplayDate-BE/
+COPY CosplayDate-BE/CosplayDate.API/*.csproj CosplayDate-BE/CosplayDate.API/
+COPY CosplayDate-BE/CosplayDate.Application/*.csproj CosplayDate-BE/CosplayDate.Application/
+COPY CosplayDate-BE/CosplayDate.Domain/*.csproj CosplayDate-BE/CosplayDate.Domain/
+COPY CosplayDate-BE/CosplayDate.Infrastructure/*.csproj CosplayDate-BE/CosplayDate.Infrastructure/
+
+# Restore dependencies
+RUN dotnet restore CosplayDate-BE/CosplayDate.API/CosplayDate.API.csproj
 
 # Copy the rest of the source code
 COPY CosplayDate-BE/ CosplayDate-BE/
 
 # Build the application
-WORKDIR /src/CosplayDate-BE
+WORKDIR /src/CosplayDate-BE/CosplayDate.API
 RUN dotnet build -c Release -o /app/build
 
 # Publish the application
@@ -42,4 +47,4 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
 ENV ASPNETCORE_ENVIRONMENT=Production
 ENV ASPNETCORE_URLS=http://+:8080
 
-ENTRYPOINT ["dotnet", "CosplayDate-BE.dll"]
+ENTRYPOINT ["dotnet", "CosplayDate.API.dll"]
