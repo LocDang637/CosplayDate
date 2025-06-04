@@ -74,49 +74,40 @@ const Header = ({ user = null, onLogout }) => {
     navigate('/');
   };
 
-  // ✅ FIXED: Correct profile path determination
-  const getProfilePath = () => {
-    if (!user) {
-      console.warn('❌ Header: No user data available');
-      return '/login';
-    }
-    
-    // ✅ THE MAIN FIX: Always use user ID (not cosplayer ID) for profile routes
-    const userId = user.id || user.userId || user.accountId;
-    const userType = (user.userType || user.role || '').toLowerCase();
-    
-    console.log('🔍 Header Profile Path Debug:', {
-      userId: userId,
-      userType: userType,
-      fullUser: user
-    });
-    
-    // ✅ FIXED: Correct routing logic using USER ID
-    if (userType === 'cosplayer') {
-      // For cosplayers, use cosplayer profile route with USER ID
-      const profilePath = userId ? `/profile/${userId}` : '/profile';
-      console.log('🎭 Header: Cosplayer profile path:', profilePath);
-      return profilePath;
-    } else if (userType === 'customer') {
-      // For customers, use customer profile route with USER ID  
-      const profilePath = userId ? `/customer-profile/${userId}` : '/customer-profile';
-      console.log('👤 Header: Customer profile path:', profilePath);
-      return profilePath;
-    } else {
-      // ✅ FIXED: Better fallback logic based on user properties
-      const hasCosplayerProps = user.displayName || user.pricePerHour || user.category || 
-                               user.skills || user.portfolio || user.characterTypes;
-      const hasCustomerProps = user.preferences || user.bookingHistory || user.orders;
-      
-      if (hasCosplayerProps && !hasCustomerProps) {
-        console.log('🎭 Header: Detected cosplayer from properties');
-        return userId ? `/profile/${userId}` : '/profile';
-      } else {
-        console.log('👤 Header: Defaulting to customer profile');
-        return userId ? `/customer-profile/${userId}` : '/customer-profile';
-      }
-    }
-  };
+  // Header.jsx - FIXED profile navigation
+const getProfilePath = () => {
+  if (!user) {
+    console.warn('❌ Header: No user data available');
+    return '/login';
+  }
+  
+  // ✅ THE MAIN FIX: Always use user ID (not cosplayer ID) for profile routes
+  const userId = user.id || user.userId;
+  const userType = (user.userType || user.role || '').toLowerCase();
+  
+  console.log('🔍 Header Profile Path Debug:', {
+    userId: userId,
+    userType: userType,
+    fullUser: user
+  });
+  
+  // ✅ FIXED: Correct routing logic using USER ID
+  if (userType === 'cosplayer') {
+    // For cosplayers, use cosplayer profile route with USER ID
+    const profilePath = userId ? `/profile/${userId}` : '/profile';
+    console.log('🎭 Header: Cosplayer profile path:', profilePath);
+    return profilePath;
+  } else if (userType === 'customer') {
+    // For customers, use customer profile route with USER ID  
+    const profilePath = userId ? `/customer-profile/${userId}` : '/customer-profile';
+    console.log('👤 Header: Customer profile path:', profilePath);
+    return profilePath;
+  } else {
+    // ✅ FIXED: Better fallback logic
+    console.log('👤 Header: Defaulting to customer profile');
+    return userId ? `/customer-profile/${userId}` : '/customer-profile';
+  }
+};
 
   // ✅ FIXED: Simplified profile navigation
   const handleProfileNavigation = () => {

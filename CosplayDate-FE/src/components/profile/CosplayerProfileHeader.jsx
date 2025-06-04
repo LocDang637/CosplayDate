@@ -1,4 +1,4 @@
-// src/components/profile/CosplayerProfileHeader.jsx
+// src/components/profile/CosplayerProfileHeader.jsx - FIXED VERSION
 import React, { useState } from 'react';
 import {
   Box,
@@ -62,8 +62,74 @@ const CosplayerProfileHeader = ({ user, isOwnProfile, onFollowToggle, isFollowin
   };
 
   const formatPrice = (price) => {
+    if (!price || isNaN(price)) return 'Liên hệ';
     return new Intl.NumberFormat('vi-VN').format(price) + 'đ/giờ';
   };
+
+  // ✅ FIXED: Safe tags processing function
+  const getTags = () => {
+    if (!user?.tags) return [];
+    
+    // If tags is already an array, return it
+    if (Array.isArray(user.tags)) {
+      return user.tags.filter(tag => tag && typeof tag === 'string' && tag.trim());
+    }
+    
+    // If tags is a string, split it
+    if (typeof user.tags === 'string') {
+      return user.tags.split(',')
+        .map(tag => tag.trim())
+        .filter(tag => tag.length > 0);
+    }
+    
+    // For any other data type, return empty array
+    console.warn('⚠️ Invalid tags format:', typeof user.tags, user.tags);
+    return [];
+  };
+
+  // ✅ FIXED: Safe specialties processing function
+  const getSpecialties = () => {
+    if (!user?.specialties) return [];
+    
+    // If specialties is already an array, return it
+    if (Array.isArray(user.specialties)) {
+      return user.specialties.filter(specialty => specialty && typeof specialty === 'string' && specialty.trim());
+    }
+    
+    // If specialties is a string, split it
+    if (typeof user.specialties === 'string') {
+      return user.specialties.split(',')
+        .map(specialty => specialty.trim())
+        .filter(specialty => specialty.length > 0);
+    }
+    
+    // For any other data type, return empty array
+    console.warn('⚠️ Invalid specialties format:', typeof user.specialties, user.specialties);
+    return [];
+  };
+
+  // ✅ FIXED: Safe name display function
+  const getDisplayName = () => {
+    return user?.displayName || user?.stageName || user?.firstName || 'Cosplayer';
+  };
+
+  // ✅ FIXED: Safe category display function
+  const getCategoryText = () => {
+    const category = user?.category || '';
+    const specialty = user?.characterSpecialty || '';
+    
+    if (category && specialty) {
+      return `${category} • ${specialty}`;
+    } else if (category) {
+      return category;
+    } else if (specialty) {
+      return specialty;
+    }
+    return 'Cosplayer';
+  };
+
+  const tags = getTags();
+  const specialties = getSpecialties();
 
   return (
     <>
@@ -88,7 +154,9 @@ const CosplayerProfileHeader = ({ user, isOwnProfile, onFollowToggle, isFollowin
                     border: '4px solid white',
                     boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
                   }}
-                />
+                >
+                  {getDisplayName()[0]?.toUpperCase()}
+                </Avatar>
                 {isOwnProfile && (
                   <IconButton
                     onClick={handleEditAvatar}
@@ -123,7 +191,7 @@ const CosplayerProfileHeader = ({ user, isOwnProfile, onFollowToggle, isFollowin
                         fontSize: { xs: '1.5rem', md: '2rem' },
                       }}
                     >
-                      {user?.displayName || user?.stageName}
+                      {getDisplayName()}
                     </Typography>
                     {user?.isVerified && (
                       <Verified sx={{ color: 'primary.main', fontSize: 24 }} />
@@ -147,7 +215,7 @@ const CosplayerProfileHeader = ({ user, isOwnProfile, onFollowToggle, isFollowin
                       fontSize: '16px',
                     }}
                   >
-                    {user?.category} • {user?.characterSpecialty}
+                    {getCategoryText()}
                   </Typography>
 
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 3, mb: 2, flexWrap: 'wrap' }}>
@@ -209,12 +277,13 @@ const CosplayerProfileHeader = ({ user, isOwnProfile, onFollowToggle, isFollowin
                     )}
                   </Box>
 
-                  {user?.tags && (
+                  {/* ✅ FIXED: Safe tags rendering */}
+                  {tags.length > 0 && (
                     <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
-                      {user.tags.split(',').slice(0, 4).map((tag, index) => (
+                      {tags.slice(0, 4).map((tag, index) => (
                         <Chip
                           key={index}
-                          label={tag.trim()}
+                          label={tag}
                           size="small"
                           sx={{
                             backgroundColor: 'rgba(233, 30, 99, 0.1)',
@@ -309,7 +378,8 @@ const CosplayerProfileHeader = ({ user, isOwnProfile, onFollowToggle, isFollowin
           </Grid>
         </Box>
 
-        {user?.specialties && user.specialties.length > 0 && (
+        {/* ✅ FIXED: Safe specialties rendering */}
+        {specialties.length > 0 && (
           <>
             <Divider />
             <Box sx={{ p: 3 }}>
@@ -317,7 +387,7 @@ const CosplayerProfileHeader = ({ user, isOwnProfile, onFollowToggle, isFollowin
                 Kỹ năng chuyên môn
               </Typography>
               <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
-                {user.specialties.map((specialty, index) => (
+                {specialties.map((specialty, index) => (
                   <Chip
                     key={index}
                     label={specialty}

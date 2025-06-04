@@ -1,4 +1,4 @@
-// src/components/profile/CosplayerProfileOverview.jsx
+// src/components/profile/CosplayerProfileOverview.jsx - FIXED VERSION
 import React from 'react';
 import {
   Box,
@@ -26,6 +26,44 @@ import {
 } from '@mui/icons-material';
 
 const CosplayerProfileOverview = ({ user, isOwnProfile }) => {
+  // ✅ FIXED: Safe tags processing function
+  const getTags = () => {
+    if (!user?.tags) return [];
+    
+    // If tags is already an array, return it
+    if (Array.isArray(user.tags)) {
+      return user.tags.filter(tag => tag && typeof tag === 'string' && tag.trim());
+    }
+    
+    // If tags is a string, split it
+    if (typeof user.tags === 'string') {
+      return user.tags.split(',')
+        .map(tag => tag.trim())
+        .filter(tag => tag.length > 0);
+    }
+    
+    // For any other data type, return empty array
+    console.warn('⚠️ Invalid tags format in Overview:', typeof user.tags, user.tags);
+    return [];
+  };
+
+  // ✅ FIXED: Safe price formatting
+  const formatPrice = (price) => {
+    if (!price || isNaN(price)) return 'Liên hệ';
+    return new Intl.NumberFormat('vi-VN').format(price) + 'đ/giờ';
+  };
+
+  // ✅ FIXED: Safe date formatting
+  const formatDate = (dateString) => {
+    if (!dateString) return 'N/A';
+    try {
+      return new Date(dateString).toLocaleDateString('vi-VN');
+    } catch (error) {
+      console.warn('⚠️ Invalid date format:', dateString);
+      return 'N/A';
+    }
+  };
+
   const StatCard = ({ icon, title, value, subtitle, color = 'primary.main' }) => (
     <Card
       sx={{
@@ -55,7 +93,7 @@ const CosplayerProfileOverview = ({ user, isOwnProfile }) => {
           {icon}
         </Box>
         <Typography variant="h4" sx={{ fontWeight: 700, color: 'text.primary', mb: 1 }}>
-          {value}
+          {value || 0}
         </Typography>
         <Typography variant="h6" sx={{ fontWeight: 600, mb: 0.5, fontSize: '14px' }}>
           {title}
@@ -72,25 +110,29 @@ const CosplayerProfileOverview = ({ user, isOwnProfile }) => {
   const RecentReview = ({ review }) => (
     <Box sx={{ p: 2, borderRadius: '12px', backgroundColor: 'rgba(233, 30, 99, 0.02)', mb: 2 }}>
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 1 }}>
-        <Avatar src={review.customerAvatarUrl} sx={{ width: 32, height: 32 }} />
+        <Avatar src={review.customerAvatarUrl} sx={{ width: 32, height: 32 }}>
+          {review.customerName?.[0]?.toUpperCase()}
+        </Avatar>
         <Box sx={{ flex: 1 }}>
           <Typography variant="subtitle2" sx={{ fontWeight: 600, fontSize: '14px' }}>
-            {review.customerName}
+            {review.customerName || 'Ẩn danh'}
           </Typography>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-            <Rating value={review.rating} size="small" readOnly />
+            <Rating value={review.rating || 0} size="small" readOnly />
             <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-              {new Date(review.createdAt).toLocaleDateString('vi-VN')}
+              {formatDate(review.createdAt)}
             </Typography>
           </Box>
         </Box>
         {review.isVerified && <Verified sx={{ color: 'success.main', fontSize: 16 }} />}
       </Box>
       <Typography variant="body2" sx={{ color: 'text.secondary', fontSize: '13px', lineHeight: 1.4 }}>
-        {review.comment}
+        {review.comment || 'Không có bình luận'}
       </Typography>
     </Box>
   );
+
+  const tags = getTags();
 
   return (
     <Box>
@@ -177,7 +219,8 @@ const CosplayerProfileOverview = ({ user, isOwnProfile }) => {
             </Grid>
           </Paper>
 
-          {user?.recentReviews && user.recentReviews.length > 0 && (
+          {/* ✅ FIXED: Safe reviews rendering */}
+          {user?.recentReviews && Array.isArray(user.recentReviews) && user.recentReviews.length > 0 && (
             <Paper
               sx={{
                 borderRadius: '16px',
@@ -221,7 +264,7 @@ const CosplayerProfileOverview = ({ user, isOwnProfile }) => {
               </Box>
               <LinearProgress
                 variant="determinate"
-                value={user?.stats?.successRate || 0}
+                value={Math.min(user?.stats?.successRate || 0, 100)}
                 sx={{
                   height: 8,
                   borderRadius: 4,
@@ -239,7 +282,7 @@ const CosplayerProfileOverview = ({ user, isOwnProfile }) => {
                   Thời gian phản hồi
                 </Typography>
                 <Typography variant="body2" sx={{ fontWeight: 600, color: 'primary.main' }}>
-                  {user?.stats?.responseTime || '< 1 giờ'}
+                  {user?.stats?.responseTime || user?.responseTime || '< 1 giờ'}
                 </Typography>
               </Box>
             </Box>
@@ -247,7 +290,7 @@ const CosplayerProfileOverview = ({ user, isOwnProfile }) => {
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
               <TrendingUp sx={{ color: 'success.main', fontSize: 20 }} />
               <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                Thành viên từ {new Date(user?.stats?.memberSince || user?.createdAt).toLocaleDateString('vi-VN')}
+                Thành viên từ {formatDate(user?.stats?.memberSince || user?.createdAt)}
               </Typography>
             </Box>
 
@@ -286,7 +329,7 @@ const CosplayerProfileOverview = ({ user, isOwnProfile }) => {
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                 <AttachMoney sx={{ color: 'success.main', fontSize: 18 }} />
                 <Typography variant="h6" sx={{ fontWeight: 700, color: 'success.main' }}>
-                  {new Intl.NumberFormat('vi-VN').format(user?.pricePerHour || 0)}đ/giờ
+                  {formatPrice(user?.pricePerHour)}
                 </Typography>
               </Box>
             </Box>
@@ -317,7 +360,8 @@ const CosplayerProfileOverview = ({ user, isOwnProfile }) => {
             </Box>
           </Paper>
 
-          {user?.tags && (
+          {/* ✅ FIXED: Safe tags rendering */}
+          {tags.length > 0 && (
             <Paper
               sx={{
                 borderRadius: '16px',
@@ -330,10 +374,10 @@ const CosplayerProfileOverview = ({ user, isOwnProfile }) => {
                 Tags
               </Typography>
               <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
-                {user.tags.split(',').map((tag, index) => (
+                {tags.map((tag, index) => (
                   <Chip
                     key={index}
-                    label={tag.trim()}
+                    label={tag}
                     size="small"
                     sx={{
                       backgroundColor: 'rgba(233, 30, 99, 0.1)',
