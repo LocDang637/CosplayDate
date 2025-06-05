@@ -34,7 +34,7 @@ jobs:
         working-directory: ./CosplayDate-FE
         run: npm run build
         env:
-          VITE_API_URL: ${{ secrets.BACKEND_URL }}
+          VITE_API_BASE_URL: ${{ secrets.BACKEND_URL }}
 
       - name: Deploy to Vercel
         uses: vercel/action@v1
