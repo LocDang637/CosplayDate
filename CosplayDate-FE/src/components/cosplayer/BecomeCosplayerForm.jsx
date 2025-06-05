@@ -1,4 +1,4 @@
-// src/components/cosplayer/BecomeCosplayerForm.jsx
+// src/components/cosplayer/BecomeCosplayerForm.jsx - FIXED VERSION
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -39,7 +39,7 @@ const BecomeCosplayerForm = ({ user, onSuccess }) => {
     category: '',
     gender: user?.gender || '',
     characterSpecialty: '',
-    tags: '',
+    selectedTags: [], // Internal state for UI
     specialties: [],
     acceptCosplayerTerms: false
   });
@@ -56,6 +56,14 @@ const BecomeCosplayerForm = ({ user, onSuccess }) => {
     'Photography', 'Performance', 'Voice Acting', 'Dancing',
     'Singing', 'Martial Arts', 'Magic Shows', 'Comedy',
     'Character Interaction', 'Event Hosting', 'Workshop Teaching'
+  ];
+
+  // Available tags from backend
+  const availableTags = [
+    'Beginner Friendly', 'Professional', 'Affordable', 'Premium', 'Quick Response',
+    'Custom Outfits', 'Props Included', 'Makeup Included', 'Photography', 'Events',
+    'Conventions', 'Photoshoots', 'Group Cosplay', 'Solo Performance', 'Interactive',
+    'High Quality', 'Award Winner', 'Experienced', 'Creative', 'Detailed'
   ];
 
   const genderOptions = ['Male', 'Female', 'Other'];
@@ -75,7 +83,20 @@ const BecomeCosplayerForm = ({ user, onSuccess }) => {
       ...prev,
       specialties: prev.specialties.includes(specialty)
         ? prev.specialties.filter(s => s !== specialty)
-        : [...prev.specialties, specialty]
+        : prev.specialties.length < 5 
+          ? [...prev.specialties, specialty]
+          : prev.specialties
+    }));
+  };
+
+  const handleTagToggle = (tag) => {
+    setFormData(prev => ({
+      ...prev,
+      selectedTags: prev.selectedTags.includes(tag)
+        ? prev.selectedTags.filter(t => t !== tag)
+        : prev.selectedTags.length < 5 
+          ? [...prev.selectedTags, tag]
+          : prev.selectedTags
     }));
   };
 
@@ -84,9 +105,12 @@ const BecomeCosplayerForm = ({ user, onSuccess }) => {
     
     if (!formData.displayName.trim()) {
       newErrors.displayName = 'Tên hiển thị là bắt buộc';
+    } else if (formData.displayName.trim().length < 2) {
+      newErrors.displayName = 'Tên hiển thị phải có ít nhất 2 ký tự';
     }
     
-    if (!formData.pricePerHour || parseFloat(formData.pricePerHour) < 1) {
+    const price = parseFloat(formData.pricePerHour);
+    if (!formData.pricePerHour || isNaN(price) || price < 1) {
       newErrors.pricePerHour = 'Giá phải từ 1đ trở lên';
     }
     
@@ -109,24 +133,42 @@ const BecomeCosplayerForm = ({ user, onSuccess }) => {
     setError('');
     
     try {
+      // Log the current user to check authentication
+      const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
+      const currentToken = localStorage.getItem('token');
+      
+      console.log('🔍 Debug - Current user:', {
+        id: currentUser.id,
+        email: currentUser.email,
+        userType: currentUser.userType,
+        hasToken: !!currentToken
+      });
+
+      // FIXED: Prepare data to match backend DTO exactly
       const becomeCosplayerData = {
-        displayName: formData.displayName.trim(),
-        pricePerHour: parseFloat(formData.pricePerHour),
-        category: formData.category,
-        gender: formData.gender || null,
-        characterSpecialty: formData.characterSpecialty?.trim() || null,
-        tags: formData.tags?.trim() || null,
-        specialties: formData.specialties.length > 0 ? formData.specialties : null,
-        acceptCosplayerTerms: formData.acceptCosplayerTerms
+        DisplayName: formData.displayName.trim(),
+        PricePerHour: parseFloat(formData.pricePerHour),
+        Category: formData.category,
+        Gender: formData.gender || null,
+        CharacterSpecialty: formData.characterSpecialty?.trim() || null,
+        // FIXED: Convert tags array to comma-separated string for backend
+        Tags: formData.selectedTags.length > 0 ? formData.selectedTags.join(', ') : null,
+        // FIXED: Send specialties as array or null
+        Specialties: formData.specialties.length > 0 ? formData.specialties : null,
+        AcceptCosplayerTerms: formData.acceptCosplayerTerms
       };
 
+      console.log('🔄 Submitting become cosplayer data:', becomeCosplayerData);
+
       const result = await cosplayerAPI.becomeCosplayer(becomeCosplayerData);
+      
+      console.log('📋 API result:', result);
       
       if (result.success) {
         const updatedUser = { 
           ...user, 
           userType: 'Cosplayer',
-          cosplayerId: result.data.cosplayerId 
+          cosplayerId: result.data.cosplayerId || result.data.id
         };
         localStorage.setItem('user', JSON.stringify(updatedUser));
         
@@ -135,20 +177,50 @@ const BecomeCosplayerForm = ({ user, onSuccess }) => {
         } else {
           navigate(`/profile/${updatedUser.id}`, { 
             state: { 
-              message: result.data.message || 'Chúc mừng! Bạn đã trở thành Cosplayer.',
+              message: result.message || 'Chúc mừng! Bạn đã trở thành Cosplayer.',
               upgraded: true 
             }
           });
         }
       } else {
-        if (result.errors && Object.keys(result.errors).length > 0) {
-          setErrors(result.errors);
+        console.error('❌ API call failed:', {
+          message: result.message,
+          errors: result.errors
+        });
+
+        // Handle specific validation errors
+        if (result.errors && typeof result.errors === 'object') {
+          const backendErrors = {};
+          
+          // Map backend field names to frontend field names
+          if (result.errors.DisplayName) {
+            backendErrors.displayName = Array.isArray(result.errors.DisplayName) 
+              ? result.errors.DisplayName[0] 
+              : result.errors.DisplayName;
+          }
+          if (result.errors.PricePerHour) {
+            backendErrors.pricePerHour = Array.isArray(result.errors.PricePerHour) 
+              ? result.errors.PricePerHour[0] 
+              : result.errors.PricePerHour;
+          }
+          if (result.errors.Category) {
+            backendErrors.category = Array.isArray(result.errors.Category) 
+              ? result.errors.Category[0] 
+              : result.errors.Category;
+          }
+          
+          if (Object.keys(backendErrors).length > 0) {
+            setErrors(backendErrors);
+          } else {
+            setError(result.message || 'Không thể hoàn tất đăng ký. Vui lòng thử lại.');
+          }
         } else {
           setError(result.message || 'Không thể hoàn tất đăng ký. Vui lòng thử lại.');
         }
       }
       
     } catch (err) {
+      console.error('❌ Unexpected error:', err);
       setError('Lỗi kết nối. Vui lòng thử lại.');
     } finally {
       setLoading(false);
@@ -312,22 +384,48 @@ const BecomeCosplayerForm = ({ user, onSuccess }) => {
         </Grid>
 
         <Grid item xs={12}>
-          <TextField
-            fullWidth
-            label="Tags (phân cách bằng dấu phẩy)"
-            value={formData.tags}
-            onChange={handleInputChange('tags')}
-            disabled={loading}
-            placeholder="VD: professional, high-quality, creative, experienced..."
-            sx={{
-              '& .MuiOutlinedInput-root': {
-                borderRadius: '12px',
-              }
-            }}
-            InputProps={{
-              startAdornment: <Label sx={{ color: 'primary.main', mr: 1 }} />
-            }}
-          />
+          <Typography variant="h6" sx={{ fontWeight: 600, mb: 2 }}>
+            Tags (chọn tối đa 5)
+          </Typography>
+          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+            {availableTags.map((tag) => (
+              <Chip
+                key={tag}
+                label={tag}
+                onClick={() => handleTagToggle(tag)}
+                disabled={loading || (formData.selectedTags.length >= 5 && !formData.selectedTags.includes(tag))}
+                variant={formData.selectedTags.includes(tag) ? 'filled' : 'outlined'}
+                sx={{
+                  backgroundColor: formData.selectedTags.includes(tag) 
+                    ? 'primary.main' 
+                    : 'transparent',
+                  color: formData.selectedTags.includes(tag) 
+                    ? 'white' 
+                    : 'text.primary',
+                  borderColor: 'primary.main',
+                  '&:hover': {
+                    backgroundColor: formData.selectedTags.includes(tag)
+                      ? 'primary.dark'
+                      : 'rgba(233, 30, 99, 0.1)',
+                  },
+                  '&.Mui-disabled': {
+                    opacity: 0.5,
+                    cursor: 'not-allowed',
+                  },
+                }}
+              />
+            ))}
+          </Box>
+          {formData.selectedTags.length >= 5 && (
+            <Typography variant="caption" sx={{ color: 'warning.main', mt: 1, display: 'block' }}>
+              Đã chọn tối đa 5 tags
+            </Typography>
+          )}
+          {formData.selectedTags.length > 0 && (
+            <Typography variant="body2" sx={{ color: 'text.secondary', mt: 1, fontSize: '12px' }}>
+              Đã chọn: {formData.selectedTags.join(', ')}
+            </Typography>
+          )}
         </Grid>
 
         <Grid item xs={12}>
@@ -340,7 +438,7 @@ const BecomeCosplayerForm = ({ user, onSuccess }) => {
                 key={specialty}
                 label={specialty}
                 onClick={() => handleSpecialtyToggle(specialty)}
-                disabled={loading}
+                disabled={loading || (formData.specialties.length >= 5 && !formData.specialties.includes(specialty))}
                 variant={formData.specialties.includes(specialty) ? 'filled' : 'outlined'}
                 sx={{
                   backgroundColor: formData.specialties.includes(specialty) 
@@ -354,6 +452,10 @@ const BecomeCosplayerForm = ({ user, onSuccess }) => {
                     backgroundColor: formData.specialties.includes(specialty)
                       ? 'primary.dark'
                       : 'rgba(233, 30, 99, 0.1)',
+                  },
+                  '&.Mui-disabled': {
+                    opacity: 0.5,
+                    cursor: 'not-allowed',
                   },
                 }}
               />

@@ -13,7 +13,7 @@ import CosplayerPolicyPage from "../pages/CosplayerPolicyPage";
 import CosplayerProfilePage from "../pages/CosplayerProfilePage";
 import PaymentSuccessPage from "../pages/PaymentSuccessPage";
 import PaymentFailedPage from "../pages/PaymentFailedPage";
-import BecomeCosplayerForm from "../components/cosplayer/BecomeCosplayerForm";
+import BecomeCosplayerPage from "../pages/BecomeCosplayerPage";
 function AppRoutes() {
   return (
     <Routes>
@@ -39,7 +39,7 @@ function AppRoutes() {
         path="/become-cosplayer" 
         element={
           <ProtectedRoute>
-            <BecomeCosplayerForm />
+            <BecomeCosplayerPage />
           </ProtectedRoute>
         } 
       />

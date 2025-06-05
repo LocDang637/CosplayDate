@@ -266,44 +266,132 @@ export const cosplayerAPI = {
 
   // Convert customer to cosplayer
   becomeCosplayer: async (cosplayerData) => {
-    try {
-      console.log('🔄 API: Converting to cosplayer with data:', cosplayerData);
-      
-      const response = await api.post('/cosplayers/become-cosplayer', cosplayerData);
-      
-      console.log('✅ API: Become cosplayer response:', {
-        status: response.status,
-        hasData: !!response.data
-      });
-      
-      // ✅ FIXED: Update local storage immediately after successful conversion
-      if (response.data.isSuccess !== false) {
+  try {
+    console.log('🔄 API: Converting to cosplayer with data:', cosplayerData);
+    
+    const response = await api.post('/cosplayers/become-cosplayer', cosplayerData);
+    
+    console.log('✅ API: Become cosplayer response:', {
+      status: response.status,
+      data: response.data,
+      isSuccess: response.data?.isSuccess
+    });
+    
+    // FIXED: Handle different response formats properly
+    if (response.status === 200 || response.status === 201) {
+      // Check if response indicates success
+      if (response.data?.isSuccess === true) {
+        // Success case - update local storage
         const user = JSON.parse(localStorage.getItem('user') || '{}');
         const updatedUser = { 
           ...user, 
           userType: 'Cosplayer',
-          // Add any returned cosplayer data to user object
-          ...(response.data.data || {})
+          cosplayerId: response.data.data?.cosplayerId || response.data.data?.id
         };
         localStorage.setItem('user', JSON.stringify(updatedUser));
         console.log('✅ Updated user type in localStorage:', updatedUser);
+        
+        return {
+          success: true,
+          data: response.data.data || response.data,
+          message: response.data.message || 'Successfully became a cosplayer'
+        };
+      } 
+      // Handle explicit failure response
+      else if (response.data?.isSuccess === false) {
+        console.log('❌ API: Backend returned failure:', response.data);
+        return {
+          success: false,
+          message: response.data.message || 'Failed to become cosplayer',
+          errors: response.data.errors || {}
+        };
       }
+      // Handle response without explicit isSuccess field
+      else if (response.data?.data || response.data?.cosplayerId) {
+        const user = JSON.parse(localStorage.getItem('user') || '{}');
+        const updatedUser = { 
+          ...user, 
+          userType: 'Cosplayer',
+          cosplayerId: response.data.data?.cosplayerId || response.data.cosplayerId
+        };
+        localStorage.setItem('user', JSON.stringify(updatedUser));
+        
+        return {
+          success: true,
+          data: response.data.data || response.data,
+          message: response.data.message || 'Successfully became a cosplayer'
+        };
+      }
+    }
+    
+    // Fallback for unexpected response
+    return {
+      success: false,
+      message: 'Unexpected response format',
+      errors: {}
+    };
+    
+  } catch (error) {
+    console.error('❌ API: Error becoming cosplayer:', {
+      status: error.response?.status,
+      statusText: error.response?.statusText,
+      data: error.response?.data,
+      message: error.response?.data?.message,
+      errors: error.response?.data?.errors
+    });
+    
+    // FIXED: Better error handling for different status codes
+    if (error.response?.status === 400) {
+      // Handle validation errors
+      const errorData = error.response.data;
       
-      return {
-        success: true,
-        data: response.data.data || response.data,
-        message: response.data.message || 'Successfully became a cosplayer'
-      };
-    } catch (error) {
-      console.error('❌ API: Error becoming cosplayer:', error);
-      
+      if (errorData?.errors && typeof errorData.errors === 'object') {
+        // Handle ModelState validation errors
+        const validationErrors = {};
+        Object.keys(errorData.errors).forEach(key => {
+          const errorValue = errorData.errors[key];
+          validationErrors[key] = Array.isArray(errorValue) ? errorValue[0] : errorValue;
+        });
+        
+        return {
+          success: false,
+          message: errorData.message || 'Validation failed',
+          errors: validationErrors
+        };
+      } else {
+        return {
+          success: false,
+          message: errorData?.message || 'Invalid data provided. Please check your input.',
+          errors: errorData?.errors || { validation: 'Bad request' }
+        };
+      }
+    } else if (error.response?.status === 401) {
       return {
         success: false,
-        message: error.response?.data?.message || 'Failed to become cosplayer',
-        errors: error.response?.data?.errors || {}
+        message: 'Authentication required. Please login again.',
+        errors: { unauthorized: true }
+      };
+    } else if (error.response?.status === 403) {
+      return {
+        success: false,
+        message: 'You do not have permission to perform this action.',
+        errors: { forbidden: true }
+      };
+    } else if (error.response?.status === 409) {
+      return {
+        success: false,
+        message: 'You are already a cosplayer.',
+        errors: { conflict: true }
+      };
+    } else {
+      return {
+        success: false,
+        message: error.response?.data?.message || 'Failed to become cosplayer. Please try again.',
+        errors: error.response?.data?.errors || { network: true }
       };
     }
-  },
+  }
+},
 
   // Get cosplayer services
   getServices: async (cosplayerId) => {
