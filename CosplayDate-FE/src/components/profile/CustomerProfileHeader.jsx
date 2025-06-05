@@ -35,6 +35,7 @@ import {
   TheaterComedy
 } from '@mui/icons-material';
 
+
 const CustomerProfileHeader = ({ 
   user, 
   isOwnProfile = false, 
@@ -70,7 +71,7 @@ const CustomerProfileHeader = ({
   };
 
   const handleBecomeCosplayer = () => {
-    navigate('/cosplayer-policy');
+    navigate('/become-cosplayer');
     handleMenuClose();
   };
   const formatCurrency = (amount) => {
@@ -491,7 +492,7 @@ const CustomerProfileHeader = ({
                     }} 
                   />
                   <Typography variant="h6" sx={{ fontWeight: 700, fontSize: '18px' }}>
-                    2023
+                    {new Date().getFullYear()}
                   </Typography>
                   <Typography variant="body2" sx={{ color: 'text.secondary', fontSize: '12px' }}>
                     Thành viên từ
