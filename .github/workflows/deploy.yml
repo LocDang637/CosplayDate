@@ -11,10 +11,11 @@ env:
   IMAGE_NAME: ${{ github.repository }}-backend
 
 jobs:
-  # Frontend deployment to Vercel
+  # Frontend deployment to Vercel - FIXED
   deploy-frontend:
     name: Deploy Frontend to Vercel
     runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'  # Only deploy on main branch
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -43,8 +44,9 @@ jobs:
           vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
           vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
           working-directory: ./CosplayDate-FE
+          vercel-args: '--prod'  # Force production deployment
 
-  # Backend build and push to registry
+  # Backend build and push to registry - OPTIMIZED
   build-backend:
     name: Build and Push Backend Image
     runs-on: ubuntu-latest
@@ -87,12 +89,13 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+          platforms: linux/amd64  # Specify platform for Railway
 
       - name: Output image
         id: image
         run: echo "image=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest" >> $GITHUB_OUTPUT
 
-  # Deploy backend to Railway (free tier)
+  # Deploy backend to Railway - FIXED with correct service name and IDs
   deploy-backend:
     name: Deploy Backend to Railway
     runs-on: ubuntu-latest
@@ -106,19 +109,9 @@ jobs:
         run: npm install -g @railway/cli
 
       - name: Deploy to Railway
-        run: railway up --service backend
+        run: |
+          railway up --service CosplayDate --detach
         env:
           RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
-
-  # Alternative: Deploy to Render
-  deploy-backend-render:
-    name: Deploy Backend to Render (Alternative)
-    runs-on: ubuntu-latest
-    needs: build-backend
-    if: false # Set to true if using Render instead of Railway
-    steps:
-      - name: Deploy to Render
-        uses: johnbeynon/render-deploy-action@v0.0.8
-        with:
-          service-id: ${{ secrets.RENDER_SERVICE_ID }}
-          api-key: ${{ secrets.RENDER_API_KEY }}
+          RAILWAY_PROJECT_ID: ${{ secrets.RAILWAY_PROJECT_ID }}
+          RAILWAY_SERVICE_ID: ${{ secrets.RAILWAY_SERVICE_ID }}
