@@ -313,13 +313,18 @@ builder.Services.AddCors(options =>
                 allowedOrigins.Add(frontendUrl);
             }
 
-            // Add your production domains
+            // Add your actual Vercel domains from the screenshot
             allowedOrigins.AddRange(new[]
             {
-                "https://cosplay-date.vercel.app", // Your actual Vercel frontend
+                "https://cosplay-date.vercel.app", // Main Vercel domain
+                "https://cosplay-date-kqd598ot3-loc-dangs-projects-ebd5f443.vercel.app", // Deployment domain
+                "https://cosplay-date-git-main-loc-dangs-projects-ebd5f443.vercel.app", // Git branch domain (common pattern)
                 "https://cosplaydate.com",
                 "https://www.cosplaydate.com"
             });
+
+            // Log the allowed origins for debugging
+            Console.WriteLine($"🌐 CORS Allowed Origins: {string.Join(", ", allowedOrigins)}");
 
             policy.WithOrigins(allowedOrigins.ToArray())
                   .AllowAnyHeader()
