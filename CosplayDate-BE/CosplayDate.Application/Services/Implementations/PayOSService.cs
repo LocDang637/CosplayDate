@@ -122,8 +122,8 @@ namespace CosplayDate.Infrastructure.Services
                     description: paymentDescription,
                     items: items,
                     // Frontend URLs for user redirects
-                    cancelUrl: $"{frontendBaseUrl}/payment-cancel?orderCode={orderCode}",
-                    returnUrl: $"{frontendBaseUrl}/payment-success?orderCode={orderCode}",
+                    cancelUrl: $"{frontendBaseUrl}/payment/cancel?orderCode={orderCode}",
+                    returnUrl: $"{frontendBaseUrl}/payment/success?orderCode={orderCode}",
                     buyerName: TruncateForPayOS(request.BuyerName, 50),
                     buyerEmail: TruncateForPayOS(request.BuyerEmail, 50),
                     buyerPhone: TruncateForPayOS(request.BuyerPhone, 15),
