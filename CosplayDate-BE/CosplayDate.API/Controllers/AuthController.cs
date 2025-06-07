@@ -47,7 +47,7 @@ namespace CosplayDate.API.Controllers
         /// User login
         /// </summary>
         [HttpPost("login")]
-        [EnableRateLimiting("AuthPolicy")]
+        //[EnableRateLimiting("AuthPolicy")]
         public async Task<IActionResult> Login([FromBody] LoginRequestDto request)
         {
             if (!ModelState.IsValid)
