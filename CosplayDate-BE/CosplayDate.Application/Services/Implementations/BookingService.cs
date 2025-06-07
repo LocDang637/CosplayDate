@@ -50,13 +50,24 @@ namespace CosplayDate.Application.Services.Implementations
                 }
 
                 // Validate time
-                if (request.EndTime <= request.StartTime)
+                if (!TimeOnly.TryParse(request.StartTime, out var startTime))
+                {
+                    return ApiResponse<CreateBookingResponseDto>.Error("Invalid start time format. Use HH:mm format (e.g., 14:30)");
+                }
+
+                if (!TimeOnly.TryParse(request.EndTime, out var endTime))
+                {
+                    return ApiResponse<CreateBookingResponseDto>.Error("Invalid end time format. Use HH:mm format (e.g., 16:30)");
+                }
+
+                // Validate time
+                if (endTime <= startTime)
                 {
                     return ApiResponse<CreateBookingResponseDto>.Error("End time must be after start time");
                 }
 
                 // Calculate duration and price
-                var duration = CalculateDuration(request.StartTime, request.EndTime);
+                var duration = CalculateDuration(startTime, endTime);
                 var totalPrice = CalculatePrice(cosplayer.PricePerHour, duration);
 
                 // Check if customer has sufficient wallet balance
@@ -67,7 +78,7 @@ namespace CosplayDate.Application.Services.Implementations
                 }
 
                 // Check for time conflicts
-                var hasConflict = await HasTimeConflictAsync(request.CosplayerId, request.BookingDate, request.StartTime, request.EndTime);
+                var hasConflict = await HasTimeConflictAsync(request.CosplayerId, request.BookingDate, startTime, endTime);
                 if (hasConflict)
                 {
                     return ApiResponse<CreateBookingResponseDto>.Error("The selected time slot conflicts with another booking");
@@ -84,8 +95,8 @@ namespace CosplayDate.Application.Services.Implementations
                     CosplayerId = request.CosplayerId,
                     ServiceType = request.ServiceType,
                     BookingDate = request.BookingDate,
-                    StartTime = request.StartTime,
-                    EndTime = request.EndTime,
+                    StartTime = startTime,  // Use parsed TimeOnly
+                    EndTime = endTime,      // Use parsed TimeOnly
                     Duration = duration,
                     Location = request.Location,
                     TotalPrice = totalPrice,
