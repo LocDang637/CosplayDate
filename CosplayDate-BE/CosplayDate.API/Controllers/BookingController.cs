@@ -40,14 +40,16 @@ namespace CosplayDate.API.Controllers
                 var currentUserId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
                 var userType = User.FindFirst("UserType")?.Value;
 
-                // Only customers can create bookings
-                if (userType != "Customer")
+                // FIXED: Handle both Vietnamese and English user types
+                var isCustomer = userType == "Customer" || userType == "Khách hàng";
+
+                if (!isCustomer)
                 {
                     return BadRequest(new
                     {
                         isSuccess = false,
                         message = "Only customers can create bookings",
-                        errors = new[] { "Invalid user type" }
+                        errors = new[] { $"Invalid user type: {userType}" }
                     });
                 }
 
