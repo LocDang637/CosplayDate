@@ -209,6 +209,10 @@ builder.Services.AddScoped<ICosplayerService, CosplayerService>();
 builder.Services.AddScoped<ICosplayerMediaService, CosplayerMediaService>();
 builder.Services.AddScoped<IPayOSService, PayOSService>();
 builder.Services.AddScoped<IWalletService, WalletService>();
+builder.Services.AddScoped<IBookingService, BookingService>();
+builder.Services.AddScoped<IBookingNotificationService, BookingNotificationService>();
+builder.Services.AddScoped<BookingValidationService>();
+builder.Services.AddScoped<BookingReminderBackgroundService>();
 
 // ===== JWT AUTHENTICATION CONFIGURATION =====
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)

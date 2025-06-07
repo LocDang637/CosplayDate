@@ -1,0 +1,413 @@
+﻿// CosplayDate.API/Controllers/BookingController.cs
+using CosplayDate.Application.DTOs.Booking;
+using CosplayDate.Application.Services.Interfaces;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
+using System.Security.Claims;
+
+namespace CosplayDate.API.Controllers
+{
+    [ApiController]
+    [Route("api/[controller]")]
+    [Authorize]
+    public class BookingController : ControllerBase
+    {
+        private readonly IBookingService _bookingService;
+        private readonly ILogger<BookingController> _logger;
+
+        public BookingController(IBookingService bookingService, ILogger<BookingController> logger)
+        {
+            _bookingService = bookingService;
+            _logger = logger;
+        }
+
+        /// <summary>
+        /// Create a new booking
+        /// </summary>
+        [HttpPost]
+        [Authorize(Policy = "RequireVerifiedUser")]
+        [EnableRateLimiting("ApiPolicy")]
+        public async Task<IActionResult> CreateBooking([FromBody] CreateBookingRequestDto request)
+        {
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(ModelState);
+            }
+
+            try
+            {
+                var currentUserId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
+                var userType = User.FindFirst("UserType")?.Value;
+
+                // Only customers can create bookings
+                if (userType != "Customer")
+                {
+                    return BadRequest(new
+                    {
+                        isSuccess = false,
+                        message = "Only customers can create bookings",
+                        errors = new[] { "Invalid user type" }
+                    });
+                }
+
+                var result = await _bookingService.CreateBookingAsync(currentUserId, request);
+
+                if (result.IsSuccess)
+                {
+                    return CreatedAtAction(nameof(GetBookingDetails), new { id = result.Data?.BookingId }, result);
+                }
+
+                return BadRequest(result);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error creating booking");
+                return StatusCode(500, "An error occurred while creating the booking");
+            }
+        }
+
+        /// <summary>
+        /// Get booking details by ID
+        /// </summary>
+        [HttpGet("{id}")]
+        public async Task<IActionResult> GetBookingDetails(int id)
+        {
+            try
+            {
+                var currentUserId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
+                var result = await _bookingService.GetBookingDetailsAsync(id, currentUserId);
+
+                if (result.IsSuccess)
+                {
+                    return Ok(result);
+                }
+
+                return NotFound(result);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting booking details for ID: {BookingId}", id);
+                return StatusCode(500, "An error occurred while retrieving booking details");
+            }
+        }
+
+        /// <summary>
+        /// Get user's bookings with filters
+        /// </summary>
+        [HttpGet]
+        public async Task<IActionResult> GetBookings([FromQuery] GetBookingsRequestDto request)
+        {
+            try
+            {
+                var currentUserId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
+                var result = await _bookingService.GetBookingsAsync(currentUserId, request);
+
+                if (result.IsSuccess)
+                {
+                    return Ok(result);
+                }
+
+                return BadRequest(result);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting bookings for user");
+                return StatusCode(500, "An error occurred while retrieving bookings");
+            }
+        }
+
+        /// <summary>
+        /// Update a booking (customers only, pending bookings only)
+        /// </summary>
+        [HttpPut("{id}")]
+        [EnableRateLimiting("ApiPolicy")]
+        public async Task<IActionResult> UpdateBooking(int id, [FromBody] UpdateBookingRequestDto request)
+        {
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(ModelState);
+            }
+
+            try
+            {
+                var currentUserId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
+                var result = await _bookingService.UpdateBookingAsync(id, currentUserId, request);
+
+                if (result.IsSuccess)
+                {
+                    return Ok(result);
+                }
+
+                return BadRequest(result);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error updating booking {BookingId}", id);
+                return StatusCode(500, "An error occurred while updating the booking");
+            }
+        }
+
+        /// <summary>
+        /// Cancel a booking
+        /// </summary>
+        [HttpPost("{id}/cancel")]
+        [EnableRateLimiting("ApiPolicy")]
+        public async Task<IActionResult> CancelBooking(int id, [FromBody] CancelBookingRequestDto request)
+        {
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(ModelState);
+            }
+
+            try
+            {
+                var currentUserId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
+                var result = await _bookingService.CancelBookingAsync(id, currentUserId, request);
+
+                if (result.IsSuccess)
+                {
+                    return Ok(result);
+                }
+
+                return BadRequest(result);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error cancelling booking {BookingId}", id);
+                return StatusCode(500, "An error occurred while cancelling the booking");
+            }
+        }
+
+        /// <summary>
+        /// Confirm a booking (cosplayers only)
+        /// </summary>
+        [HttpPost("{id}/confirm")]
+        [Authorize(Policy = "RequireCosplayer")]
+        [EnableRateLimiting("ApiPolicy")]
+        public async Task<IActionResult> ConfirmBooking(int id)
+        {
+            try
+            {
+                var currentUserId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
+                var result = await _bookingService.ConfirmBookingAsync(id, currentUserId);
+
+                if (result.IsSuccess)
+                {
+                    return Ok(result);
+                }
+
+                return BadRequest(result);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error confirming booking {BookingId}", id);
+                return StatusCode(500, "An error occurred while confirming the booking");
+            }
+        }
+
+        /// <summary>
+        /// Complete a booking (after service is done)
+        /// </summary>
+        [HttpPost("{id}/complete")]
+        [EnableRateLimiting("ApiPolicy")]
+        public async Task<IActionResult> CompleteBooking(int id)
+        {
+            try
+            {
+                var currentUserId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
+                var result = await _bookingService.CompleteBookingAsync(id, currentUserId);
+
+                if (result.IsSuccess)
+                {
+                    return Ok(result);
+                }
+
+                return BadRequest(result);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error completing booking {BookingId}", id);
+                return StatusCode(500, "An error occurred while completing the booking");
+            }
+        }
+
+        /// <summary>
+        /// Calculate booking price for given time range
+        /// </summary>
+        [HttpGet("calculate-price")]
+        public async Task<IActionResult> CalculateBookingPrice(
+            [FromQuery] int cosplayerId,
+            [FromQuery] string startTime,
+            [FromQuery] string endTime)
+        {
+            try
+            {
+                if (!TimeOnly.TryParse(startTime, out var start) || !TimeOnly.TryParse(endTime, out var end))
+                {
+                    return BadRequest(new
+                    {
+                        isSuccess = false,
+                        message = "Invalid time format. Use HH:mm format",
+                        errors = new[] { "Invalid time format" }
+                    });
+                }
+
+                var result = await _bookingService.CalculateBookingPriceAsync(cosplayerId, start, end);
+
+                if (result.IsSuccess)
+                {
+                    return Ok(result);
+                }
+
+                return BadRequest(result);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error calculating booking price");
+                return StatusCode(500, "An error occurred while calculating the booking price");
+            }
+        }
+
+        /// <summary>
+        /// Get upcoming bookings for the current user
+        /// </summary>
+        [HttpGet("upcoming")]
+        public async Task<IActionResult> GetUpcomingBookings([FromQuery] int pageSize = 10)
+        {
+            try
+            {
+                var request = new GetBookingsRequestDto
+                {
+                    Page = 1,
+                    PageSize = pageSize,
+                    FromDate = DateOnly.FromDateTime(DateTime.Today),
+                    Status = null, // Get all statuses except cancelled
+                    SortBy = "booking_date",
+                    SortOrder = "asc"
+                };
+
+                var currentUserId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
+                var result = await _bookingService.GetBookingsAsync(currentUserId, request);
+
+                if (result.IsSuccess && result.Data != null)
+                {
+                    // Filter out cancelled bookings
+                    var upcomingBookings = result.Data.Bookings
+                        .Where(b => b.Status != "Cancelled")
+                        .ToList();
+
+                    var response = new
+                    {
+                        isSuccess = true,
+                        message = "Upcoming bookings retrieved successfully",
+                        data = new
+                        {
+                            bookings = upcomingBookings,
+                            totalCount = upcomingBookings.Count
+                        }
+                    };
+
+                    return Ok(response);
+                }
+
+                return BadRequest(result);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting upcoming bookings");
+                return StatusCode(500, "An error occurred while retrieving upcoming bookings");
+            }
+        }
+
+        /// <summary>
+        /// Get booking history (completed and cancelled bookings)
+        /// </summary>
+        [HttpGet("history")]
+        public async Task<IActionResult> GetBookingHistory([FromQuery] GetBookingsRequestDto request)
+        {
+            try
+            {
+                // Override to get only completed and cancelled bookings
+                request.ToDate = DateOnly.FromDateTime(DateTime.Today.AddDays(-1));
+                request.SortBy = "booking_date";
+                request.SortOrder = "desc";
+
+                var currentUserId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
+                var result = await _bookingService.GetBookingsAsync(currentUserId, request);
+
+                if (result.IsSuccess && result.Data != null)
+                {
+                    // Filter to show only completed and cancelled bookings
+                    var historyBookings = result.Data.Bookings
+                        .Where(b => b.Status == "Completed" || b.Status == "Cancelled")
+                        .ToList();
+
+                    var response = new GetBookingsResponseDto
+                    {
+                        Bookings = historyBookings,
+                        TotalCount = historyBookings.Count,
+                        CurrentPage = request.Page,
+                        PageSize = request.PageSize,
+                        TotalPages = (int)Math.Ceiling((double)historyBookings.Count / request.PageSize),
+                        HasNextPage = false,
+                        HasPreviousPage = false,
+                        Stats = result.Data.Stats
+                    };
+
+                    return Ok(new
+                    {
+                        isSuccess = true,
+                        message = "Booking history retrieved successfully",
+                        data = response
+                    });
+                }
+
+                return BadRequest(result);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting booking history");
+                return StatusCode(500, "An error occurred while retrieving booking history");
+            }
+        }
+
+        /// <summary>
+        /// Get booking statistics for the current user
+        /// </summary>
+        [HttpGet("stats")]
+        public async Task<IActionResult> GetBookingStats()
+        {
+            try
+            {
+                var request = new GetBookingsRequestDto
+                {
+                    Page = 1,
+                    PageSize = 1000, // Get all bookings for stats
+                    SortBy = "created_date",
+                    SortOrder = "desc"
+                };
+
+                var currentUserId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
+                var result = await _bookingService.GetBookingsAsync(currentUserId, request);
+
+                if (result.IsSuccess && result.Data != null)
+                {
+                    return Ok(new
+                    {
+                        isSuccess = true,
+                        message = "Booking statistics retrieved successfully",
+                        data = result.Data.Stats
+                    });
+                }
+
+                return BadRequest(result);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting booking stats");
+                return StatusCode(500, "An error occurred while retrieving booking statistics");
+            }
+        }
+    }
+}
