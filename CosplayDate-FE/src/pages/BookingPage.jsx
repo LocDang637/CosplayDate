@@ -20,7 +20,6 @@ import BookingPayment from '../components/booking/BookingPayment';
 import BookingConfirmation from '../components/booking/BookingConfirmation';
 import { cosplayerAPI } from '../services/cosplayerAPI';
 import { bookingAPI } from '../services/bookingAPI';
-import { paymentAPI } from '../services/paymentAPI';
 
 const steps = ['Chọn dịch vụ', 'Chọn thời gian', 'Thanh toán', 'Xác nhận'];
 
@@ -62,15 +61,24 @@ const BookingPage = () => {
 
       // Load services
       const servicesResult = await cosplayerAPI.getServices(cosplayerId);
-      if (servicesResult.success) {
-        setServices(servicesResult.data || []);
+      if (servicesResult.success && servicesResult.data.length > 0) {
+        setServices(servicesResult.data);
+        
+        // Update cosplayer name if provided
+        if (servicesResult.cosplayerName && cosplayer) {
+          setCosplayer({
+            ...cosplayer,
+            displayName: servicesResult.cosplayerName
+          });
+        }
+      } else {
+        setServices([]);
+        setError('Cosplayer này chưa có dịch vụ nào.');
       }
 
-      // Check wallet balance
-      const balanceResult = await bookingAPI.checkBalance();
-      if (balanceResult.success) {
-        setWalletBalance(balanceResult.data.Balance || 0);
-      }
+      // Get user info from local storage to check wallet balance
+      const user = JSON.parse(localStorage.getItem('user') || '{}');
+      setWalletBalance(user.walletBalance || 1000000); // Mock balance for development
 
     } catch (err) {
       console.error('Failed to load booking data:', err);
@@ -98,9 +106,10 @@ const BookingPage = () => {
     handleNext();
   };
 
-  const handleScheduleConfirm = (date, timeSlots, note) => {
+  const handleScheduleConfirm = (date, bookingData, note) => {
     setSelectedDate(date);
-    setSelectedTimeSlots(timeSlots);
+    // bookingData contains the complete booking information
+    setSelectedTimeSlots(bookingData);
     setBookingNote(note);
     handleNext();
   };
@@ -110,21 +119,24 @@ const BookingPage = () => {
       setLoading(true);
       setError('');
 
+      // Get booking data from selectedTimeSlots (which now contains complete booking info)
+      const bookingInfo = selectedTimeSlots[0];
+      
       // Check balance first
-      if (walletBalance < selectedService.price * selectedTimeSlots.length) {
+      if (walletBalance < bookingInfo.totalPrice) {
         setError('Số dư ví không đủ. Vui lòng nạp thêm tiền.');
         return false;
       }
 
-      // Create booking
+      // Create booking data matching the API structure
       const bookingData = {
-        cosplayerId: cosplayerId,
-        serviceId: selectedService.id,
-        bookingDate: selectedDate,
-        timeSlots: selectedTimeSlots,
-        totalAmount: selectedService.price * selectedTimeSlots.length,
-        note: bookingNote,
-        paymentMethod: 'wallet'
+        cosplayerId: parseInt(cosplayerId),
+        serviceType: selectedService.name,
+        bookingDate: selectedDate.toISOString(),
+        startTime: bookingInfo.startTime,
+        endTime: bookingInfo.endTime,
+        location: bookingInfo.location,
+        specialNotes: bookingInfo.note || bookingNote
       };
 
       const result = await bookingAPI.createBooking(bookingData);
@@ -134,11 +146,7 @@ const BookingPage = () => {
         handleNext();
         return true;
       } else {
-        if (result.insufficientFunds) {
-          setError('Số dư ví không đủ để thực hiện đặt lịch này.');
-        } else {
-          setError(result.message || 'Không thể tạo đặt lịch. Vui lòng thử lại.');
-        }
+        setError(result.message || 'Không thể tạo đặt lịch. Vui lòng thử lại.');
         return false;
       }
     } catch (err) {
@@ -183,7 +191,7 @@ const BookingPage = () => {
             selectedDate={selectedDate}
             selectedTimeSlots={selectedTimeSlots}
             walletBalance={walletBalance}
-            totalAmount={selectedService?.price * selectedTimeSlots.length}
+            totalAmount={selectedTimeSlots?.[0]?.totalPrice || 0}
             onConfirm={handlePaymentConfirm}
             onBack={handleBack}
             loading={loading}

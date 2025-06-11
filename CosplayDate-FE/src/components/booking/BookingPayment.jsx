@@ -47,7 +47,11 @@ const BookingPayment = ({
   const navigate = useNavigate();
   const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
   const [processing, setProcessing] = useState(false);
-  const insufficientFunds = walletBalance < totalAmount;
+  
+  // Get booking info from selectedTimeSlots
+  const bookingInfo = selectedTimeSlots?.[0] || {};
+  const actualTotalAmount = bookingInfo.totalPrice || totalAmount || 0;
+  const insufficientFunds = walletBalance < actualTotalAmount;
 
   const formatPrice = (price) => {
     return new Intl.NumberFormat('vi-VN', {
@@ -132,7 +136,7 @@ const BookingPayment = ({
           
           {insufficientFunds && (
             <Alert severity="error" sx={{ mt: 2 }}>
-              Số dư không đủ. Bạn cần nạp thêm {formatPrice(totalAmount - walletBalance)} để thực hiện đặt lịch này.
+              Số dư không đủ. Bạn cần nạp thêm {formatPrice(actualTotalAmount - walletBalance)} để thực hiện đặt lịch này.
             </Alert>
           )}
         </CardContent>
@@ -197,10 +201,19 @@ const BookingPayment = ({
             
             <Grid item xs={12} sm={6}>
               <Typography variant="body2" color="text.secondary" gutterBottom>
-                Số lượng slot
+                Thời gian
               </Typography>
               <Typography variant="body1" sx={{ fontWeight: 600 }}>
-                {selectedTimeSlots.length} slot
+                {bookingInfo.startTime} - {bookingInfo.endTime}
+              </Typography>
+            </Grid>
+            
+            <Grid item xs={12}>
+              <Typography variant="body2" color="text.secondary" gutterBottom>
+                Địa điểm
+              </Typography>
+              <Typography variant="body1" sx={{ fontWeight: 600 }}>
+                {bookingInfo.location || 'Chưa xác định'}
               </Typography>
             </Grid>
             
@@ -209,14 +222,11 @@ const BookingPayment = ({
                 Khung giờ
               </Typography>
               <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mt: 1 }}>
-                {selectedTimeSlots.map((slot) => (
-                  <Chip
-                    key={slot}
-                    label={slot}
-                    color="primary"
-                    size="small"
-                  />
-                ))}
+                <Chip
+                  label={`${bookingInfo.startTime} - ${bookingInfo.endTime}`}
+                  color="primary"
+                  size="small"
+                />
               </Box>
             </Grid>
           </Grid>

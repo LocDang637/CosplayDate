@@ -2,7 +2,7 @@
 import axios from 'axios';
 
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL,
+  baseURL: import.meta.env.VITE_API_BASE_URL || 'http://localhost:5068/api',
   timeout: 30000,
   headers: {
     'Content-Type': 'application/json',
@@ -21,42 +21,17 @@ api.interceptors.request.use(
 );
 
 export const bookingAPI = {
-  // Check wallet balance
-  checkBalance: async () => {
-    try {
-      const response = await api.get('/payment/wallet/balance');
-      return {
-        success: true,
-        data: response.data.data || { Balance: 0 },
-        message: response.data.message || 'Balance retrieved successfully'
-      };
-    } catch (error) {
-      return {
-        success: false,
-        message: error.response?.data?.message || 'Failed to check balance',
-        errors: error.response?.data?.errors || {}
-      };
-    }
-  },
-
   // Create new booking
   createBooking: async (bookingData) => {
     try {
-      const response = await api.post('/bookings', bookingData);
+      const response = await api.post('/booking', bookingData);
       return {
         success: true,
-        data: response.data.data,
+        data: response.data.data || response.data,
         message: response.data.message || 'Booking created successfully'
       };
     } catch (error) {
-      if (error.response?.status === 400 && error.response?.data?.message?.includes('insufficient funds')) {
-        return {
-          success: false,
-          insufficientFunds: true,
-          message: 'Số dư không đủ để thực hiện đặt lịch',
-          errors: { balance: 'Insufficient funds' }
-        };
-      }
+      console.error('Failed to create booking:', error);
       return {
         success: false,
         message: error.response?.data?.message || 'Failed to create booking',
@@ -65,16 +40,39 @@ export const bookingAPI = {
     }
   },
 
-  // Get booking details
-  getBookingDetails: async (bookingId) => {
+  // Get bookings with filters
+  getBookings: async (params = {}) => {
     try {
-      const response = await api.get(`/bookings/${bookingId}`);
+      const queryParams = new URLSearchParams(params);
+      const response = await api.get(`/booking?${queryParams}`);
       return {
         success: true,
-        data: response.data.data,
+        data: response.data.data || response.data || [],
+        pagination: response.data.pagination || {},
+        message: response.data.message || 'Bookings loaded successfully'
+      };
+    } catch (error) {
+      console.error('Failed to load bookings:', error);
+      return {
+        success: false,
+        data: [],
+        message: error.response?.data?.message || 'Failed to load bookings',
+        errors: error.response?.data?.errors || {}
+      };
+    }
+  },
+
+  // Get booking by ID
+  getBookingById: async (bookingId) => {
+    try {
+      const response = await api.get(`/booking/${bookingId}`);
+      return {
+        success: true,
+        data: response.data.data || response.data,
         message: response.data.message || 'Booking details loaded'
       };
     } catch (error) {
+      console.error('Failed to load booking details:', error);
       return {
         success: false,
         message: error.response?.data?.message || 'Failed to load booking details',
@@ -83,52 +81,36 @@ export const bookingAPI = {
     }
   },
 
-  // Get user's bookings
-  getUserBookings: async (params = {}) => {
+  // Update booking
+  updateBooking: async (bookingId, updateData) => {
     try {
-      const response = await api.get('/bookings/my-bookings', { params });
+      const response = await api.put(`/booking/${bookingId}`, updateData);
       return {
         success: true,
-        data: response.data.data || [],
-        message: response.data.message || 'Bookings loaded successfully'
+        data: response.data.data || response.data,
+        message: response.data.message || 'Booking updated successfully'
       };
     } catch (error) {
+      console.error('Failed to update booking:', error);
       return {
         success: false,
-        message: error.response?.data?.message || 'Failed to load bookings',
+        message: error.response?.data?.message || 'Failed to update booking',
         errors: error.response?.data?.errors || {}
       };
     }
   },
 
-  // Cancel booking (before confirmation)
-  cancelBooking: async (bookingId, reason) => {
-    try {
-      const response = await api.post(`/bookings/${bookingId}/cancel`, { reason });
-      return {
-        success: true,
-        data: response.data.data,
-        message: response.data.message || 'Booking cancelled successfully'
-      };
-    } catch (error) {
-      return {
-        success: false,
-        message: error.response?.data?.message || 'Failed to cancel booking',
-        errors: error.response?.data?.errors || {}
-      };
-    }
-  },
-
-  // Cosplayer confirms booking
+  // Confirm booking
   confirmBooking: async (bookingId) => {
     try {
-      const response = await api.post(`/bookings/${bookingId}/confirm`);
+      const response = await api.post(`/booking/${bookingId}/confirm`);
       return {
         success: true,
-        data: response.data.data,
+        data: response.data.data || response.data,
         message: response.data.message || 'Booking confirmed successfully'
       };
     } catch (error) {
+      console.error('Failed to confirm booking:', error);
       return {
         success: false,
         message: error.response?.data?.message || 'Failed to confirm booking',
@@ -137,36 +119,36 @@ export const bookingAPI = {
     }
   },
 
-  // Upload evidence (photos before/after)
-  uploadEvidence: async (bookingId, formData) => {
+  // Cancel booking
+  cancelBooking: async (bookingId, reason = '') => {
     try {
-      const response = await api.post(`/bookings/${bookingId}/evidence`, formData, {
-        headers: { 'Content-Type': 'multipart/form-data' }
-      });
+      const response = await api.post(`/booking/${bookingId}/cancel`, { cancellationReason: reason });
       return {
         success: true,
-        data: response.data.data,
-        message: response.data.message || 'Evidence uploaded successfully'
+        data: response.data.data || response.data,
+        message: response.data.message || 'Booking cancelled successfully'
       };
     } catch (error) {
+      console.error('Failed to cancel booking:', error);
       return {
         success: false,
-        message: error.response?.data?.message || 'Failed to upload evidence',
+        message: error.response?.data?.message || 'Failed to cancel booking',
         errors: error.response?.data?.errors || {}
       };
     }
   },
 
-  // Complete booking (cosplayer marks as complete)
+  // Complete booking
   completeBooking: async (bookingId) => {
     try {
-      const response = await api.post(`/bookings/${bookingId}/complete`);
+      const response = await api.post(`/booking/${bookingId}/complete`);
       return {
         success: true,
-        data: response.data.data,
+        data: response.data.data || response.data,
         message: response.data.message || 'Booking completed successfully'
       };
     } catch (error) {
+      console.error('Failed to complete booking:', error);
       return {
         success: false,
         message: error.response?.data?.message || 'Failed to complete booking',
@@ -175,72 +157,65 @@ export const bookingAPI = {
     }
   },
 
-  // Report issue
-  reportIssue: async (bookingId, reportData) => {
+  // Calculate price
+  calculatePrice: async (cosplayerId, startTime, endTime) => {
     try {
-      const formData = new FormData();
-      formData.append('bookingId', bookingId);
-      formData.append('reason', reportData.reason);
-      formData.append('description', reportData.description);
-      
-      // Add evidence files
-      if (reportData.evidence) {
-        reportData.evidence.forEach((file, index) => {
-          formData.append(`evidence[${index}]`, file);
-        });
-      }
-
-      const response = await api.post(`/bookings/${bookingId}/report`, formData, {
-        headers: { 'Content-Type': 'multipart/form-data' }
-      });
-      
+      const params = { cosplayerId, startTime, endTime };
+      const response = await api.get('/booking/calculate-price', { params });
       return {
         success: true,
-        data: response.data.data,
-        message: response.data.message || 'Issue reported successfully'
+        data: response.data.data || response.data,
+        message: response.data.message || 'Price calculated successfully'
       };
     } catch (error) {
+      console.error('Failed to calculate price:', error);
       return {
         success: false,
-        message: error.response?.data?.message || 'Failed to report issue',
+        message: error.response?.data?.message || 'Failed to calculate price',
         errors: error.response?.data?.errors || {}
       };
     }
   },
 
-  // Get available time slots
-  getAvailableSlots: async (cosplayerId, date) => {
+  // Get upcoming bookings
+  getUpcomingBookings: async (params = {}) => {
     try {
-      const response = await api.get(`/bookings/available-slots`, {
-        params: { cosplayerId, date }
-      });
+      const queryParams = new URLSearchParams(params);
+      const response = await api.get(`/booking/upcoming?${queryParams}`);
       return {
         success: true,
-        data: response.data.data || [],
-        message: response.data.message || 'Available slots loaded'
+        data: response.data.data || response.data || [],
+        pagination: response.data.pagination || {},
+        message: response.data.message || 'Upcoming bookings loaded successfully'
       };
     } catch (error) {
+      console.error('Failed to load upcoming bookings:', error);
       return {
         success: false,
-        message: error.response?.data?.message || 'Failed to load available slots',
+        data: [],
+        message: error.response?.data?.message || 'Failed to load upcoming bookings',
         errors: error.response?.data?.errors || {}
       };
     }
   },
 
-  // Create schedule form (cosplayer)
-  createScheduleForm: async (bookingId, scheduleData) => {
+  // Get booking history
+  getBookingHistory: async (params = {}) => {
     try {
-      const response = await api.post(`/bookings/${bookingId}/schedule`, scheduleData);
+      const queryParams = new URLSearchParams(params);
+      const response = await api.get(`/booking/history?${queryParams}`);
       return {
         success: true,
-        data: response.data.data,
-        message: response.data.message || 'Schedule created successfully'
+        data: response.data.data || response.data || [],
+        pagination: response.data.pagination || {},
+        message: response.data.message || 'Booking history loaded successfully'
       };
     } catch (error) {
+      console.error('Failed to load booking history:', error);
       return {
         success: false,
-        message: error.response?.data?.message || 'Failed to create schedule',
+        data: [],
+        message: error.response?.data?.message || 'Failed to load booking history',
         errors: error.response?.data?.errors || {}
       };
     }
