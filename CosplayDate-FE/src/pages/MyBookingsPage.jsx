@@ -33,8 +33,6 @@ import {
 import { ThemeProvider } from '@mui/material/styles';
 import { cosplayTheme } from '../theme/cosplayTheme';
 import PageLayout from '../components/layout/PageLayout';
-import BookingDetailsDialog from '../components/booking/BookingDetailsDialog';
-import BookingCancelDialog from '../components/booking/BookingCancelDialog';
 import { bookingAPI } from '../services/bookingAPI';
 import { format } from 'date-fns';
 import { vi } from 'date-fns/locale';
@@ -392,25 +390,6 @@ const MyBookingsPage = () => {
               </MenuItem>
             )}
           </Menu>
-
-          {/* Dialogs */}
-          {selectedBooking && (
-            <>
-              <BookingDetailsDialog
-                open={detailsDialogOpen}
-                onClose={() => setDetailsDialogOpen(false)}
-                booking={selectedBooking}
-                isCosplayer={isCosplayer}
-              />
-              
-              <BookingCancelDialog
-                open={cancelDialogOpen}
-                onClose={() => setCancelDialogOpen(false)}
-                booking={selectedBooking}
-                onCancelled={loadBookings}
-              />
-            </>
-          )}
         </Container>
       </PageLayout>
     </ThemeProvider>
