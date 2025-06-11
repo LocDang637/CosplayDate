@@ -13,6 +13,8 @@ import {
   Button,
   Grid
 } from '@mui/material';
+import { ArrowBack } from '@mui/icons-material';
+import { useNavigate } from 'react-router-dom';
 
 const BookingServiceSelect = ({ 
   services = [], 
@@ -20,6 +22,7 @@ const BookingServiceSelect = ({
   onServiceSelect,
   cosplayer 
 }) => {
+  const navigate = useNavigate();
   const [selectedId, setSelectedId] = React.useState(selectedService?.id?.toString() || '');
 
   // Ensure services is always an array
@@ -161,7 +164,29 @@ const BookingServiceSelect = ({
         </Grid>
       </RadioGroup>
 
-      <Box sx={{ mt: 4, display: 'flex', justifyContent: 'flex-end' }}>
+      <Box sx={{ mt: 4, display: 'flex', justifyContent: 'space-between' }}>
+        <Button
+          variant="outlined"
+          size="large"
+          onClick={() => navigate('/')}
+          startIcon={<ArrowBack />}
+          sx={{
+            borderRadius: '12px',
+            textTransform: 'none',
+            fontWeight: 600,
+            px: 3,
+            py: 1.5,
+            borderColor: 'primary.main',
+            color: 'primary.main',
+            '&:hover': {
+              borderColor: 'primary.dark',
+              backgroundColor: 'rgba(233, 30, 99, 0.05)'
+            }
+          }}
+        >
+          Về trang chủ
+        </Button>
+        
         <Button
           variant="contained"
           size="large"

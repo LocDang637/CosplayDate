@@ -12,7 +12,11 @@ import {
   CircularProgress,
   Alert,
   Divider,
-  InputAdornment
+  InputAdornment,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions
 } from '@mui/material';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { TimePicker } from '@mui/x-date-pickers/TimePicker';
@@ -24,9 +28,9 @@ import {
   AccessTime,
   Notes,
   ArrowBack,
-  ArrowForward,
   AttachMoney,
-  LocationOn
+  LocationOn,
+  CheckCircle
 } from '@mui/icons-material';
 import { format, addDays, isBefore, parse, isValid } from 'date-fns';
 import { bookingAPI } from '../../services/bookingAPI';
@@ -48,6 +52,8 @@ const BookingSchedule = ({
   const [totalPrice, setTotalPrice] = useState(0);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
+  const [creating, setCreating] = useState(false);
 
   // Calculate price when date, start time, or end time changes
   useEffect(() => {
@@ -84,7 +90,7 @@ const BookingSchedule = ({
     }
   };
 
-  const handleConfirm = () => {
+  const handleOpenConfirmDialog = () => {
     if (!date) {
       setError('Vui lòng chọn ngày');
       return;
@@ -104,17 +110,40 @@ const BookingSchedule = ({
       return;
     }
     
-    // Pass the data in the format expected by the parent
-    const bookingData = {
-      date,
-      startTime: format(startTime, 'HH:mm'),
-      endTime: format(endTime, 'HH:mm'),
-      location: location.trim(),
-      note: note.trim(),
-      totalPrice
-    };
-    
-    onConfirm(date, [bookingData], note);
+    setConfirmDialogOpen(true);
+  };
+
+  const handleCreateBooking = async () => {
+    try {
+      setCreating(true);
+      setError('');
+      
+      // Create booking data matching the API structure
+      const bookingData = {
+        cosplayerId: parseInt(cosplayer.id),
+        serviceType: service.name,
+        bookingDate: format(date, 'yyyy-MM-dd'),
+        startTime: format(startTime, 'HH:mm'),
+        endTime: format(endTime, 'HH:mm'),
+        location: location.trim(),
+        specialNotes: note.trim() || ''
+      };
+
+      const result = await bookingAPI.createBooking(bookingData);
+      
+      if (result.success) {
+        setConfirmDialogOpen(false);
+        // Pass booking data to parent
+        onConfirm(result.data, totalPrice);
+      } else {
+        setError(result.message || 'Không thể tạo đặt lịch. Vui lòng thử lại.');
+      }
+    } catch (err) {
+      console.error('Booking creation failed:', err);
+      setError('Đã xảy ra lỗi. Vui lòng thử lại.');
+    } finally {
+      setCreating(false);
+    }
   };
 
   const isDateDisabled = (date) => {
@@ -272,67 +301,6 @@ const BookingSchedule = ({
           }}
           sx={{ mb: 3 }}
         />
-
-        {/* Summary */}
-        {date && startTime && endTime && location && (
-          <Card sx={{ 
-            mb: 3, 
-            borderRadius: '12px',
-            backgroundColor: 'rgba(233, 30, 99, 0.05)',
-            border: '1px solid rgba(233, 30, 99, 0.2)'
-          }}>
-            <CardContent>
-              <Typography variant="h6" sx={{ fontWeight: 600, mb: 2 }}>
-                Tóm tắt đặt lịch:
-              </Typography>
-              
-              <Grid container spacing={2}>
-                <Grid item xs={12}>
-                  <Typography variant="body2" color="text.secondary">
-                    Ngày đã chọn:
-                  </Typography>
-                  <Typography variant="body1" sx={{ fontWeight: 600 }}>
-                    {formatSelectedDate()}
-                  </Typography>
-                </Grid>
-                
-                <Grid item xs={12}>
-                  <Typography variant="body2" color="text.secondary">
-                    Thời gian:
-                  </Typography>
-                  <Typography variant="body1" sx={{ fontWeight: 600 }}>
-                    {format(startTime, 'HH:mm')} - {format(endTime, 'HH:mm')}
-                  </Typography>
-                </Grid>
-                
-                <Grid item xs={12}>
-                  <Typography variant="body2" color="text.secondary">
-                    Địa điểm:
-                  </Typography>
-                  <Typography variant="body1" sx={{ fontWeight: 600 }}>
-                    {location}
-                  </Typography>
-                </Grid>
-                
-                <Grid item xs={12}>
-                  <Divider sx={{ my: 1 }} />
-                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <Typography variant="h6">
-                      Tổng cộng:
-                    </Typography>
-                    {loading ? (
-                      <CircularProgress size={24} />
-                    ) : (
-                      <Typography variant="h5" sx={{ color: 'primary.main', fontWeight: 700 }}>
-                        {formatPrice(totalPrice)}
-                      </Typography>
-                    )}
-                  </Box>
-                </Grid>
-              </Grid>
-            </CardContent>
-          </Card>
-        )}
       </LocalizationProvider>
 
       {/* Actions */}
@@ -356,8 +324,8 @@ const BookingSchedule = ({
         <Button
           variant="contained"
           size="large"
-          onClick={handleConfirm}
-          endIcon={<ArrowForward />}
+          onClick={handleOpenConfirmDialog}
+          startIcon={<CheckCircle />}
           disabled={!date || !startTime || !endTime || !location || loading}
           sx={{
             background: 'linear-gradient(45deg, #E91E63, #9C27B0)',
@@ -379,9 +347,121 @@ const BookingSchedule = ({
             }
           }}
         >
-          Tiếp tục
+          Tạo đặt lịch
         </Button>
       </Box>
+
+      {/* Confirmation Dialog */}
+      <Dialog
+        open={confirmDialogOpen}
+        onClose={() => !creating && setConfirmDialogOpen(false)}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle sx={{ fontWeight: 600 }}>
+          Xác nhận đặt lịch
+        </DialogTitle>
+        <DialogContent dividers>
+          {error && (
+            <Alert severity="error" sx={{ mb: 2 }}>
+              {error}
+            </Alert>
+          )}
+          
+          <Typography variant="h6" sx={{ fontWeight: 600, mb: 2 }}>
+            Tóm tắt đặt lịch:
+          </Typography>
+          
+          <Grid container spacing={2}>
+            <Grid item xs={12}>
+              <Typography variant="body2" color="text.secondary">
+                Cosplayer:
+              </Typography>
+              <Typography variant="body1" sx={{ fontWeight: 600 }}>
+                {cosplayer?.displayName}
+              </Typography>
+            </Grid>
+            
+            <Grid item xs={12}>
+              <Typography variant="body2" color="text.secondary">
+                Dịch vụ:
+              </Typography>
+              <Typography variant="body1" sx={{ fontWeight: 600 }}>
+                {service?.name}
+              </Typography>
+            </Grid>
+            
+            <Grid item xs={12}>
+              <Typography variant="body2" color="text.secondary">
+                Ngày:
+              </Typography>
+              <Typography variant="body1" sx={{ fontWeight: 600 }}>
+                {formatSelectedDate()}
+              </Typography>
+            </Grid>
+            
+            <Grid item xs={12}>
+              <Typography variant="body2" color="text.secondary">
+                Thời gian:
+              </Typography>
+              <Typography variant="body1" sx={{ fontWeight: 600 }}>
+                {startTime && format(startTime, 'HH:mm')} - {endTime && format(endTime, 'HH:mm')}
+              </Typography>
+            </Grid>
+            
+            <Grid item xs={12}>
+              <Typography variant="body2" color="text.secondary">
+                Địa điểm:
+              </Typography>
+              <Typography variant="body1" sx={{ fontWeight: 600 }}>
+                {location}
+              </Typography>
+            </Grid>
+            
+            {note && (
+              <Grid item xs={12}>
+                <Typography variant="body2" color="text.secondary">
+                  Ghi chú:
+                </Typography>
+                <Typography variant="body1">
+                  {note}
+                </Typography>
+              </Grid>
+            )}
+            
+            <Grid item xs={12}>
+              <Divider sx={{ my: 1 }} />
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <Typography variant="h6">
+                  Tổng cộng:
+                </Typography>
+                <Typography variant="h5" sx={{ color: 'primary.main', fontWeight: 700 }}>
+                  {formatPrice(totalPrice)}
+                </Typography>
+              </Box>
+            </Grid>
+          </Grid>
+        </DialogContent>
+        <DialogActions sx={{ p: 2 }}>
+          <Button 
+            onClick={() => setConfirmDialogOpen(false)}
+            disabled={creating}
+          >
+            Hủy
+          </Button>
+          <Button 
+            variant="contained"
+            onClick={handleCreateBooking}
+            disabled={creating}
+            sx={{
+              background: 'linear-gradient(45deg, #E91E63, #9C27B0)',
+              minWidth: 120
+            }}
+          >
+            {creating ? <CircularProgress size={24} color="inherit" /> : 'Xác nhận'}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 };
