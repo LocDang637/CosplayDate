@@ -1,6 +1,7 @@
 // src/pages/CosplayerProfilePage.jsx - FIXED VERSION
 import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
+import CosplayerBookingOrders from '../components/profile/CosplayerBookingOrders';
 import {
   Box,
   Container,
@@ -29,7 +30,7 @@ const CosplayerProfilePage = () => {
   const { userId } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
-  
+
   // State management
   const [user, setUser] = useState(null);
   const [profileUser, setProfileUser] = useState(null);
@@ -62,14 +63,14 @@ const CosplayerProfilePage = () => {
         const parsedUser = JSON.parse(storedUser);
         setUser(parsedUser);
         setUserDataLoaded(true);
-        
+
         console.log('👤 User loaded:', {
           id: parsedUser.id || parsedUser.userId,
           userType: parsedUser.userType,
           urlUserId: userId,
           isOwnProfile: !userId || (parseInt(userId) === parseInt(parsedUser.id || parsedUser.userId))
         });
-        
+
         // ✅ FIXED: Handle route corrections without infinite loops
         if (!userId && parsedUser.userType === 'Cosplayer' && (parsedUser.id || parsedUser.userId)) {
           const userIdValue = parsedUser.id || parsedUser.userId;
@@ -77,15 +78,15 @@ const CosplayerProfilePage = () => {
           navigate(`/profile/${userIdValue}`, { replace: true });
           return;
         }
-        
+
         // Check for wrong URL corrections
-        if (userId && parsedUser.userType === 'Customer' && 
-            parseInt(userId) === parseInt(parsedUser.id || parsedUser.userId)) {
+        if (userId && parsedUser.userType === 'Customer' &&
+          parseInt(userId) === parseInt(parsedUser.id || parsedUser.userId)) {
           console.log('🔄 Customer on cosplayer route, redirecting to customer profile');
           navigate(`/customer-profile/${userId}`, { replace: true });
           return;
         }
-        
+
       } catch (error) {
         console.error('❌ Error parsing stored user:', error);
         localStorage.removeItem('user');
@@ -138,30 +139,30 @@ const CosplayerProfilePage = () => {
 
         try {
           const result = await cosplayerAPI.getCosplayerDetails(targetUserId);
-          
+
           console.log('📊 API Result:', {
             success: result.success,
             hasData: !!result.data,
             error: result.message,
             errorStatus: result.errors?.status
           });
-          
+
           if (result.success && result.data) {
             // ✅ FIXED: Profile exists and loaded successfully
             setProfileUser(result.data);
-            
+
             // Update local storage for own profile
             if (isOwnProfile) {
               const updatedUser = { ...user, ...result.data };
               localStorage.setItem('user', JSON.stringify(updatedUser));
               setUser(updatedUser);
             }
-            
+
             console.log('✅ Profile loaded successfully');
           } else {
             // ✅ FIXED: Profile not found - handle different scenarios
             console.log('❌ Profile loading failed:', result.message);
-            
+
             if (isOwnProfile) {
               if (user?.userType === 'Cosplayer') {
                 // User is marked as cosplayer but no profile found
@@ -181,7 +182,7 @@ const CosplayerProfilePage = () => {
           }
         } catch (apiError) {
           console.error('🚨 API Error:', apiError);
-          
+
           if (isOwnProfile) {
             if (user?.userType === 'Cosplayer') {
               console.log('🔧 API error for cosplayer, showing become cosplayer form');
@@ -198,7 +199,7 @@ const CosplayerProfilePage = () => {
 
       } catch (err) {
         console.error('💥 Profile loading error:', err);
-        
+
         if (isOwnProfile && user?.userType === 'Cosplayer') {
           setShowBecomeCosplayer(true);
         } else {
@@ -297,6 +298,12 @@ const CosplayerProfilePage = () => {
       show: true
     },
     {
+      id: 'bookings',
+      label: 'Đặt lịch',
+      icon: 'Event',
+      show: isOwnProfile // Only show for own profile
+    },
+    {
       id: 'gallery',
       label: 'Thư viện ảnh',
       icon: 'PhotoLibrary',
@@ -326,6 +333,12 @@ const CosplayerProfilePage = () => {
         return (
           <CosplayerServices
             cosplayerId={profileUser?.id}
+            isOwnProfile={isOwnProfile}
+          />
+        );
+      case 'bookings':
+        return (
+          <CosplayerBookingOrders
             isOwnProfile={isOwnProfile}
           />
         );
@@ -363,8 +376,8 @@ const CosplayerProfilePage = () => {
         <Box sx={{ minHeight: '100vh', backgroundColor: '#FFE8F5' }}>
           <Header user={user} onLogout={handleLogout} />
           <Container maxWidth="lg" sx={{ py: 4 }}>
-            <BecomeCosplayerForm 
-              user={user} 
+            <BecomeCosplayerForm
+              user={user}
               onSuccess={handleBecomeCosplayerSuccess}
             />
           </Container>
@@ -401,8 +414,8 @@ const CosplayerProfilePage = () => {
         <Box sx={{ minHeight: '100vh', backgroundColor: '#FFE8F5' }}>
           <Header user={user} onLogout={handleLogout} />
           <Container maxWidth="lg" sx={{ py: 8 }}>
-            <Alert 
-              severity="error" 
+            <Alert
+              severity="error"
               sx={{ mb: 4, borderRadius: '12px' }}
               action={
                 <Button color="inherit" onClick={() => window.location.reload()}>
@@ -458,8 +471,8 @@ const CosplayerProfilePage = () => {
             <Alert severity="warning" sx={{ mb: 4, borderRadius: '12px' }}>
               Không tìm thấy thông tin cosplayer
             </Alert>
-            <Button 
-              onClick={() => navigate('/cosplayers')} 
+            <Button
+              onClick={() => navigate('/cosplayers')}
               variant="contained"
               sx={{
                 background: 'linear-gradient(45deg, #E91E63, #9C27B0)',
@@ -483,7 +496,7 @@ const CosplayerProfilePage = () => {
     <ThemeProvider theme={cosplayTheme}>
       <Box sx={{ minHeight: '100vh', backgroundColor: '#FFE8F5' }}>
         <Header user={user} onLogout={handleLogout} />
-        
+
         <Container maxWidth="lg" sx={{ py: 4 }}>
           {/* Profile Header */}
           <CosplayerProfileHeader
@@ -518,9 +531,9 @@ const CosplayerProfilePage = () => {
                 background: 'linear-gradient(45deg, #AD1457, #7B1FA2)',
               },
             }}
-            onClick={() => setUploadDialog({ 
-              open: true, 
-              type: activeTab === 'gallery' ? 'photo' : 'video' 
+            onClick={() => setUploadDialog({
+              open: true,
+              type: activeTab === 'gallery' ? 'photo' : 'video'
             })}
           >
             <Add />
@@ -544,8 +557,8 @@ const CosplayerProfilePage = () => {
           onClose={handleCloseSnackbar}
           anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
         >
-          <Alert 
-            onClose={handleCloseSnackbar} 
+          <Alert
+            onClose={handleCloseSnackbar}
             severity={snackbar.severity}
             sx={{ borderRadius: '12px' }}
           >
