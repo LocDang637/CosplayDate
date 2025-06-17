@@ -49,6 +49,15 @@ namespace CosplayDate.Application.Services.Implementations
                     return ApiResponse<RegisterResponseDto>.Error("Bạn phải từ 18 tuổi trở lên để đăng ký.");
                 }
 
+                // Standardize UserType to English for database consistency
+                var standardizedUserType = request.UserType switch
+                {
+                    "Khách hàng" => "Customer",
+                    "Customer" => "Customer",
+                    "Cosplayer" => "Cosplayer",
+                    _ => "Customer" // Default fallback
+                };
+
                 // Create new user
                 var user = new User
                 {
@@ -59,9 +68,9 @@ namespace CosplayDate.Application.Services.Implementations
                     DateOfBirth = request.DateOfBirth,
                     Location = request.Location?.Trim(),
                     Bio = request.Bio?.Trim(),
-                    UserType = request.UserType,
+                    UserType = standardizedUserType, // Use standardized UserType
                     IsVerified = false,
-                    
+
                     IsActive = true,
                     IsOnline = false,
                     ProfileCompleteness = CalculateProfileCompleteness(request),
@@ -110,7 +119,7 @@ namespace CosplayDate.Application.Services.Implementations
                     RequiresEmailVerification = true
                 };
 
-                _logger.LogInformation("User registered successfully: {Email}", user.Email);
+                _logger.LogInformation("User registered successfully: {Email} with UserType: {UserType}", user.Email, user.UserType);
                 return ApiResponse<RegisterResponseDto>.Success(response, "Đăng ký thành công!");
 
             }
