@@ -37,7 +37,7 @@ namespace CosplayDate.Application.DTOs.Auth
         public bool AcceptTerms { get; set; }
 
         [Required(ErrorMessage = "Yêu cầu loại người dùng")]
-        [RegularExpression("Khách hàng|Cosplayer", ErrorMessage = "Loại người dùng phải là 'Khách hàng' hoặc 'Cosplayer'")]
-        public string UserType { get; set; } = "Khách hàng";
+        [RegularExpression("Customer|Cosplayer|Khách hàng", ErrorMessage = "Loại người dùng phải là 'Customer', 'Cosplayer' hoặc 'Khách hàng'")]
+        public string UserType { get; set; } = "Customer"; // Default to English "Customer"
     }
 }
