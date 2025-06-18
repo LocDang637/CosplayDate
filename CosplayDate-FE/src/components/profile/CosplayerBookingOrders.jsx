@@ -1157,8 +1157,8 @@ const CosplayerBookingOrders = () => {
                   />
                 </Grid>
 
-                {/* Location - Full width separate row */}
-                <Grid item xs={12}>
+                {/* Location - Force new row */}
+                <Grid item xs={12} sx={{ width: '100%' }}>
                   <TextField
                     fullWidth
                     size="small"
@@ -1176,8 +1176,8 @@ const CosplayerBookingOrders = () => {
                   />
                 </Grid>
 
-                {/* Special Notes - Full width separate row */}
-                <Grid item xs={12}>
+                {/* Special Notes - Force new row */}
+                <Grid item xs={12} sx={{ width: '100%' }}>
                   <TextField
                     fullWidth
                     size="small"

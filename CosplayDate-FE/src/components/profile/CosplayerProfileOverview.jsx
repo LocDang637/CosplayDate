@@ -1,5 +1,5 @@
 // src/components/profile/CosplayerProfileOverview.jsx - FIXED VERSION
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Box,
   Paper,
@@ -11,7 +11,8 @@ import {
   Rating,
   Chip,
   LinearProgress,
-  Divider
+  Divider,
+  CircularProgress
 } from '@mui/material';
 import {
   TrendingUp,
@@ -22,26 +23,55 @@ import {
   AttachMoney,
   PhotoCamera,
   Videocam,
-  Verified
+  Verified,
+  AccessTime,
+  Person,
+  Category,
+  LocationOn,
+  Note
 } from '@mui/icons-material';
+import { bookingAPI } from '../../services/bookingAPI';
 
 const CosplayerProfileOverview = ({ user, isOwnProfile }) => {
+  const [upcomingBooking, setUpcomingBooking] = useState(null);
+  const [loadingBooking, setLoadingBooking] = useState(true);
+
+  useEffect(() => {
+    const fetchUpcomingBooking = async () => {
+      try {
+        setLoadingBooking(true);
+        const response = await bookingAPI.getUpcomingBookings();
+
+        if (response.data.isSuccess && response.data.data.bookings.length > 0) {
+          // Get the closest upcoming booking (first one since API returns sorted)
+          setUpcomingBooking(response.data.data.bookings[0]);
+        }
+      } catch (error) {
+        console.error('Failed to fetch upcoming booking:', error);
+      } finally {
+        setLoadingBooking(false);
+      }
+    };
+
+    fetchUpcomingBooking();
+  }, []);
+
   // ✅ FIXED: Safe tags processing function
   const getTags = () => {
     if (!user?.tags) return [];
-    
+
     // If tags is already an array, return it
     if (Array.isArray(user.tags)) {
       return user.tags.filter(tag => tag && typeof tag === 'string' && tag.trim());
     }
-    
+
     // If tags is a string, split it
     if (typeof user.tags === 'string') {
       return user.tags.split(',')
         .map(tag => tag.trim())
         .filter(tag => tag.length > 0);
     }
-    
+
     // For any other data type, return empty array
     console.warn('⚠️ Invalid tags format in Overview:', typeof user.tags, user.tags);
     return [];
@@ -62,6 +92,32 @@ const CosplayerProfileOverview = ({ user, isOwnProfile }) => {
       console.warn('⚠️ Invalid date format:', dateString);
       return 'N/A';
     }
+  };
+
+  // Format date and time for upcoming booking
+  const formatBookingDateTime = (booking) => {
+    if (!booking) return '';
+    
+    const bookingDate = new Date(booking.bookingDate);
+    const formattedDate = bookingDate.toLocaleDateString('vi-VN', {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    });
+
+    const formatTime = (timeString) => {
+      const [hours, minutes] = timeString.split(':');
+      const hour = parseInt(hours);
+      const ampm = hour >= 12 ? 'CH' : 'SA';
+      const hour12 = hour % 12 || 12;
+      return `${hour12}:${minutes} ${ampm}`;
+    };
+
+    return {
+      date: formattedDate,
+      time: `${formatTime(booking.startTime)} - ${formatTime(booking.endTime)}`
+    };
   };
 
   const StatCard = ({ icon, title, value, subtitle, color = 'primary.main' }) => (
@@ -240,6 +296,132 @@ const CosplayerProfileOverview = ({ user, isOwnProfile }) => {
         </Grid>
 
         <Grid size={{ xs: 12, md: 4 }}>
+          {/* Upcoming Booking Section */}
+          {!loadingBooking && upcomingBooking && (
+            <Paper
+              sx={{
+                borderRadius: '16px',
+                p: 3,
+                mb: 3,
+                background: 'rgba(255,255,255,0.95)',
+                border: '1px solid rgba(233, 30, 99, 0.1)',
+              }}
+            >
+              <Typography variant="h6" sx={{ fontWeight: 700, mb: 3, color: 'text.primary' }}>
+                Lịch hẹn sắp tới
+              </Typography>
+              
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                {/* Customer Name */}
+                <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1.5 }}>
+                  <Person sx={{ color: 'text.secondary', fontSize: 20, mt: 0.5 }} />
+                  <Box sx={{ flex: 1 }}>
+                    <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+                      Khách hàng
+                    </Typography>
+                    <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                      {upcomingBooking.customer.name}
+                    </Typography>
+                  </Box>
+                </Box>
+
+                {/* Service Name */}
+                <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1.5 }}>
+                  <Category sx={{ color: 'text.secondary', fontSize: 20, mt: 0.5 }} />
+                  <Box sx={{ flex: 1 }}>
+                    <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+                      Dịch vụ
+                    </Typography>
+                    <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                      {upcomingBooking.serviceType}
+                    </Typography>
+                  </Box>
+                </Box>
+
+                {/* Date and Time */}
+                <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1.5 }}>
+                  <AccessTime sx={{ color: 'text.secondary', fontSize: 20, mt: 0.5 }} />
+                  <Box sx={{ flex: 1 }}>
+                    <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+                      Ngày và giờ
+                    </Typography>
+                    <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                      {formatBookingDateTime(upcomingBooking).date}
+                    </Typography>
+                    <Typography variant="body2" sx={{ color: 'text.secondary', fontSize: '13px' }}>
+                      {formatBookingDateTime(upcomingBooking).time}
+                    </Typography>
+                  </Box>
+                </Box>
+
+                {/* Location */}
+                <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1.5 }}>
+                  <LocationOn sx={{ color: 'text.secondary', fontSize: 20, mt: 0.5 }} />
+                  <Box sx={{ flex: 1 }}>
+                    <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+                      Địa điểm
+                    </Typography>
+                    <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                      {upcomingBooking.location}
+                    </Typography>
+                  </Box>
+                </Box>
+
+                {/* Special Note */}
+                {upcomingBooking.specialNotes && (
+                  <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1.5 }}>
+                    <Note sx={{ color: 'text.secondary', fontSize: 20, mt: 0.5 }} />
+                    <Box sx={{ flex: 1 }}>
+                      <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+                        Ghi chú đặc biệt
+                      </Typography>
+                      <Typography variant="body2" sx={{ fontStyle: 'italic', color: 'text.secondary' }}>
+                        "{upcomingBooking.specialNotes}"
+                      </Typography>
+                    </Box>
+                  </Box>
+                )}
+              </Box>
+
+              <Divider sx={{ my: 2 }} />
+              
+              <Chip
+                label={upcomingBooking.status === 'Pending' ? 'Đang chờ' : 
+                       upcomingBooking.status === 'Confirmed' ? 'Đã xác nhận' : 
+                       upcomingBooking.status}
+                size="small"
+                sx={{
+                  backgroundColor: upcomingBooking.status === 'Pending' ? '#FFF3E0' : 
+                                  upcomingBooking.status === 'Confirmed' ? '#E8F5E9' : 
+                                  '#F5F5F5',
+                  color: upcomingBooking.status === 'Pending' ? '#E65100' : 
+                         upcomingBooking.status === 'Confirmed' ? '#2E7D32' : 
+                         '#616161',
+                  fontWeight: 600,
+                }}
+              />
+            </Paper>
+          )}
+
+          {/* Loading state for booking */}
+          {loadingBooking && (
+            <Paper
+              sx={{
+                borderRadius: '16px',
+                p: 3,
+                mb: 3,
+                background: 'rgba(255,255,255,0.95)',
+                border: '1px solid rgba(233, 30, 99, 0.1)',
+                display: 'flex',
+                justifyContent: 'center',
+                alignItems: 'center',
+                minHeight: 200,
+              }}
+            >
+              <CircularProgress size={40} />
+            </Paper>
+          )}
+
           <Paper
             sx={{
               borderRadius: '16px',
@@ -252,7 +434,7 @@ const CosplayerProfileOverview = ({ user, isOwnProfile }) => {
             <Typography variant="h6" sx={{ fontWeight: 700, mb: 3, color: 'text.primary' }}>
               Hiệu suất
             </Typography>
-            
+
             <Box sx={{ mb: 3 }}>
               <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
                 <Typography variant="body2" sx={{ fontWeight: 600 }}>
@@ -321,7 +503,7 @@ const CosplayerProfileOverview = ({ user, isOwnProfile }) => {
             <Typography variant="h6" sx={{ fontWeight: 700, mb: 3, color: 'text.primary' }}>
               Thông tin liên hệ
             </Typography>
-            
+
             <Box sx={{ mb: 2 }}>
               <Typography variant="body2" sx={{ color: 'text.secondary', mb: 0.5 }}>
                 Giá dịch vụ
