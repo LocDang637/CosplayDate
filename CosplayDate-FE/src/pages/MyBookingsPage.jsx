@@ -47,7 +47,6 @@ const MyBookingsPage = () => {
   const [selectedBooking, setSelectedBooking] = useState(null);
   const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
-  const [reportDialogOpen, setReportDialogOpen] = useState(false);
   const [anchorEl, setAnchorEl] = useState(null);
   const [menuBooking, setMenuBooking] = useState(null);
 
@@ -64,11 +63,23 @@ const MyBookingsPage = () => {
       setLoading(true);
       setError('');
       
-      const status = getStatusByTab(activeTab);
-      const result = await bookingAPI.getUserBookings({ status });
+      let result;
+      switch (activeTab) {
+        case 0: // All
+          result = await bookingAPI.getBookings();
+          break;
+        case 1: // Upcoming
+          result = await bookingAPI.getUpcomingBookings();
+          break;
+        case 2: // History
+          result = await bookingAPI.getBookingHistory();
+          break;
+        default:
+          result = await bookingAPI.getBookings();
+      }
       
       if (result.success) {
-        setBookings(result.data || []);
+        setBookings(Array.isArray(result.data) ? result.data : []);
       } else {
         setError(result.message);
       }
@@ -77,17 +88,6 @@ const MyBookingsPage = () => {
       setError('Không thể tải danh sách đặt lịch');
     } finally {
       setLoading(false);
-    }
-  };
-
-  const getStatusByTab = (tab) => {
-    switch (tab) {
-      case 0: return 'all';
-      case 1: return 'pending';
-      case 2: return 'confirmed';
-      case 3: return 'completed';
-      case 4: return 'cancelled';
-      default: return 'all';
     }
   };
 
@@ -105,21 +105,23 @@ const MyBookingsPage = () => {
     setMenuBooking(null);
   };
 
-  const handleViewDetails = (booking) => {
-    setSelectedBooking(booking || menuBooking);
-    setDetailsDialogOpen(true);
+  const handleViewDetails = async (booking) => {
+    const targetBooking = booking || menuBooking;
+    try {
+      const result = await bookingAPI.getBookingById(targetBooking.id);
+      if (result.success) {
+        setSelectedBooking(result.data);
+        setDetailsDialogOpen(true);
+      }
+    } catch (err) {
+      console.error('Failed to load booking details:', err);
+    }
     handleMenuClose();
   };
 
   const handleCancelBooking = (booking) => {
     setSelectedBooking(booking || menuBooking);
     setCancelDialogOpen(true);
-    handleMenuClose();
-  };
-
-  const handleReportIssue = (booking) => {
-    setSelectedBooking(booking || menuBooking);
-    setReportDialogOpen(true);
     handleMenuClose();
   };
 
@@ -165,13 +167,13 @@ const MyBookingsPage = () => {
 
   const getStatusChip = (status) => {
     const statusConfig = {
-      pending: { label: 'Chờ xác nhận', color: 'warning', icon: <HourglassEmpty /> },
-      confirmed: { label: 'Đã xác nhận', color: 'info', icon: <CheckCircle /> },
-      completed: { label: 'Hoàn tất', color: 'success', icon: <CheckCircle /> },
-      cancelled: { label: 'Đã hủy', color: 'error', icon: <Cancel /> }
+      Pending: { label: 'Chờ xác nhận', color: 'warning', icon: <HourglassEmpty /> },
+      Confirmed: { label: 'Đã xác nhận', color: 'info', icon: <CheckCircle /> },
+      Completed: { label: 'Hoàn tất', color: 'success', icon: <CheckCircle /> },
+      Cancelled: { label: 'Đã hủy', color: 'error', icon: <Cancel /> }
     };
     
-    const config = statusConfig[status] || statusConfig.pending;
+    const config = statusConfig[status] || statusConfig.Pending;
     
     return (
       <Chip
@@ -185,10 +187,9 @@ const MyBookingsPage = () => {
 
   const renderBookingCard = (booking) => {
     const isCustomer = !isCosplayer;
-    const canCancel = booking.status === 'pending' && isCustomer;
-    const canConfirm = booking.status === 'pending' && isCosplayer;
-    const canComplete = booking.status === 'confirmed' && isCosplayer;
-    const canReport = booking.status === 'confirmed' || booking.status === 'completed';
+    const canCancel = booking.status === 'Pending' && isCustomer;
+    const canConfirm = booking.status === 'Pending' && isCosplayer;
+    const canComplete = booking.status === 'Confirmed' && isCosplayer;
 
     return (
       <Grid item xs={12} md={6} key={booking.id}>
@@ -204,7 +205,7 @@ const MyBookingsPage = () => {
           <CardContent>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
               <Typography variant="h6" sx={{ fontWeight: 600 }}>
-                #{booking.bookingCode}
+                #{booking.id}
               </Typography>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                 {getStatusChip(booking.status)}
@@ -222,14 +223,14 @@ const MyBookingsPage = () => {
                 src={isCustomer ? booking.cosplayer?.avatar : booking.customer?.avatar}
                 sx={{ width: 48, height: 48 }}
               >
-                {(isCustomer ? booking.cosplayer?.displayName : booking.customer?.name)?.[0]}
+                {(isCustomer ? booking.cosplayerName : booking.customerName)?.[0]}
               </Avatar>
               <Box sx={{ flex: 1 }}>
                 <Typography variant="body1" sx={{ fontWeight: 600 }}>
-                  {isCustomer ? booking.cosplayer?.displayName : booking.customer?.name}
+                  {isCustomer ? booking.cosplayerName : booking.customerName}
                 </Typography>
                 <Typography variant="body2" color="text.secondary">
-                  {booking.service?.name}
+                  {booking.serviceType}
                 </Typography>
               </Box>
             </Box>
@@ -250,7 +251,7 @@ const MyBookingsPage = () => {
                   Tổng tiền
                 </Typography>
                 <Typography variant="body1" sx={{ fontWeight: 600, color: 'primary.main' }}>
-                  {formatPrice(booking.totalAmount)}
+                  {formatPrice(booking.totalPrice)}
                 </Typography>
               </Grid>
             </Grid>
@@ -324,10 +325,8 @@ const MyBookingsPage = () => {
               scrollButtons="auto"
             >
               <Tab label="Tất cả" />
-              <Tab label="Chờ xác nhận" />
-              <Tab label="Đã xác nhận" />
-              <Tab label="Hoàn tất" />
-              <Tab label="Đã hủy" />
+              <Tab label="Sắp tới" />
+              <Tab label="Lịch sử" />
             </Tabs>
           </Box>
 
@@ -379,23 +378,16 @@ const MyBookingsPage = () => {
               <Visibility sx={{ mr: 1 }} /> Xem chi tiết
             </MenuItem>
             
-            {menuBooking?.status === 'pending' && !isCosplayer && (
+            {menuBooking?.status === 'Pending' && !isCosplayer && (
               <MenuItem onClick={() => handleCancelBooking()}>
                 <Cancel sx={{ mr: 1 }} /> Hủy đặt lịch
               </MenuItem>
             )}
             
-            {(menuBooking?.status === 'confirmed' || menuBooking?.status === 'completed') && (
-              <>
-                <MenuItem onClick={() => navigate(`/messages/${menuBooking.id}`)}>
-                  <Message sx={{ mr: 1 }} /> Nhắn tin
-                </MenuItem>
-                <Divider />
-                <MenuItem onClick={() => handleReportIssue()}>
-                  <Report sx={{ mr: 1, color: 'error.main' }} /> 
-                  <Typography color="error">Báo cáo vấn đề</Typography>
-                </MenuItem>
-              </>
+            {(menuBooking?.status === 'Confirmed' || menuBooking?.status === 'Completed') && (
+              <MenuItem onClick={() => navigate(`/messages/${menuBooking.id}`)}>
+                <Message sx={{ mr: 1 }} /> Nhắn tin
+              </MenuItem>
             )}
           </Menu>
         </Container>

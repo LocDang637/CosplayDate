@@ -44,7 +44,7 @@ const Header = ({ user = null, onLogout }) => {
   const location = useLocation();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
-  
+
   const [anchorEl, setAnchorEl] = useState(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [notificationCount] = useState(3); // Mock notification count
@@ -75,39 +75,39 @@ const Header = ({ user = null, onLogout }) => {
   };
 
   // Header.jsx - FIXED profile navigation
-const getProfilePath = () => {
-  if (!user) {
-    console.warn('❌ Header: No user data available');
-    return '/login';
-  }
-  
-  // ✅ THE MAIN FIX: Always use user ID (not cosplayer ID) for profile routes
-  const userId = user.id || user.userId;
-  const userType = (user.userType || user.role || '').toLowerCase();
-  
-  console.log('🔍 Header Profile Path Debug:', {
-    userId: userId,
-    userType: userType,
-    fullUser: user
-  });
-  
-  // ✅ FIXED: Correct routing logic using USER ID
-  if (userType === 'cosplayer') {
-    // For cosplayers, use cosplayer profile route with USER ID
-    const profilePath = userId ? `/profile/${userId}` : '/profile';
-    console.log('🎭 Header: Cosplayer profile path:', profilePath);
-    return profilePath;
-  } else if (userType === 'customer') {
-    // For customers, use customer profile route with USER ID  
-    const profilePath = userId ? `/customer-profile/${userId}` : '/customer-profile';
-    console.log('👤 Header: Customer profile path:', profilePath);
-    return profilePath;
-  } else {
-    // ✅ FIXED: Better fallback logic
-    console.log('👤 Header: Defaulting to customer profile');
-    return userId ? `/customer-profile/${userId}` : '/customer-profile';
-  }
-};
+  const getProfilePath = () => {
+    if (!user) {
+      console.warn('❌ Header: No user data available');
+      return '/login';
+    }
+
+    // ✅ THE MAIN FIX: Always use user ID (not cosplayer ID) for profile routes
+    const userId = user.id || user.userId;
+    const userType = (user.userType || user.role || '').toLowerCase();
+
+    console.log('🔍 Header Profile Path Debug:', {
+      userId: userId,
+      userType: userType,
+      fullUser: user
+    });
+
+    // ✅ FIXED: Correct routing logic using USER ID
+    if (userType === 'cosplayer') {
+      // For cosplayers, use cosplayer profile route with USER ID
+      const profilePath = userId ? `/profile/${userId}` : '/profile';
+      console.log('🎭 Header: Cosplayer profile path:', profilePath);
+      return profilePath;
+    } else if (userType === 'customer') {
+      // For customers, use customer profile route with USER ID  
+      const profilePath = userId ? `/customer-profile/${userId}` : '/customer-profile';
+      console.log('👤 Header: Customer profile path:', profilePath);
+      return profilePath;
+    } else {
+      // ✅ FIXED: Better fallback logic
+      console.log('👤 Header: Defaulting to customer profile');
+      return userId ? `/customer-profile/${userId}` : '/customer-profile';
+    }
+  };
 
   // ✅ FIXED: Simplified profile navigation
   const handleProfileNavigation = () => {
@@ -121,7 +121,7 @@ const getProfilePath = () => {
       const profilePath = getProfilePath();
       console.log('📱 Header: Profile navigation to:', profilePath);
       handleNavigation(profilePath);
-      
+
     } catch (error) {
       console.error('💥 Header: Error in profile navigation:', error);
       // Fallback to safe route based on user type
@@ -140,9 +140,9 @@ const getProfilePath = () => {
 
   // ✅ FIXED: Updated auth menu items with correct profile action
   const authMenuItems = isAuthenticated ? [
-    { 
-      label: 'Hồ sơ của tôi', 
-      action: handleProfileNavigation, 
+    {
+      label: 'Hồ sơ của tôi',
+      action: handleProfileNavigation,
       icon: user?.userType === 'Cosplayer' ? <PersonIcon /> : <AccountCircle />
     },
     { label: 'Tin nhắn', path: '/messages', icon: <Message /> },
@@ -155,7 +155,7 @@ const getProfilePath = () => {
 
   const NavButton = ({ item, isMobile = false }) => {
     const isActive = currentPath === item.path;
-    
+
     const handleClick = () => {
       try {
         if (item.action) {
@@ -169,7 +169,7 @@ const getProfilePath = () => {
         console.error('💥 Header: Error in nav button click:', error);
       }
     };
-    
+
     if (isMobile) {
       return (
         <ListItem disablePadding>
@@ -187,9 +187,9 @@ const getProfilePath = () => {
             <ListItemIcon sx={{ color: isActive ? 'primary.main' : 'text.secondary', minWidth: 40 }}>
               {item.icon}
             </ListItemIcon>
-            <ListItemText 
+            <ListItemText
               primary={item.label}
-              sx={{ 
+              sx={{
                 color: isActive ? 'primary.main' : 'text.primary',
                 '& .MuiListItemText-primary': {
                   fontWeight: isActive ? 600 : 400,
@@ -340,7 +340,7 @@ const getProfilePath = () => {
             <IconButton
               component={Link}
               to="/"
-              sx={{ 
+              sx={{
                 mr: 1,
                 '&:hover': { backgroundColor: 'rgba(233, 30, 99, 0.05)' }
               }}
@@ -413,41 +413,40 @@ const getProfilePath = () => {
         }}
       >
         {isAuthenticated && (
-          <>
-            <Box sx={{ px: 2, py: 1.5, borderBottom: '1px solid rgba(0,0,0,0.05)' }}>
-              <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
-                {user?.firstName} {user?.lastName}
+          <Box sx={{ px: 2, py: 1.5, borderBottom: '1px solid rgba(0,0,0,0.05)' }}>
+            <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
+              {user?.firstName} {user?.lastName}
+            </Typography>
+            <Typography variant="body2" sx={{ color: 'text.secondary', fontSize: '12px' }}>
+              {user?.email}
+            </Typography>
+            {user?.userType && (
+              <Typography variant="body2" sx={{ color: 'primary.main', fontSize: '11px', fontWeight: 500 }}>
+                {user.userType === 'Customer' ? '👤 Khách hàng' : '🎭 Cosplayer'}
               </Typography>
-              <Typography variant="body2" sx={{ color: 'text.secondary', fontSize: '12px' }}>
-                {user?.email}
-              </Typography>
-              {user?.userType && (
-                <Typography variant="body2" sx={{ color: 'primary.main', fontSize: '11px', fontWeight: 500 }}>
-                  {user.userType === 'Customer' ? '👤 Khách hàng' : '🎭 Cosplayer'}
+            )}
+            {/* Enhanced debug info for development */}
+            {process.env.NODE_ENV === 'development' && (
+              <Box sx={{ mt: 0.5, p: 1, backgroundColor: 'rgba(0,0,0,0.02)', borderRadius: '4px' }}>
+                <Typography variant="body2" sx={{ color: 'text.secondary', fontSize: '10px' }}>
+                  Debug Info:
                 </Typography>
-              )}
-              {/* Enhanced debug info for development */}
-              {process.env.NODE_ENV === 'development' && (
-                <Box sx={{ mt: 0.5, p: 1, backgroundColor: 'rgba(0,0,0,0.02)', borderRadius: '4px' }}>
-                  <Typography variant="body2" sx={{ color: 'text.secondary', fontSize: '10px' }}>
-                    Debug Info:
-                  </Typography>
-                  <Typography variant="body2" sx={{ color: 'text.secondary', fontSize: '10px' }}>
-                    ID: {user?.id || 'N/A'} | UserID: {user?.userId || 'N/A'}
-                  </Typography>
-                  <Typography variant="body2" sx={{ color: 'text.secondary', fontSize: '10px' }}>
-                    Type: {user?.userType || user?.role || 'N/A'}
-                  </Typography>
-                  <Typography variant="body2" sx={{ color: 'text.secondary', fontSize: '10px' }}>
-                    Profile Path: {getProfilePath()}
-                  </Typography>
-                </Box>
-              )}
-            </Box>
-            <Divider />
-          </>
+                <Typography variant="body2" sx={{ color: 'text.secondary', fontSize: '10px' }}>
+                  ID: {user?.id || 'N/A'} | UserID: {user?.userId || 'N/A'}
+                </Typography>
+                <Typography variant="body2" sx={{ color: 'text.secondary', fontSize: '10px' }}>
+                  Type: {user?.userType || user?.role || 'N/A'}
+                </Typography>
+                <Typography variant="body2" sx={{ color: 'text.secondary', fontSize: '10px' }}>
+                  Profile Path: {getProfilePath()}
+                </Typography>
+              </Box>
+            )}
+          </Box>
         )}
-        
+
+        {isAuthenticated && <Divider />}
+
         {authMenuItems.map((item, index) => (
           <MenuItem
             key={index}
@@ -494,17 +493,17 @@ const getProfilePath = () => {
             <Close />
           </IconButton>
         </Box>
-        
+
         <Divider />
-        
+
         <List>
           {navigationItems.map((item) => (
             <NavButton key={item.path} item={item} isMobile />
           ))}
         </List>
-        
+
         <Divider sx={{ my: 1 }} />
-        
+
         <List>
           {authMenuItems.map((item, index) => (
             <NavButton key={index} item={item} isMobile />
@@ -513,18 +512,18 @@ const getProfilePath = () => {
 
         {isAuthenticated && (
           <Box sx={{ p: 2, mt: 'auto' }}>
-            <Box sx={{ 
-              p: 2, 
-              backgroundColor: 'rgba(233, 30, 99, 0.05)', 
+            <Box sx={{
+              p: 2,
+              backgroundColor: 'rgba(233, 30, 99, 0.05)',
               borderRadius: '12px',
               textAlign: 'center'
             }}>
-              <Avatar sx={{ 
-                width: 48, 
-                height: 48, 
-                backgroundColor: 'primary.main', 
-                mx: 'auto', 
-                mb: 1 
+              <Avatar sx={{
+                width: 48,
+                height: 48,
+                backgroundColor: 'primary.main',
+                mx: 'auto',
+                mb: 1
               }}>
                 {user?.firstName?.[0] || 'U'}
               </Avatar>

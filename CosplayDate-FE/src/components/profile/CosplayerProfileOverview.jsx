@@ -137,7 +137,7 @@ const CosplayerProfileOverview = ({ user, isOwnProfile }) => {
   return (
     <Box>
       <Grid container spacing={3}>
-        <Grid item xs={12} md={8}>
+        <Grid size={{ xs: 12, md: 8 }}>
           <Paper
             sx={{
               borderRadius: '16px',
@@ -180,7 +180,7 @@ const CosplayerProfileOverview = ({ user, isOwnProfile }) => {
               Thống kê hoạt động
             </Typography>
             <Grid container spacing={2}>
-              <Grid item xs={6} sm={3}>
+              <Grid size={{ xs: 6, sm: 3 }}>
                 <StatCard
                   icon={<Event sx={{ color: 'white', fontSize: 20 }} />}
                   title="Đơn đặt"
@@ -189,7 +189,7 @@ const CosplayerProfileOverview = ({ user, isOwnProfile }) => {
                   color="#2196F3"
                 />
               </Grid>
-              <Grid item xs={6} sm={3}>
+              <Grid size={{ xs: 6, sm: 3 }}>
                 <StatCard
                   icon={<Star sx={{ color: 'white', fontSize: 20 }} />}
                   title="Hoàn thành"
@@ -198,7 +198,7 @@ const CosplayerProfileOverview = ({ user, isOwnProfile }) => {
                   color="#4CAF50"
                 />
               </Grid>
-              <Grid item xs={6} sm={3}>
+              <Grid size={{ xs: 6, sm: 3 }}>
                 <StatCard
                   icon={<PhotoCamera sx={{ color: 'white', fontSize: 20 }} />}
                   title="Ảnh"
@@ -207,7 +207,7 @@ const CosplayerProfileOverview = ({ user, isOwnProfile }) => {
                   color="#FF9800"
                 />
               </Grid>
-              <Grid item xs={6} sm={3}>
+              <Grid size={{ xs: 6, sm: 3 }}>
                 <StatCard
                   icon={<Videocam sx={{ color: 'white', fontSize: 20 }} />}
                   title="Video"
@@ -239,7 +239,7 @@ const CosplayerProfileOverview = ({ user, isOwnProfile }) => {
           )}
         </Grid>
 
-        <Grid item xs={12} md={4}>
+        <Grid size={{ xs: 12, md: 4 }}>
           <Paper
             sx={{
               borderRadius: '16px',
