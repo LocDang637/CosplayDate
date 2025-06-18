@@ -21,47 +21,35 @@ import {
   Select,
   FormControl,
   InputLabel,
-  Badge,
   Pagination,
   Dialog,
   DialogTitle,
   DialogContent,
   DialogActions,
   Tooltip,
-  Rating,
   Collapse
 } from '@mui/material';
 import {
-  CalendarToday,
-  AccessTime,
-  LocationOn,
-  AttachMoney,
   Person,
-  MoreVert,
   CheckCircle,
   Cancel,
-  HourglassEmpty,
-  Schedule,
   Search,
   FilterList,
   Message,
   Visibility,
   Phone,
   Email,
-  Notes,
-  Payment,
-  Star,
   Done,
   Close,
-  Pending,
   ExpandMore,
-  ExpandLess
+  ExpandLess,
+  Warning
 } from '@mui/icons-material';
-import { format, parseISO, differenceInHours, differenceInDays } from 'date-fns';
+import { format, parseISO, differenceInDays } from 'date-fns';
 import { vi } from 'date-fns/locale';
 import { bookingAPI } from '../../services/bookingAPI';
 
-const CosplayerBookingOrders = ({ isOwnProfile = true }) => {
+const CosplayerBookingOrders = () => {
   const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -69,18 +57,23 @@ const CosplayerBookingOrders = ({ isOwnProfile = true }) => {
   const [totalPages, setTotalPages] = useState(1);
   const [totalCount, setTotalCount] = useState(0);
   const [stats, setStats] = useState({});
-  
+
   // Filters
   const [filterStatus, setFilterStatus] = useState('');
   const [filterPaymentStatus, setFilterPaymentStatus] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState('bookingDate');
   const [sortOrder, setSortOrder] = useState('desc');
-  
+
   // Dialogs
-  const [statusDialog, setStatusDialog] = useState({ open: false, booking: null, newStatus: '' });
-  const [detailDialog, setDetailDialog] = useState({ open: false, booking: null });
-  
+  const [statusDialog, setStatusDialog] = useState({
+    open: false,
+    booking: null,
+    newStatus: '',
+    showConfirm: false,
+    cancellationReason: ''
+  });
+
   // Menu
   const [anchorEl, setAnchorEl] = useState(null);
   const [selectedBooking, setSelectedBooking] = useState(null);
@@ -93,17 +86,17 @@ const CosplayerBookingOrders = ({ isOwnProfile = true }) => {
     try {
       setLoading(true);
       setError('');
-      
+
       const params = {
         page,
         pageSize: 20, // Get more results for client-side filtering
       };
-      
+
       const result = await bookingAPI.getBookings(params);
-      
+
       if (result.success && result.data) {
         setBookings(result.data.bookings || []);
-        
+
         // Parse stats from the response
         setStats({
           total: result.data.stats?.totalBookings || result.data.totalCount || 0,
@@ -114,7 +107,7 @@ const CosplayerBookingOrders = ({ isOwnProfile = true }) => {
           totalRevenue: result.data.stats?.totalRevenue || 0,
           pendingPayments: result.data.stats?.pendingPayments || 0
         });
-        
+
         // Parse pagination data
         setTotalPages(result.data.totalPages || 1);
         setTotalCount(result.data.totalCount || 0);
@@ -132,27 +125,44 @@ const CosplayerBookingOrders = ({ isOwnProfile = true }) => {
 
   const handleStatusUpdate = async () => {
     if (!statusDialog.booking || !statusDialog.newStatus) return;
-    
+
     try {
-      const result = await bookingAPI.updateBookingStatus(
-        statusDialog.booking.id, 
-        statusDialog.newStatus
-      );
-      
+      let result;
+      const bookingId = statusDialog.booking.id;
+
+      // Call appropriate API based on new status
+      switch (statusDialog.newStatus) {
+        case 'Confirmed':
+          result = await bookingAPI.confirmBooking(bookingId);
+          break;
+        case 'Cancelled':
+          // You might want to add a reason field in the dialog for cancellations
+          result = await bookingAPI.cancelBooking(bookingId, statusDialog.cancellationReason || '');
+          break;
+        case 'Completed':
+          result = await bookingAPI.completeBooking(bookingId);
+          break;
+        default:
+          // Fallback to generic update if needed
+          result = await bookingAPI.updateBooking(bookingId, { status: statusDialog.newStatus });
+      }
+
       if (result.success) {
         await loadBookings();
-        setStatusDialog({ open: false, booking: null, newStatus: '' });
+        setStatusDialog({ open: false, booking: null, newStatus: '', showConfirm: false });
+        // Optionally show success message
       } else {
         console.error('Failed to update status:', result.message);
+        // Optionally show error message
       }
     } catch (err) {
       console.error('Error updating status:', err);
     }
   };
 
-  const handleMenuOpen = (event, booking) => {
-    setAnchorEl(event.currentTarget);
-    setSelectedBooking(booking);
+  const handleStatusConfirm = () => {
+    if (!statusDialog.booking || !statusDialog.newStatus) return;
+    setStatusDialog({ ...statusDialog, showConfirm: true });
   };
 
   const handleMenuClose = () => {
@@ -177,28 +187,28 @@ const CosplayerBookingOrders = ({ isOwnProfile = true }) => {
   const canUpdateStatus = (booking) => {
     const bookingDate = parseISO(booking.bookingDate);
     const daysUntilBooking = differenceInDays(bookingDate, new Date());
-    
+
     // Can't update completed or cancelled bookings
     if (booking.status === 'Completed' || booking.status === 'Cancelled') {
       return false;
     }
-    
+
     // Can confirm pending bookings
     if (booking.status === 'Pending') {
       return true;
     }
-    
+
     // Can complete confirmed bookings if the date has passed
     if (booking.status === 'Confirmed' && daysUntilBooking <= 0) {
       return true;
     }
-    
+
     return false;
   };
 
   const getAvailableStatuses = (booking) => {
     const statuses = [];
-    
+
     if (booking.status === 'Pending') {
       statuses.push('Confirmed', 'Cancelled');
     } else if (booking.status === 'Confirmed') {
@@ -209,7 +219,7 @@ const CosplayerBookingOrders = ({ isOwnProfile = true }) => {
       }
       statuses.push('Cancelled');
     }
-    
+
     return statuses;
   };
 
@@ -238,35 +248,35 @@ const CosplayerBookingOrders = ({ isOwnProfile = true }) => {
       );
       if (!matchesSearch) return false;
     }
-    
+
     // Status filter
     if (filterStatus && booking.status !== filterStatus) {
       return false;
     }
-    
+
     // Payment status filter
     if (filterPaymentStatus && booking.paymentStatus !== filterPaymentStatus) {
       return false;
     }
-    
+
     return true;
   }).sort((a, b) => {
     // Sorting logic
     let aValue = a[sortBy];
     let bValue = b[sortBy];
-    
+
     // Handle date strings
     if (sortBy === 'bookingDate' || sortBy === 'createdAt') {
       aValue = new Date(aValue);
       bValue = new Date(bValue);
     }
-    
+
     // Handle numeric values
     if (sortBy === 'totalPrice') {
       aValue = Number(aValue) || 0;
       bValue = Number(bValue) || 0;
     }
-    
+
     if (sortOrder === 'asc') {
       return aValue > bValue ? 1 : -1;
     } else {
@@ -287,7 +297,13 @@ const CosplayerBookingOrders = ({ isOwnProfile = true }) => {
 
     const handleStatusButtonClick = (e, newStatus) => {
       e.stopPropagation();
-      setStatusDialog({ open: true, booking, newStatus });
+      setStatusDialog({
+        open: true,
+        booking,
+        newStatus,
+        showConfirm: false,
+        cancellationReason: ''
+      });
     };
 
     return (
@@ -312,28 +328,28 @@ const CosplayerBookingOrders = ({ isOwnProfile = true }) => {
                 <Typography variant="body1" sx={{ fontWeight: 600, mb: 0.5 }}>
                   {booking.customer?.name} • {booking.serviceType}
                 </Typography>
-                
+
                 {/* Line 2: Date | Time • Location */}
                 <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
                   {format(bookingDate, 'dd/MM/yyyy', { locale: vi })} | {booking.startTime} - {booking.endTime} • {booking.location}
                 </Typography>
-                
+
                 {/* Line 3: Note (if any) */}
                 {booking.notes && (
                   <Typography variant="body2" sx={{ fontStyle: 'italic', color: 'text.secondary', mb: 0.5 }}>
                     "{booking.notes}"
                   </Typography>
                 )}
-                
+
                 {/* Line 4: Status • Payment Status • Total Price */}
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
-                  <Chip 
-                    label={booking.status} 
-                    size="small" 
+                  <Chip
+                    label={booking.status}
+                    size="small"
                     color={getStatusColor(booking.status)}
                   />
                   <Typography variant="body2" color="text.secondary">•</Typography>
-                  <Chip 
+                  <Chip
                     label={booking.paymentStatus === 'Paid' ? 'Đã thanh toán' : 'Chưa thanh toán'}
                     size="small"
                     color={getPaymentStatusColor(booking.paymentStatus)}
@@ -344,7 +360,7 @@ const CosplayerBookingOrders = ({ isOwnProfile = true }) => {
                   </Typography>
                 </Box>
               </Box>
-              
+
               {/* Expand/Collapse Icon */}
               <IconButton size="small" sx={{ ml: 1 }}>
                 {expanded ? <ExpandLess /> : <ExpandMore />}
@@ -355,7 +371,7 @@ const CosplayerBookingOrders = ({ isOwnProfile = true }) => {
           {/* Expanded Details */}
           <Collapse in={expanded}>
             <Divider sx={{ my: 2 }} />
-            
+
             {/* Customer Details */}
             <Box sx={{ mb: 2 }}>
               <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1 }}>
@@ -555,7 +571,7 @@ const CosplayerBookingOrders = ({ isOwnProfile = true }) => {
             </Button>
           )}
         </Box>
-        
+
         <Grid container spacing={2}>
           <Grid item xs={12} md={4}>
             <TextField
@@ -574,7 +590,7 @@ const CosplayerBookingOrders = ({ isOwnProfile = true }) => {
               }}
             />
           </Grid>
-          
+
           <Grid item xs={6} md={2}>
             <FormControl fullWidth size="small">
               <InputLabel>Trạng thái</InputLabel>
@@ -607,7 +623,7 @@ const CosplayerBookingOrders = ({ isOwnProfile = true }) => {
               </Select>
             </FormControl>
           </Grid>
-          
+
           <Grid item xs={6} md={2}>
             <FormControl fullWidth size="small">
               <InputLabel>Thanh toán</InputLabel>
@@ -630,7 +646,7 @@ const CosplayerBookingOrders = ({ isOwnProfile = true }) => {
               </Select>
             </FormControl>
           </Grid>
-          
+
           <Grid item xs={6} md={2}>
             <FormControl fullWidth size="small">
               <InputLabel>Sắp xếp theo</InputLabel>
@@ -646,7 +662,7 @@ const CosplayerBookingOrders = ({ isOwnProfile = true }) => {
               </Select>
             </FormControl>
           </Grid>
-          
+
           <Grid item xs={6} md={2}>
             <FormControl fullWidth size="small">
               <InputLabel>Thứ tự</InputLabel>
@@ -661,7 +677,7 @@ const CosplayerBookingOrders = ({ isOwnProfile = true }) => {
             </FormControl>
           </Grid>
         </Grid>
-        
+
         {/* Active filters display */}
         {(searchQuery || filterStatus || filterPaymentStatus) && (
           <Box sx={{ mt: 2, display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
@@ -730,11 +746,11 @@ const CosplayerBookingOrders = ({ isOwnProfile = true }) => {
               Hiển thị {filteredBookings.length} trong số {bookings.length} kết quả
             </Typography>
           </Box>
-          
+
           {filteredBookings.map((booking) => (
             <BookingCard key={booking.id} booking={booking} />
           ))}
-          
+
           {/* Pagination - Note: This would need server-side implementation for true pagination */}
           {totalPages > 1 && (
             <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}>
@@ -762,29 +778,29 @@ const CosplayerBookingOrders = ({ isOwnProfile = true }) => {
         }}>
           <Visibility sx={{ mr: 1 }} /> Xem chi tiết
         </MenuItem>
-        
+
         {selectedBooking && canUpdateStatus(selectedBooking) && (
           <MenuItem onClick={() => {
-            setStatusDialog({ 
-              open: true, 
-              booking: selectedBooking, 
-              newStatus: '' 
+            setStatusDialog({
+              open: true,
+              booking: selectedBooking,
+              newStatus: ''
             });
             handleMenuClose();
           }}>
             <CheckCircle sx={{ mr: 1 }} /> Cập nhật trạng thái
           </MenuItem>
         )}
-        
+
         <MenuItem onClick={() => {
           console.log('Message customer', selectedBooking);
           handleMenuClose();
         }}>
           <Message sx={{ mr: 1 }} /> Nhắn tin
         </MenuItem>
-        
+
         <Divider />
-        
+
         <MenuItem onClick={() => {
           console.log('View customer profile', selectedBooking);
           handleMenuClose();
@@ -793,10 +809,12 @@ const CosplayerBookingOrders = ({ isOwnProfile = true }) => {
         </MenuItem>
       </Menu>
 
+      {/* Replace the existing Status Update Dialog with this: */}
+
       {/* Status Update Dialog */}
       <Dialog
-        open={statusDialog.open}
-        onClose={() => setStatusDialog({ open: false, booking: null, newStatus: '' })}
+        open={statusDialog.open && !statusDialog.showConfirm}
+        onClose={() => setStatusDialog({ open: false, booking: null, newStatus: '', showConfirm: false })}
         maxWidth="sm"
         fullWidth
       >
@@ -807,7 +825,10 @@ const CosplayerBookingOrders = ({ isOwnProfile = true }) => {
           <Typography variant="body2" sx={{ mb: 2 }}>
             Đặt lịch: <strong>{statusDialog.booking?.bookingCode}</strong>
           </Typography>
-          <FormControl fullWidth>
+          <Typography variant="body2" sx={{ mb: 2 }}>
+            Khách hàng: <strong>{statusDialog.booking?.customer?.name}</strong>
+          </Typography>
+          <FormControl fullWidth sx={{ mb: 2 }}>
             <InputLabel>Trạng thái mới</InputLabel>
             <Select
               value={statusDialog.newStatus}
@@ -816,22 +837,150 @@ const CosplayerBookingOrders = ({ isOwnProfile = true }) => {
             >
               {statusDialog.booking && getAvailableStatuses(statusDialog.booking).map((status) => (
                 <MenuItem key={status} value={status}>
-                  {status}
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    {status === 'Confirmed' && <CheckCircle color="info" fontSize="small" />}
+                    {status === 'Cancelled' && <Cancel color="error" fontSize="small" />}
+                    {status === 'Completed' && <Done color="success" fontSize="small" />}
+                    {status === 'Confirmed' && 'Xác nhận'}
+                    {status === 'Cancelled' && 'Hủy bỏ'}
+                    {status === 'Completed' && 'Hoàn thành'}
+                  </Box>
                 </MenuItem>
               ))}
             </Select>
           </FormControl>
+
+          {/* Add cancellation reason field when cancelling */}
+          {statusDialog.newStatus === 'Cancelled' && (
+            <TextField
+              fullWidth
+              multiline
+              rows={3}
+              label="Lý do hủy (tùy chọn)"
+              value={statusDialog.cancellationReason || ''}
+              onChange={(e) => setStatusDialog({ ...statusDialog, cancellationReason: e.target.value })}
+              placeholder="Nhập lý do hủy đặt lịch..."
+              sx={{ mt: 2 }}
+            />
+          )}
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setStatusDialog({ open: false, booking: null, newStatus: '' })}>
+          <Button onClick={() => setStatusDialog({ open: false, booking: null, newStatus: '', showConfirm: false })}>
             Hủy
           </Button>
-          <Button 
-            onClick={handleStatusUpdate}
+          <Button
+            onClick={handleStatusConfirm}
             variant="contained"
             disabled={!statusDialog.newStatus}
+            color={
+              statusDialog.newStatus === 'Cancelled' ? 'error' :
+                statusDialog.newStatus === 'Completed' ? 'success' :
+                  'primary'
+            }
           >
-            Cập nhật
+            Tiếp tục
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Confirmation Dialog */}
+      <Dialog
+        open={statusDialog.showConfirm}
+        onClose={() => setStatusDialog({ ...statusDialog, showConfirm: false })}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <Warning color="warning" />
+            Xác nhận thay đổi trạng thái
+          </Box>
+        </DialogTitle>
+        <DialogContent>
+          <Alert severity="warning" sx={{ mb: 2 }}>
+            Lưu ý: Hành động này không thể hoàn tác!
+          </Alert>
+
+          <Typography variant="body1" sx={{ mb: 2 }}>
+            Bạn có chắc chắn muốn chuyển trạng thái đặt lịch <strong>{statusDialog.booking?.bookingCode}</strong> sang:
+          </Typography>
+
+          <Paper sx={{ p: 2, bgcolor: 'grey.50', mb: 2 }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+              <Typography variant="body2" color="text.secondary">Từ:</Typography>
+              <Chip
+                label={statusDialog.booking?.status}
+                size="small"
+                color={getStatusColor(statusDialog.booking?.status)}
+              />
+            </Box>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              <Typography variant="body2" color="text.secondary">Sang:</Typography>
+              <Chip
+                label={statusDialog.newStatus}
+                size="small"
+                color={getStatusColor(statusDialog.newStatus)}
+              />
+            </Box>
+          </Paper>
+
+          {statusDialog.newStatus === 'Cancelled' && statusDialog.cancellationReason && (
+            <Box sx={{ mb: 2 }}>
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                Lý do hủy:
+              </Typography>
+              <Typography variant="body2">
+                {statusDialog.cancellationReason}
+              </Typography>
+            </Box>
+          )}
+
+          {statusDialog.newStatus === 'Confirmed' && (
+            <Alert severity="info">
+              Khách hàng sẽ nhận được thông báo xác nhận đặt lịch.
+            </Alert>
+          )}
+
+          {statusDialog.newStatus === 'Cancelled' && (
+            <Alert severity="error">
+              Đặt lịch sẽ bị hủy và không thể khôi phục. Khách hàng sẽ được thông báo về việc hủy này.
+            </Alert>
+          )}
+
+          {statusDialog.newStatus === 'Completed' && (
+            <Alert severity="success">
+              Đặt lịch sẽ được đánh dấu hoàn thành. Hãy đảm bảo dịch vụ đã được thực hiện.
+            </Alert>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button
+            onClick={() => setStatusDialog({ ...statusDialog, showConfirm: false })}
+            color="inherit"
+          >
+            Quay lại
+          </Button>
+          <Button
+            onClick={handleStatusUpdate}
+            variant="contained"
+            color={
+              statusDialog.newStatus === 'Cancelled' ? 'error' :
+                statusDialog.newStatus === 'Completed' ? 'success' :
+                  'primary'
+            }
+            startIcon={
+              statusDialog.newStatus === 'Confirmed' ? <CheckCircle /> :
+                statusDialog.newStatus === 'Cancelled' ? <Cancel /> :
+                  statusDialog.newStatus === 'Completed' ? <Done /> :
+                    null
+            }
+          >
+            Xác nhận {
+              statusDialog.newStatus === 'Confirmed' ? 'xác nhận' :
+                statusDialog.newStatus === 'Cancelled' ? 'hủy' :
+                  statusDialog.newStatus === 'Completed' ? 'hoàn thành' :
+                    'thay đổi'
+            }
           </Button>
         </DialogActions>
       </Dialog>
