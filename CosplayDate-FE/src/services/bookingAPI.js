@@ -44,7 +44,7 @@ export const bookingAPI = {
   getBookings: async (params = {}) => {
     try {
       const queryParams = new URLSearchParams(params);
-      const response = await api.get(`/booking?${queryParams}`);
+      const response = await api.get(`/booking`);
       return {
         success: true,
         data: response.data.data || response.data || [],
