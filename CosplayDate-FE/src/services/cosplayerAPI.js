@@ -45,17 +45,28 @@ const api = createApiInstance();
 
 export const cosplayerAPI = {
   // Get all cosplayers with filters
-  getCosplayers: async (filters = {}) => {
+  getCosplayers: async (params = {}) => {
     try {
-      const response = await api.get('/cosplayers', { params: filters });
+      const queryParams = new URLSearchParams({
+        page: params.page || 1,
+        pageSize: params.pageSize || 12,
+        sortBy: params.sortBy || 'rating',
+        sortOrder: params.sortOrder || 'desc',
+        ...params
+      });
+
+      const response = await api.get(`/cosplayers?${queryParams}`);
       return {
         success: true,
-        data: response.data.data || response.data,
+        data: response.data.data || [],
+        pagination: response.data.pagination || {},
         message: response.data.message || 'Cosplayers loaded successfully'
       };
     } catch (error) {
+      console.error('Failed to load cosplayers:', error);
       return {
         success: false,
+        data: [],
         message: error.response?.data?.message || 'Failed to load cosplayers',
         errors: error.response?.data?.errors || {}
       };
@@ -397,18 +408,42 @@ export const cosplayerAPI = {
   getServices: async (cosplayerId) => {
     try {
       const response = await api.get(`/cosplayers/${cosplayerId}/services`);
+      
+      // Handle the specific response structure
+      let services = [];
+      let cosplayerName = '';
+      
+      if (response.data?.isSuccess && response.data?.data) {
+        services = response.data.data.services || [];
+        cosplayerName = response.data.data.cosplayerName || '';
+        
+        // Transform services to match expected structure
+        services = services.map(service => ({
+          id: service.id,
+          name: service.serviceName,
+          description: service.serviceDescription,
+          // Price and duration will need to be added from another source or set as defaults
+          price: service.price || service.pricePerSlot || 500000, // Default price
+          duration: service.duration || 60, // Default 60 minutes
+          category: service.category || 'General',
+          includedItems: service.includedItems || []
+        }));
+      }
+      
       return {
         success: true,
-        data: response.data.data || response.data,
-        message: response.data.message || 'Services loaded successfully'
+        data: services,
+        cosplayerName: cosplayerName,
+        totalCount: response.data?.data?.totalCount || services.length,
+        message: response.data?.message || 'Services loaded successfully'
       };
     } catch (error) {
-      // FIX: Don't fail completely if services can't be loaded
-      console.warn('⚠️ API: Could not load services:', error.response?.data?.message);
+      console.error('Failed to load services:', error);
       return {
-        success: true, // Return success with empty array instead of failing
+        success: false,
         data: [],
-        message: 'No services available'
+        message: error.response?.data?.message || 'Failed to load services',
+        errors: error.response?.data?.errors || []
       };
     }
   },

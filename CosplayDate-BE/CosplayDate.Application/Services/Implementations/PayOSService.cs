@@ -83,6 +83,20 @@ namespace CosplayDate.Infrastructure.Services
                 // Generate unique order code
                 var orderCode = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
 
+                // ✅ FIX: Set proper expiration with validation
+                var expiredAtTime = DateTimeOffset.UtcNow.AddHours(1); // 1 hour from now
+                var expiredAtUnix = expiredAtTime.ToUnixTimeSeconds();
+
+                // Validate expiration time
+                if (expiredAtTime <= DateTimeOffset.UtcNow)
+                {
+                    _logger.LogError("❌ Invalid expiration time");
+                    return ApiResponse<CreatePaymentResponseDto>.Error("Invalid expiration time");
+                }
+
+                _logger.LogInformation("🕐 Creating payment with expiration: {ExpiredAt} (Unix: {ExpiredAtUnix})",
+                    expiredAtTime, expiredAtUnix);
+
                 // Sanitize and truncate descriptions for PayOS limits
                 var itemDescription = SanitizeForPayOS("Nap tien CosplayDate", 25); // Max 25 chars
                 var paymentDescription = SanitizeForPayOS(request.Description ?? "Nap tien CosplayDate", 25); // Max 25 chars
@@ -127,7 +141,7 @@ namespace CosplayDate.Infrastructure.Services
                     buyerName: TruncateForPayOS(request.BuyerName, 50),
                     buyerEmail: TruncateForPayOS(request.BuyerEmail, 50),
                     buyerPhone: TruncateForPayOS(request.BuyerPhone, 15),
-                    expiredAt: DateTimeOffset.UtcNow.AddMinutes(15).ToUnixTimeSeconds()
+                    expiredAt: expiredAtUnix
                 );
 
                 var result = await _payOS.createPaymentLink(paymentData);

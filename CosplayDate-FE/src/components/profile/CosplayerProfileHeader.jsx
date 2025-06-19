@@ -144,7 +144,7 @@ const CosplayerProfileHeader = ({ user, isOwnProfile, onFollowToggle, isFollowin
       >
         <Box sx={{ p: 4 }}>
           <Grid container spacing={3} alignItems="center">
-            <Grid item>
+            <Grid>
               <Box sx={{ position: 'relative' }}>
                 <Avatar
                   src={user?.avatarUrl || user?.profilePicture}
@@ -179,7 +179,7 @@ const CosplayerProfileHeader = ({ user, isOwnProfile, onFollowToggle, isFollowin
               </Box>
             </Grid>
 
-            <Grid item xs>
+            <Grid>
               <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
                 <Box sx={{ flex: 1 }}>
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
@@ -411,7 +411,7 @@ const CosplayerProfileHeader = ({ user, isOwnProfile, onFollowToggle, isFollowin
             <Divider />
             <Box sx={{ p: 3 }}>
               <Grid container spacing={3}>
-                <Grid item xs={6} sm={3}>
+                <Grid size={{ xs: 12, sm: 3 }}>
                   <Box sx={{ textAlign: 'center' }}>
                     <Typography variant="h5" sx={{ fontWeight: 700, color: 'primary.main' }}>
                       {user.stats.completedBookings || 0}
@@ -421,7 +421,7 @@ const CosplayerProfileHeader = ({ user, isOwnProfile, onFollowToggle, isFollowin
                     </Typography>
                   </Box>
                 </Grid>
-                <Grid item xs={6} sm={3}>
+                <Grid size={{ xs: 12, sm: 3 }}>
                   <Box sx={{ textAlign: 'center' }}>
                     <Typography variant="h5" sx={{ fontWeight: 700, color: 'primary.main' }}>
                       {user.stats.totalPhotos || 0}
@@ -431,7 +431,7 @@ const CosplayerProfileHeader = ({ user, isOwnProfile, onFollowToggle, isFollowin
                     </Typography>
                   </Box>
                 </Grid>
-                <Grid item xs={6} sm={3}>
+                <Grid size={{ xs: 12, sm: 3 }}>
                   <Box sx={{ textAlign: 'center' }}>
                     <Typography variant="h5" sx={{ fontWeight: 700, color: 'primary.main' }}>
                       {user.stats.totalLikes || 0}
@@ -441,7 +441,7 @@ const CosplayerProfileHeader = ({ user, isOwnProfile, onFollowToggle, isFollowin
                     </Typography>
                   </Box>
                 </Grid>
-                <Grid item xs={6} sm={3}>
+                <Grid size={{ xs: 12, sm: 3 }}>
                   <Box sx={{ textAlign: 'center' }}>
                     <Typography variant="h5" sx={{ fontWeight: 700, color: 'primary.main' }}>
                       {Math.round(user.stats.successRate || 0)}%

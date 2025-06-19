@@ -54,7 +54,7 @@ const Footer = () => {
         <Box sx={{ py: 6 }}>
           <Grid container spacing={4}>
             {/* Phần Trợ giúp */}
-            <Grid item xs={12} sm={6} md={3}>
+            <Grid size={{ xs: 12, sm: 6, md: 3 }}>
               <Typography
                 variant="h6"
                 sx={{
@@ -127,7 +127,7 @@ const Footer = () => {
             </Grid>
 
             {/* Phần Trang */}
-            <Grid item xs={12} sm={6} md={3}>
+            <Grid size={{ xs: 12, sm: 6, md: 3 }}>
               <Typography
                 variant="h6"
                 sx={{
@@ -217,7 +217,7 @@ const Footer = () => {
             </Grid>
 
             {/* Phần Thêm về CosplayDate */}
-            <Grid item xs={12} md={6}>
+            <Grid size={{ xs: 12, sm: 6 }}>
               <Typography
                 variant="h6"
                 sx={{

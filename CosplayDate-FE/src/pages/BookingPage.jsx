@@ -16,13 +16,12 @@ import { cosplayTheme } from '../theme/cosplayTheme';
 import PageLayout from '../components/layout/PageLayout';
 import BookingServiceSelect from '../components/booking/BookingServiceSelect';
 import BookingSchedule from '../components/booking/BookingSchedule';
-import BookingPayment from '../components/booking/BookingPayment';
-import BookingConfirmation from '../components/booking/BookingConfirmation';
+import BookingWaitingConfirmation from '../components/booking/BookingWaitingConfirmation';
+import BookingSuccessConfirmation from '../components/booking/BookingSuccessConfirmation';
 import { cosplayerAPI } from '../services/cosplayerAPI';
 import { bookingAPI } from '../services/bookingAPI';
-import { paymentAPI } from '../services/paymentAPI';
 
-const steps = ['Chọn dịch vụ', 'Chọn thời gian', 'Thanh toán', 'Xác nhận'];
+const steps = ['Chọn dịch vụ', 'Chọn thời gian', 'Chờ xác nhận', 'Hoàn tất'];
 
 const BookingPage = () => {
   const { cosplayerId } = useParams();
@@ -35,11 +34,8 @@ const BookingPage = () => {
   const [cosplayer, setCosplayer] = useState(null);
   const [services, setServices] = useState([]);
   const [selectedService, setSelectedService] = useState(null);
-  const [selectedDate, setSelectedDate] = useState(null);
-  const [selectedTimeSlots, setSelectedTimeSlots] = useState([]);
-  const [bookingNote, setBookingNote] = useState('');
-  const [walletBalance, setWalletBalance] = useState(0);
   const [bookingResult, setBookingResult] = useState(null);
+  const [isConfirmed, setIsConfirmed] = useState(false);
 
   // Load initial data
   useEffect(() => {
@@ -47,6 +43,19 @@ const BookingPage = () => {
       loadInitialData();
     }
   }, [cosplayerId]);
+
+  // Simulate cosplayer confirmation (for demo)
+  useEffect(() => {
+    if (activeStep === 2 && bookingResult) {
+      // Simulate confirmation after 5 seconds
+      const timer = setTimeout(() => {
+        setIsConfirmed(true);
+        setActiveStep(3);
+      }, 5000);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [activeStep, bookingResult]);
 
   const loadInitialData = async () => {
     try {
@@ -62,14 +71,19 @@ const BookingPage = () => {
 
       // Load services
       const servicesResult = await cosplayerAPI.getServices(cosplayerId);
-      if (servicesResult.success) {
-        setServices(servicesResult.data || []);
-      }
-
-      // Check wallet balance
-      const balanceResult = await bookingAPI.checkBalance();
-      if (balanceResult.success) {
-        setWalletBalance(balanceResult.data.Balance || 0);
+      if (servicesResult.success && servicesResult.data.length > 0) {
+        setServices(servicesResult.data);
+        
+        // Update cosplayer name if provided
+        if (servicesResult.cosplayerName && cosplayer) {
+          setCosplayer({
+            ...cosplayer,
+            displayName: servicesResult.cosplayerName
+          });
+        }
+      } else {
+        setServices([]);
+        setError('Cosplayer này chưa có dịch vụ nào.');
       }
 
     } catch (err) {
@@ -80,74 +94,18 @@ const BookingPage = () => {
     }
   };
 
-  const handleNext = () => {
-    if (activeStep === steps.length - 1) {
-      // Final step - redirect to bookings list
-      navigate('/my-bookings');
-    } else {
-      setActiveStep((prev) => prev + 1);
-    }
+  const handleServiceSelect = (service) => {
+    setSelectedService(service);
+    setActiveStep(1);
+  };
+
+  const handleBookingCreated = (booking, totalPrice) => {
+    setBookingResult({ ...booking, totalPrice });
+    setActiveStep(2);
   };
 
   const handleBack = () => {
     setActiveStep((prev) => prev - 1);
-  };
-
-  const handleServiceSelect = (service) => {
-    setSelectedService(service);
-    handleNext();
-  };
-
-  const handleScheduleConfirm = (date, timeSlots, note) => {
-    setSelectedDate(date);
-    setSelectedTimeSlots(timeSlots);
-    setBookingNote(note);
-    handleNext();
-  };
-
-  const handlePaymentConfirm = async () => {
-    try {
-      setLoading(true);
-      setError('');
-
-      // Check balance first
-      if (walletBalance < selectedService.price * selectedTimeSlots.length) {
-        setError('Số dư ví không đủ. Vui lòng nạp thêm tiền.');
-        return false;
-      }
-
-      // Create booking
-      const bookingData = {
-        cosplayerId: cosplayerId,
-        serviceId: selectedService.id,
-        bookingDate: selectedDate,
-        timeSlots: selectedTimeSlots,
-        totalAmount: selectedService.price * selectedTimeSlots.length,
-        note: bookingNote,
-        paymentMethod: 'wallet'
-      };
-
-      const result = await bookingAPI.createBooking(bookingData);
-      
-      if (result.success) {
-        setBookingResult(result.data);
-        handleNext();
-        return true;
-      } else {
-        if (result.insufficientFunds) {
-          setError('Số dư ví không đủ để thực hiện đặt lịch này.');
-        } else {
-          setError(result.message || 'Không thể tạo đặt lịch. Vui lòng thử lại.');
-        }
-        return false;
-      }
-    } catch (err) {
-      console.error('Booking creation failed:', err);
-      setError('Đã xảy ra lỗi. Vui lòng thử lại.');
-      return false;
-    } finally {
-      setLoading(false);
-    }
   };
 
   const renderStepContent = () => {
@@ -167,35 +125,26 @@ const BookingPage = () => {
           <BookingSchedule
             cosplayer={cosplayer}
             service={selectedService}
-            selectedDate={selectedDate}
-            selectedTimeSlots={selectedTimeSlots}
-            bookingNote={bookingNote}
-            onConfirm={handleScheduleConfirm}
+            onConfirm={handleBookingCreated}
             onBack={handleBack}
           />
         );
       
       case 2:
         return (
-          <BookingPayment
+          <BookingWaitingConfirmation
+            booking={bookingResult}
             cosplayer={cosplayer}
-            service={selectedService}
-            selectedDate={selectedDate}
-            selectedTimeSlots={selectedTimeSlots}
-            walletBalance={walletBalance}
-            totalAmount={selectedService?.price * selectedTimeSlots.length}
-            onConfirm={handlePaymentConfirm}
-            onBack={handleBack}
-            loading={loading}
+            onViewBookings={() => navigate('/my-bookings')}
+            onBackToHome={() => navigate('/')}
           />
         );
       
       case 3:
         return (
-          <BookingConfirmation
+          <BookingSuccessConfirmation
             booking={bookingResult}
             cosplayer={cosplayer}
-            service={selectedService}
             onViewBookings={() => navigate('/my-bookings')}
             onBackToHome={() => navigate('/')}
           />
@@ -255,7 +204,7 @@ const BookingPage = () => {
             </Stepper>
           </Box>
 
-          {error && (
+          {error && activeStep === 0 && (
             <Alert 
               severity="error" 
               sx={{ mb: 3, borderRadius: '12px' }}

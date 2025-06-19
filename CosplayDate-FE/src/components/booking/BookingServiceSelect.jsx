@@ -10,16 +10,11 @@ import {
   FormControlLabel,
   Chip,
   Avatar,
-  Divider,
   Button,
   Grid
 } from '@mui/material';
-import {
-  AccessTime,
-  AttachMoney,
-  Category,
-  CheckCircle
-} from '@mui/icons-material';
+import { ArrowBack } from '@mui/icons-material';
+import { useNavigate } from 'react-router-dom';
 
 const BookingServiceSelect = ({ 
   services = [], 
@@ -27,36 +22,24 @@ const BookingServiceSelect = ({
   onServiceSelect,
   cosplayer 
 }) => {
-  const [selectedId, setSelectedId] = React.useState(selectedService?.id || '');
+  const navigate = useNavigate();
+  const [selectedId, setSelectedId] = React.useState(selectedService?.id?.toString() || '');
+
+  // Ensure services is always an array
+  const servicesList = Array.isArray(services) ? services : [];
 
   const handleServiceChange = (event) => {
     setSelectedId(event.target.value);
   };
 
   const handleConfirm = () => {
-    const service = services.find(s => s.id === selectedId);
+    const service = servicesList.find(s => s.id.toString() === selectedId.toString());
     if (service) {
       onServiceSelect(service);
     }
   };
 
-  const formatPrice = (price) => {
-    return new Intl.NumberFormat('vi-VN', {
-      style: 'currency',
-      currency: 'VND'
-    }).format(price);
-  };
-
-  const formatDuration = (minutes) => {
-    const hours = Math.floor(minutes / 60);
-    const mins = minutes % 60;
-    if (hours > 0) {
-      return `${hours}h${mins > 0 ? ` ${mins}m` : ''}`;
-    }
-    return `${mins}m`;
-  };
-
-  if (services.length === 0) {
+  if (servicesList.length === 0) {
     return (
       <Box sx={{ textAlign: 'center', py: 8 }}>
         <Typography variant="h6" color="text.secondary">
@@ -115,12 +98,12 @@ const BookingServiceSelect = ({
 
       <RadioGroup value={selectedId} onChange={handleServiceChange}>
         <Grid container spacing={2}>
-          {services.map((service) => (
+          {servicesList.map((service) => (
             <Grid item xs={12} key={service.id}>
               <Card 
                 sx={{ 
                   borderRadius: '12px',
-                  border: selectedId === service.id 
+                  border: selectedId === service.id.toString() 
                     ? '2px solid #E91E63' 
                     : '1px solid rgba(0, 0, 0, 0.1)',
                   cursor: 'pointer',
@@ -130,11 +113,11 @@ const BookingServiceSelect = ({
                     boxShadow: '0 4px 12px rgba(233, 30, 99, 0.15)'
                   }
                 }}
-                onClick={() => setSelectedId(service.id)}
+                onClick={() => setSelectedId(service.id.toString())}
               >
                 <CardContent>
                   <FormControlLabel
-                    value={service.id}
+                    value={service.id.toString()}
                     control={
                       <Radio 
                         sx={{ 
@@ -154,15 +137,6 @@ const BookingServiceSelect = ({
                           <Typography variant="h6" sx={{ fontWeight: 600 }}>
                             {service.name}
                           </Typography>
-                          <Typography 
-                            variant="h6" 
-                            sx={{ 
-                              color: 'primary.main',
-                              fontWeight: 700
-                            }}
-                          >
-                            {formatPrice(service.price)}
-                          </Typography>
                         </Box>
 
                         <Typography 
@@ -172,58 +146,6 @@ const BookingServiceSelect = ({
                         >
                           {service.description}
                         </Typography>
-
-                        <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
-                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                            <AccessTime sx={{ fontSize: 16, color: 'text.secondary' }} />
-                            <Typography variant="body2" color="text.secondary">
-                              {formatDuration(service.duration)} / slot
-                            </Typography>
-                          </Box>
-                          
-                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                            <AttachMoney sx={{ fontSize: 16, color: 'text.secondary' }} />
-                            <Typography variant="body2" color="text.secondary">
-                              {formatPrice(service.price)} / {formatDuration(service.duration)}
-                            </Typography>
-                          </Box>
-
-                          {service.category && (
-                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                              <Category sx={{ fontSize: 16, color: 'text.secondary' }} />
-                              <Typography variant="body2" color="text.secondary">
-                                {service.category}
-                              </Typography>
-                            </Box>
-                          )}
-                        </Box>
-
-                        {service.includedItems && service.includedItems.length > 0 && (
-                          <>
-                            <Divider sx={{ my: 2 }} />
-                            <Typography variant="body2" sx={{ fontWeight: 600, mb: 1 }}>
-                              Bao gồm:
-                            </Typography>
-                            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
-                              {service.includedItems.map((item, index) => (
-                                <Box 
-                                  key={index}
-                                  sx={{ display: 'flex', alignItems: 'center', gap: 1 }}
-                                >
-                                  <CheckCircle 
-                                    sx={{ 
-                                      fontSize: 16, 
-                                      color: 'success.main' 
-                                    }} 
-                                  />
-                                  <Typography variant="body2">
-                                    {item}
-                                  </Typography>
-                                </Box>
-                              ))}
-                            </Box>
-                          </>
-                        )}
                       </Box>
                     }
                     sx={{ 
@@ -242,7 +164,29 @@ const BookingServiceSelect = ({
         </Grid>
       </RadioGroup>
 
-      <Box sx={{ mt: 4, display: 'flex', justifyContent: 'flex-end' }}>
+      <Box sx={{ mt: 4, display: 'flex', justifyContent: 'space-between' }}>
+        <Button
+          variant="outlined"
+          size="large"
+          onClick={() => navigate('/')}
+          startIcon={<ArrowBack />}
+          sx={{
+            borderRadius: '12px',
+            textTransform: 'none',
+            fontWeight: 600,
+            px: 3,
+            py: 1.5,
+            borderColor: 'primary.main',
+            color: 'primary.main',
+            '&:hover': {
+              borderColor: 'primary.dark',
+              backgroundColor: 'rgba(233, 30, 99, 0.05)'
+            }
+          }}
+        >
+          Về trang chủ
+        </Button>
+        
         <Button
           variant="contained"
           size="large"

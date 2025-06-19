@@ -1,5 +1,4 @@
-﻿// CosplayDate.API/Controllers/BookingController.cs
-using CosplayDate.Application.DTOs.Booking;
+﻿using CosplayDate.Application.DTOs.Booking;
 using CosplayDate.Application.Services.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -40,16 +39,25 @@ namespace CosplayDate.API.Controllers
                 var currentUserId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
                 var userType = User.FindFirst("UserType")?.Value;
 
-                // FIXED: Handle both Vietnamese and English user types
-                var isCustomer = userType == "Customer" || userType == "Khách hàng";
+                // Log for debugging
+                _logger.LogInformation("Creating booking for User ID: {UserId}, UserType: {UserType}", currentUserId, userType);
 
-                if (!isCustomer)
+                // Debug: Log all claims
+                foreach (var claim in User.Claims)
                 {
+                    _logger.LogInformation("Claim Type: {Type}, Value: {Value}", claim.Type, claim.Value);
+                }
+
+                // Check if user type is valid for booking creation
+                // Allow both "Customer" and "Khách hàng" (Vietnamese)
+                if (userType != "Customer" && userType != "Khách hàng")
+                {
+                    _logger.LogWarning("Invalid user type for booking creation: {UserType}", userType);
                     return BadRequest(new
                     {
                         isSuccess = false,
-                        message = "Only customers can create bookings",
-                        errors = new[] { $"Invalid user type: {userType}" }
+                        message = $"Only customers can create bookings. Current user type: {userType}",
+                        errors = new[] { "Invalid user type for booking creation" }
                     });
                 }
 
@@ -95,7 +103,9 @@ namespace CosplayDate.API.Controllers
         }
 
         /// <summary>
-        /// Get user's bookings with filters
+        /// Get user's bookings with filters - shows all bookings for the authenticated user
+        /// For customers: shows bookings they created
+        /// For cosplayers: shows bookings assigned to them
         /// </summary>
         [HttpGet]
         public async Task<IActionResult> GetBookings([FromQuery] GetBookingsRequestDto request)

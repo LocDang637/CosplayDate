@@ -128,7 +128,7 @@ namespace CosplayDate.Application.Services.Implementations
                 }
 
                 // Update booking payment status
-                booking.PaymentStatus = "Paid";
+                //booking.PaymentStatus = "Paid";
                 _unitOfWork.Bookings.Update(booking);
                 await _unitOfWork.SaveChangesAsync();
 
@@ -190,19 +190,25 @@ namespace CosplayDate.Application.Services.Implementations
 
                 // Get bookings based on user type
                 IEnumerable<Booking> bookings;
+
                 if (user.UserType == "Customer")
                 {
+                    // For customers: get all bookings where they are the customer
                     bookings = await _unitOfWork.Bookings.FindAsync(b => b.CustomerId == userId);
                 }
                 else if (user.UserType == "Cosplayer")
                 {
-                    var cosplayer = await _unitOfWork.Repository<Cosplayer>()
+                    // For cosplayers: find their cosplayer profile first, then get bookings
+                    var cosplayerProfile = await _unitOfWork.Repository<Cosplayer>()
                         .FirstOrDefaultAsync(c => c.UserId == userId);
-                    if (cosplayer == null)
+
+                    if (cosplayerProfile == null)
                     {
                         return ApiResponse<GetBookingsResponseDto>.Error("Cosplayer profile not found");
                     }
-                    bookings = await _unitOfWork.Bookings.FindAsync(b => b.CosplayerId == cosplayer.Id);
+
+                    // Get all bookings for this cosplayer
+                    bookings = await _unitOfWork.Bookings.FindAsync(b => b.CosplayerId == cosplayerProfile.Id);
                 }
                 else
                 {
@@ -234,7 +240,7 @@ namespace CosplayDate.Application.Services.Implementations
                     bookingDtos.Add(dto);
                 }
 
-                // Calculate stats
+                // Calculate stats based on user type
                 var stats = CalculateBookingStats(bookingsList, user.UserType);
 
                 var response = new GetBookingsResponseDto

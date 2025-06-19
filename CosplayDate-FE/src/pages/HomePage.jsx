@@ -215,7 +215,7 @@ const HomePage = () => {
                   {user?.firstName?.[0] || 'N'}
                 </Avatar>
                 <Typography variant="h6" sx={{ fontWeight: 600, mb: 1 }}>
-                  Xin chào, {user?.firstName || 'Người dùng'}! 👋
+                  Xin chào, {user?.displayName || user?.firstName || 'Người dùng'}! 👋
                 </Typography>
                 <Typography variant="body2" sx={{ color: 'text.secondary' }}>
                   Bạn đã sẵn sàng để khám phá thế giới cosplay chưa?
