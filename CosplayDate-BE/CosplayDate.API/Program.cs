@@ -324,7 +324,9 @@ builder.Services.AddCors(options =>
                 "https://cosplay-date-kqd598ot3-loc-dangs-projects-ebd5f443.vercel.app", // Deployment domain
                 "https://cosplay-date-git-main-loc-dangs-projects-ebd5f443.vercel.app", // Git branch domain (common pattern)
                 "https://cosplaydate.com",
-                "https://www.cosplaydate.com"
+                "https://www.cosplaydate.com",
+                "http://localhost:3000",
+                "http://localhost:5173"
             });
 
             // Log the allowed origins for debugging

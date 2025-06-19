@@ -1,7 +1,7 @@
 // src/services/cosplayerAPI.js - FIXED VERSION with better user ID handling
 import axios from 'axios';
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5068/api';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
 const createApiInstance = () => {
   const instance = axios.create({
