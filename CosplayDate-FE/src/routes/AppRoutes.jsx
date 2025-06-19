@@ -14,6 +14,9 @@ import CosplayerProfilePage from "../pages/CosplayerProfilePage";
 import PaymentSuccessPage from "../pages/PaymentSuccessPage";
 import PaymentFailedPage from "../pages/PaymentFailedPage";
 import BecomeCosplayerPage from "../pages/BecomeCosplayerPage";
+import BookingPage from "../pages/BookingPage";
+import MyBookingsPage from "../pages/MyBookingsPage";
+
 function AppRoutes() {
   return (
     <Routes>
@@ -23,59 +26,59 @@ function AppRoutes() {
       <Route path="/signup" element={<SignUpPage />} />
       <Route path="/forgot-password" element={<ForgotPasswordPage />} />
       <Route path="/reset-password" element={<ResetPasswordPage />} />
-      
+
       {/* Payment routes */}
       <Route path="/payment/success" element={<PaymentSuccessPage />} />
       <Route path="/payment/cancel" element={<PaymentFailedPage />} />
-      
+
       {/* Cosplayer public routes */}
       <Route path="/cosplayers" element={<Cosplayers />} />
       <Route path="/cosplayer/:id" element={<CosplayerDetailsPage />} />
       <Route path="/cosplayer-policy" element={<CosplayerPolicyPage />} />
-      
+
 
       {/* Become Cosplayer route */}
-      <Route 
-        path="/become-cosplayer" 
+      <Route
+        path="/become-cosplayer"
         element={
           <ProtectedRoute>
             <BecomeCosplayerPage />
           </ProtectedRoute>
-        } 
+        }
       />
 
       {/* Profile routes */}
-      <Route 
-        path="/profile" 
+      <Route
+        path="/profile"
         element={
           <ProtectedRoute>
             <ProfilePage />
           </ProtectedRoute>
-        } 
+        }
       />
-      <Route 
-        path="/profile/:userId" 
+      <Route
+        path="/profile/:userId"
         element={
           <ProtectedRoute>
             <CosplayerProfilePage />
           </ProtectedRoute>
-        } 
+        }
       />
-      <Route 
-        path="/customer-profile" 
+      <Route
+        path="/customer-profile"
         element={
           <ProtectedRoute>
             <CustomerProfilePage />
           </ProtectedRoute>
-        } 
+        }
       />
-      <Route 
-        path="/customer-profile/:userId" 
+      <Route
+        path="/customer-profile/:userId"
         element={
           <ProtectedRoute>
             <CustomerProfilePage />
           </ProtectedRoute>
-        } 
+        }
       />
 
       {/* Protected routes */}
@@ -84,6 +87,24 @@ function AppRoutes() {
         element={
           <ProtectedRoute>
             <div>Profile Edit Page - Coming Soon!</div>
+          </ProtectedRoute>
+        }
+      />
+
+      {/* Booking routes */}
+      <Route
+        path="/booking/:cosplayerId"
+        element={
+          <ProtectedRoute>
+            <BookingPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/my-bookings"
+        element={
+          <ProtectedRoute>
+            <MyBookingsPage />
           </ProtectedRoute>
         }
       />

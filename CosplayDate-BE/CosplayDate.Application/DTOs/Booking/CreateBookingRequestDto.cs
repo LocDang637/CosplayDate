@@ -20,10 +20,10 @@ namespace CosplayDate.Application.DTOs.Booking
         public DateOnly BookingDate { get; set; }
 
         [Required(ErrorMessage = "Start time is required")]
-        public TimeOnly StartTime { get; set; }
+        public string StartTime { get; set; } = string.Empty; // Change to string
 
         [Required(ErrorMessage = "End time is required")]
-        public TimeOnly EndTime { get; set; }
+        public string EndTime { get; set; } = string.Empty; // Change to string
 
         [Required(ErrorMessage = "Location is required")]
         [StringLength(500, ErrorMessage = "Location cannot exceed 500 characters")]
@@ -31,5 +31,9 @@ namespace CosplayDate.Application.DTOs.Booking
 
         [StringLength(1000, ErrorMessage = "Special notes cannot exceed 1000 characters")]
         public string? SpecialNotes { get; set; }
+
+        // Helper properties to convert strings to TimeOnly
+        public TimeOnly StartTimeOnly => TimeOnly.Parse(StartTime);
+        public TimeOnly EndTimeOnly => TimeOnly.Parse(EndTime);
     }
 }

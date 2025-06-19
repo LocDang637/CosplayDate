@@ -17,7 +17,7 @@ namespace CosplayDate.Infrastructure.Data.Repositories
             EmailVerificationTokens = new EmailVerificationTokenRepository(_context);
             PasswordResetTokens = new PasswordResetTokenRepository(_context);
 
-            Bookings = new Repository<Booking>(_context);
+            Bookings = new BookingRepository(_context);
             Reviews = new Repository<Review>(_context);
             WalletTransactions = new Repository<WalletTransaction>(_context);
             UserFollows = new Repository<UserFollow>(_context);
@@ -32,7 +32,7 @@ namespace CosplayDate.Infrastructure.Data.Repositories
         public IEmailVerificationTokenRepository EmailVerificationTokens { get; private set; }
         public IPasswordResetTokenRepository PasswordResetTokens { get; private set; }
 
-        public IRepository<Booking> Bookings { get; private set; }
+        public IBookingRepository Bookings { get; private set; }
         public IRepository<Review> Reviews { get; private set; }
         public IRepository<WalletTransaction> WalletTransactions { get; private set; }
         public IRepository<UserFollow> UserFollows { get; private set; }

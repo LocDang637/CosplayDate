@@ -26,13 +26,21 @@ namespace CosplayDate.Application.Services.Implementations
             var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_configuration["Jwt:Key"]!));
             var credentials = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
 
+            var standardizedUserType = user.UserType switch
+            {
+                "Khách hàng" => "Customer",
+                "Cosplayer" => "Cosplayer",
+                _ => user.UserType // Keep original if already in English or other
+            };
+
             var claims = new[]
             {
                 new Claim(JwtRegisteredClaimNames.Sub, user.Id.ToString()),
                 new Claim(JwtRegisteredClaimNames.Email, user.Email),
                 new Claim(JwtRegisteredClaimNames.GivenName, user.FirstName),
                 new Claim(JwtRegisteredClaimNames.FamilyName, user.LastName),
-                new Claim("UserType", user.UserType),
+                new Claim("UserType", standardizedUserType), // Use standardized UserType
+                new Claim("OriginalUserType", user.UserType), // Keep original for reference
                 new Claim("IsVerified", user.IsVerified.ToString()),
                 new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
                 new Claim(JwtRegisteredClaimNames.Iat,
@@ -56,10 +64,19 @@ namespace CosplayDate.Application.Services.Implementations
             var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_configuration["Jwt:Key"]!));
             var credentials = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
 
+            // Standardize UserType for refresh token as well
+            var standardizedUserType = user.UserType switch
+            {
+                "Khách hàng" => "Customer",
+                "Cosplayer" => "Cosplayer",
+                _ => user.UserType
+            };
+
             var claims = new[]
             {
                 new Claim(JwtRegisteredClaimNames.Sub, user.Id.ToString()),
                 new Claim(JwtRegisteredClaimNames.Email, user.Email),
+                new Claim("UserType", standardizedUserType), // Use standardized UserType
                 new Claim("TokenType", "RefreshToken"),
                 new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
                 new Claim(JwtRegisteredClaimNames.Iat,

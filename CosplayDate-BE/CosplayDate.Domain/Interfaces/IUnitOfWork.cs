@@ -13,7 +13,7 @@ namespace CosplayDate.Domain.Interfaces
         IEmailVerificationTokenRepository EmailVerificationTokens { get; }
         IPasswordResetTokenRepository PasswordResetTokens { get; }
 
-        IRepository<Booking> Bookings { get; }
+        IBookingRepository Bookings { get; }
         IRepository<Review> Reviews { get; }
         IRepository<WalletTransaction> WalletTransactions { get; }
         IRepository<UserFollow> UserFollows { get; }
