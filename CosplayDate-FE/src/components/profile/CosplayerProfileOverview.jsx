@@ -36,18 +36,28 @@ const CosplayerProfileOverview = ({ user, isOwnProfile }) => {
   const [upcomingBooking, setUpcomingBooking] = useState(null);
   const [loadingBooking, setLoadingBooking] = useState(true);
 
+  console.log('upcomingBooking', upcomingBooking);
+  console.log('loadingBooking', loadingBooking);
+
   useEffect(() => {
     const fetchUpcomingBooking = async () => {
       try {
         setLoadingBooking(true);
         const response = await bookingAPI.getUpcomingBookings();
 
-        if (response.data.isSuccess && response.data.data.bookings.length > 0) {
-          // Get the closest upcoming booking (first one since API returns sorted)
-          setUpcomingBooking(response.data.data.bookings[0]);
+        // Add console.log to debug
+        console.log('API Response:', response);
+
+        // Fix: Check response.success instead of response.data.isSuccess
+        if (response.success && response.data?.bookings && response.data.bookings.length > 0) {
+          setUpcomingBooking(response.data.bookings[0]);
+        } else {
+          console.log('No upcoming bookings found or API error');
+          setUpcomingBooking(null);
         }
       } catch (error) {
         console.error('Failed to fetch upcoming booking:', error);
+        setUpcomingBooking(null);
       } finally {
         setLoadingBooking(false);
       }
@@ -97,7 +107,7 @@ const CosplayerProfileOverview = ({ user, isOwnProfile }) => {
   // Format date and time for upcoming booking
   const formatBookingDateTime = (booking) => {
     if (!booking) return '';
-    
+
     const bookingDate = new Date(booking.bookingDate);
     const formattedDate = bookingDate.toLocaleDateString('vi-VN', {
       weekday: 'long',
@@ -221,6 +231,37 @@ const CosplayerProfileOverview = ({ user, isOwnProfile }) => {
                 </Typography>
               </>
             )}
+            {tags.length > 0 && (
+              <Box>
+                <Divider sx={{ my: 2.5 }} />
+                <Box>
+                  <Typography variant="h6" sx={{ fontWeight: 700, mb: 2, color: 'text.primary' }}>
+                    Tags
+                  </Typography>
+                  <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+                    {tags.map((tag, index) => (
+                      <Chip
+                        key={index}
+                        label={tag}
+                        size="small"
+                        sx={{
+                          backgroundColor: 'rgba(233, 30, 99, 0.08)',
+                          color: 'primary.main',
+                          fontSize: '0.75rem',
+                          height: '26px',
+                          fontWeight: 500,
+                          border: '1px solid rgba(233, 30, 99, 0.15)',
+                          '&:hover': {
+                            backgroundColor: 'rgba(233, 30, 99, 0.12)',
+                            borderColor: 'rgba(233, 30, 99, 0.25)',
+                          }
+                        }}
+                      />
+                    ))}
+                  </Box>
+                </Box>
+              </Box>
+            )}
           </Paper>
 
           <Paper
@@ -310,7 +351,7 @@ const CosplayerProfileOverview = ({ user, isOwnProfile }) => {
               <Typography variant="h6" sx={{ fontWeight: 700, mb: 3, color: 'text.primary' }}>
                 Lịch hẹn sắp tới
               </Typography>
-              
+
               <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
                 {/* Customer Name */}
                 <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1.5 }}>
@@ -382,24 +423,6 @@ const CosplayerProfileOverview = ({ user, isOwnProfile }) => {
                   </Box>
                 )}
               </Box>
-
-              <Divider sx={{ my: 2 }} />
-              
-              <Chip
-                label={upcomingBooking.status === 'Pending' ? 'Đang chờ' : 
-                       upcomingBooking.status === 'Confirmed' ? 'Đã xác nhận' : 
-                       upcomingBooking.status}
-                size="small"
-                sx={{
-                  backgroundColor: upcomingBooking.status === 'Pending' ? '#FFF3E0' : 
-                                  upcomingBooking.status === 'Confirmed' ? '#E8F5E9' : 
-                                  '#F5F5F5',
-                  color: upcomingBooking.status === 'Pending' ? '#E65100' : 
-                         upcomingBooking.status === 'Confirmed' ? '#2E7D32' : 
-                         '#616161',
-                  fontWeight: 600,
-                }}
-              />
             </Paper>
           )}
 
@@ -541,36 +564,6 @@ const CosplayerProfileOverview = ({ user, isOwnProfile }) => {
               />
             </Box>
           </Paper>
-
-          {/* ✅ FIXED: Safe tags rendering */}
-          {tags.length > 0 && (
-            <Paper
-              sx={{
-                borderRadius: '16px',
-                p: 3,
-                background: 'rgba(255,255,255,0.95)',
-                border: '1px solid rgba(233, 30, 99, 0.1)',
-              }}
-            >
-              <Typography variant="h6" sx={{ fontWeight: 700, mb: 2, color: 'text.primary' }}>
-                Tags
-              </Typography>
-              <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
-                {tags.map((tag, index) => (
-                  <Chip
-                    key={index}
-                    label={tag}
-                    size="small"
-                    sx={{
-                      backgroundColor: 'rgba(233, 30, 99, 0.1)',
-                      color: 'primary.main',
-                      fontSize: '12px',
-                    }}
-                  />
-                ))}
-              </Box>
-            </Paper>
-          )}
         </Grid>
       </Grid>
     </Box>
