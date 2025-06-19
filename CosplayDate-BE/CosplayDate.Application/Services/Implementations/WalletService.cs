@@ -296,11 +296,11 @@ namespace CosplayDate.Application.Services.Implementations
                 _logger.LogInformation("🔄 Processing webhook for OrderCode: {OrderCode}, Amount: {Amount}, Code: {Code}, Desc: {Desc}",
                     webhookData.OrderCode, webhookData.Amount, webhookData.Code, webhookData.Desc);
 
-                // ===== ENHANCED: Detect and handle test webhooks =====
+                // ===== CRITICAL: Detect and handle test webhooks first =====
                 var isTestWebhook = IsTestWebhook(webhookData);
                 if (isTestWebhook)
                 {
-                    _logger.LogInformation("🧪 Test webhook detected for OrderCode: {OrderCode}, Reference: {Reference}",
+                    _logger.LogInformation("🧪 Test webhook detected for OrderCode: {OrderCode}, Reference: {Reference} - Processing successfully",
                         webhookData.OrderCode, webhookData.Reference);
 
                     return ApiResponse<string>.Success("", "Test webhook processed successfully");
@@ -314,7 +314,7 @@ namespace CosplayDate.Application.Services.Implementations
                 {
                     _logger.LogWarning("⚠️ No pending transaction found for OrderCode: {OrderCode}", webhookData.OrderCode);
 
-                    // ===== ENHANCED: Check if this transaction was already processed =====
+                    // Check if this transaction was already processed
                     var completedTransaction = await _unitOfWork.WalletTransactions
                         .FirstOrDefaultAsync(wt => wt.ReferenceId == webhookData.OrderCode.ToString() && wt.Status == "Completed");
 
@@ -324,7 +324,7 @@ namespace CosplayDate.Application.Services.Implementations
                         return ApiResponse<string>.Success("", "Transaction already processed");
                     }
 
-                    // ===== ENHANCED: Try to find by transaction reference if available =====
+                    // Try to find by transaction reference if available
                     if (!string.IsNullOrEmpty(webhookData.Reference))
                     {
                         pendingTransaction = await _unitOfWork.WalletTransactions
@@ -338,7 +338,7 @@ namespace CosplayDate.Application.Services.Implementations
 
                     if (pendingTransaction == null)
                     {
-                        // ===== ENHANCED: Create manual transaction for valid payments without pending records =====
+                        // Handle orphaned successful payments
                         if (webhookData.Code == "00" && webhookData.Desc.ToLower() == "success" && webhookData.Amount > 0)
                         {
                             _logger.LogInformation("💡 Creating manual transaction for valid payment without pending record");
@@ -347,7 +347,7 @@ namespace CosplayDate.Application.Services.Implementations
 
                         _logger.LogError("❌ Could not find any pending transaction for OrderCode: {OrderCode}, Reference: {Reference}",
                             webhookData.OrderCode, webhookData.Reference);
-                        return ApiResponse<string>.Error("No pending transaction found");
+                        return ApiResponse<string>.Success("", "No pending transaction found - webhook acknowledged");
                     }
                 }
 
@@ -355,7 +355,7 @@ namespace CosplayDate.Application.Services.Implementations
                 if (user == null)
                 {
                     _logger.LogError("❌ User not found for transaction: {TransactionCode}", pendingTransaction.TransactionCode);
-                    return ApiResponse<string>.Error("User not found");
+                    return ApiResponse<string>.Success("", "User not found - webhook acknowledged");
                 }
 
                 // Check if payment was successful
@@ -420,32 +420,53 @@ namespace CosplayDate.Application.Services.Implementations
                     _unitOfWork.WalletTransactions.Update(pendingTransaction);
                     await _unitOfWork.SaveChangesAsync();
 
-                    return ApiResponse<string>.Success("", "Payment failed");
+                    return ApiResponse<string>.Success("", "Payment failed - webhook acknowledged");
                 }
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "❌ Error processing payment webhook for OrderCode: {OrderCode}", webhookData.OrderCode);
-                return ApiResponse<string>.Error("An error occurred while processing payment webhook");
+                // Always return success to prevent PayOS retries
+                return ApiResponse<string>.Success("", "Webhook error handled");
             }
         }
 
-        // ===== NEW: Helper methods =====
+        // Add these helper methods at the bottom of WalletService class
         private bool IsTestWebhook(WebhookDataDto webhookData)
         {
-            // Common test patterns from PayOS
-            var testPatterns = new[]
+            // Comprehensive test detection patterns
+            var testIndicators = new[]
             {
-        "123", "TF230204212323", "test", "demo"
+        "123", "TF230204212323", "test", "demo", "sample", "example"
     };
 
             var orderCodeStr = webhookData.OrderCode.ToString();
             var reference = webhookData.Reference ?? "";
 
-            return testPatterns.Any(pattern =>
-                orderCodeStr.Contains(pattern, StringComparison.OrdinalIgnoreCase) ||
-                reference.Contains(pattern, StringComparison.OrdinalIgnoreCase)) ||
-                webhookData.OrderCode < 1000; // Very low order codes are likely tests
+            // Check order code patterns
+            var isTestOrderCode = testIndicators.Any(pattern =>
+                orderCodeStr.Equals(pattern, StringComparison.OrdinalIgnoreCase) ||
+                orderCodeStr.Contains(pattern, StringComparison.OrdinalIgnoreCase));
+
+            // Check reference patterns  
+            var isTestReference = testIndicators.Any(pattern =>
+                reference.Contains(pattern, StringComparison.OrdinalIgnoreCase));
+
+            // Check for very low order codes (likely tests)
+            var isLowOrderCode = webhookData.OrderCode < 1000;
+
+            // Check for specific test amounts
+            var isTestAmount = webhookData.Amount <= 1000;
+
+            var isTest = isTestOrderCode || isTestReference || isLowOrderCode || isTestAmount;
+
+            if (isTest)
+            {
+                _logger.LogInformation("🧪 Test webhook indicators: OrderCode={OrderCode}, Reference={Reference}, Amount={Amount}, IsLowCode={IsLowCode}, IsTestAmount={IsTestAmount}",
+                    orderCodeStr, reference, webhookData.Amount, isLowOrderCode, isTestAmount);
+            }
+
+            return isTest;
         }
 
         private async Task<ApiResponse<string>> HandleOrphanedSuccessfulPayment(WebhookDataDto webhookData)
