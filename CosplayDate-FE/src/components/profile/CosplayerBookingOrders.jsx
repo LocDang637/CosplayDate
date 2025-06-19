@@ -48,6 +48,8 @@ import {
 import { format, parseISO, differenceInDays } from 'date-fns';
 import { vi } from 'date-fns/locale';
 import { bookingAPI } from '../../services/bookingAPI';
+import { LocalizationProvider, DatePicker, TimePicker } from '@mui/x-date-pickers';
+import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 
 const CosplayerBookingOrders = () => {
   const [bookings, setBookings] = useState([]);
@@ -77,6 +79,62 @@ const CosplayerBookingOrders = () => {
   // Menu
   const [anchorEl, setAnchorEl] = useState(null);
   const [selectedBooking, setSelectedBooking] = useState(null);
+
+  // Add these state variables to CosplayerBookingOrders component
+  const [editDialog, setEditDialog] = useState({
+    open: false,
+    booking: null,
+    formData: {
+      bookingDate: null,
+      startTime: null,
+      endTime: null,
+      location: '',
+      specialNotes: ''
+    }
+  });
+
+  // Add this function to handle opening edit dialog
+  const handleEditBooking = (booking) => {
+    setEditDialog({
+      open: true,
+      booking,
+      formData: {
+        bookingDate: parseISO(booking.bookingDate),
+        startTime: booking.startTime,
+        endTime: booking.endTime,
+        location: booking.location || '',
+        specialNotes: booking.notes || ''
+      }
+    });
+  };
+
+  // Add this function to handle updating booking
+  const handleUpdateBooking = async () => {
+    if (!editDialog.booking) return;
+
+    try {
+      const updateData = {
+        bookingDate: format(editDialog.formData.bookingDate, 'yyyy-MM-dd'),
+        startTime: editDialog.formData.startTime,
+        endTime: editDialog.formData.endTime,
+        location: editDialog.formData.location,
+        specialNotes: editDialog.formData.specialNotes
+      };
+
+      const result = await bookingAPI.updateBooking(editDialog.booking.id, updateData);
+
+      if (result.success) {
+        await loadBookings();
+        setEditDialog({ open: false, booking: null, formData: {} });
+        // Optional: Show success message
+      } else {
+        console.error('Failed to update booking:', result.message);
+        // Optional: Show error message
+      }
+    } catch (err) {
+      console.error('Error updating booking:', err);
+    }
+  };
 
   useEffect(() => {
     loadBookings();
@@ -449,31 +507,63 @@ const CosplayerBookingOrders = () => {
 
             {/* Action Buttons */}
             {canUpdateStatus(booking) && (
-              <Box sx={{ display: 'flex', gap: 1, mt: 2 }}>
+              <Box sx={{ mt: 2 }}>
                 {booking.status === 'Pending' && (
-                  <>
-                    <Button
-                      variant="contained"
-                      size="small"
-                      fullWidth
-                      startIcon={<CheckCircle />}
-                      onClick={(e) => handleStatusButtonClick(e, 'Confirmed')}
-                      sx={{ borderRadius: '8px' }}
-                    >
-                      Xác nhận
-                    </Button>
-                    <Button
-                      variant="outlined"
-                      size="small"
-                      fullWidth
-                      color="error"
-                      startIcon={<Close />}
-                      onClick={(e) => handleStatusButtonClick(e, 'Cancelled')}
-                      sx={{ borderRadius: '8px' }}
-                    >
-                      Từ chối
-                    </Button>
-                  </>
+                  <Grid container spacing={1}>
+                    <Grid item xs={12}>
+                      <Button
+                        size="small"
+                        variant="outlined"
+                        fullWidth
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleEditBooking(booking);
+                        }}
+                        sx={{
+                          borderColor: '#e91e63',
+                          color: '#e91e63',
+                          borderRadius: '8px',
+                          '&:hover': {
+                            borderColor: '#d81b60',
+                            backgroundColor: 'rgba(233, 30, 99, 0.08)'
+                          }
+                        }}
+                      >
+                        Chỉnh sửa
+                      </Button>
+                    </Grid>
+                    <Grid item xs={6}>
+                      <Button
+                        variant="contained"
+                        size="small"
+                        fullWidth
+                        startIcon={<CheckCircle />}
+                        onClick={(e) => handleStatusButtonClick(e, 'Confirmed')}
+                        sx={{
+                          borderRadius: '8px',
+                          backgroundColor: '#e91e63',
+                          '&:hover': {
+                            backgroundColor: '#d81b60'
+                          }
+                        }}
+                      >
+                        Xác nhận
+                      </Button>
+                    </Grid>
+                    <Grid item xs={6}>
+                      <Button
+                        variant="outlined"
+                        size="small"
+                        fullWidth
+                        color="error"
+                        startIcon={<Close />}
+                        onClick={(e) => handleStatusButtonClick(e, 'Cancelled')}
+                        sx={{ borderRadius: '8px' }}
+                      >
+                        Từ chối
+                      </Button>
+                    </Grid>
+                  </Grid>
                 )}
                 {booking.status === 'Confirmed' && daysUntilBooking <= 0 && (
                   <Button
@@ -981,6 +1071,160 @@ const CosplayerBookingOrders = () => {
                   statusDialog.newStatus === 'Completed' ? 'hoàn thành' :
                     'thay đổi'
             }
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog
+        open={editDialog.open}
+        onClose={() => setEditDialog({ open: false, booking: null, formData: {} })}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle sx={{
+          borderBottom: '1px solid #f0f0f0',
+          pb: 2
+        }}>
+          Chỉnh sửa đặt lịch
+        </DialogTitle>
+        <DialogContent>
+          <Box sx={{ mt: 3 }}>
+            <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={vi}>
+              <Grid container spacing={2}>
+                {/* Date and Time Row */}
+                <Grid item xs={4}>
+                  <DatePicker
+                    label="Ngày đặt"
+                    value={editDialog.formData.bookingDate}
+                    onChange={(newValue) => {
+                      setEditDialog({
+                        ...editDialog,
+                        formData: { ...editDialog.formData, bookingDate: newValue }
+                      });
+                    }}
+                    slotProps={{
+                      textField: {
+                        fullWidth: true,
+                        variant: 'outlined',
+                        size: 'small',
+                        error: !editDialog.formData.bookingDate,
+                        helperText: !editDialog.formData.bookingDate ? 'Vui lòng chọn ngày' : ''
+                      }
+                    }}
+                    minDate={new Date()}
+                  />
+                </Grid>
+
+                {/* Start Time */}
+                <Grid item xs={4}>
+                  <TextField
+                    fullWidth
+                    size="small"
+                    label="Giờ bắt đầu"
+                    type="time"
+                    value={editDialog.formData.startTime || ''}
+                    onChange={(e) => {
+                      setEditDialog({
+                        ...editDialog,
+                        formData: { ...editDialog.formData, startTime: e.target.value }
+                      });
+                    }}
+                    InputLabelProps={{ shrink: true }}
+                    inputProps={{ step: 300 }}
+                    error={!editDialog.formData.startTime}
+                    helperText={!editDialog.formData.startTime ? 'Bắt buộc' : ''}
+                  />
+                </Grid>
+
+                {/* End Time */}
+                <Grid item xs={4}>
+                  <TextField
+                    fullWidth
+                    size="small"
+                    label="Giờ kết thúc"
+                    type="time"
+                    value={editDialog.formData.endTime || ''}
+                    onChange={(e) => {
+                      setEditDialog({
+                        ...editDialog,
+                        formData: { ...editDialog.formData, endTime: e.target.value }
+                      });
+                    }}
+                    InputLabelProps={{ shrink: true }}
+                    inputProps={{ step: 300 }}
+                    error={!editDialog.formData.endTime}
+                    helperText={!editDialog.formData.endTime ? 'Bắt buộc' : ''}
+                  />
+                </Grid>
+
+                {/* Location - Force new row */}
+                <Grid item xs={12} sx={{ width: '100%' }}>
+                  <TextField
+                    fullWidth
+                    size="small"
+                    label="Địa điểm"
+                    value={editDialog.formData.location}
+                    onChange={(e) => {
+                      setEditDialog({
+                        ...editDialog,
+                        formData: { ...editDialog.formData, location: e.target.value }
+                      });
+                    }}
+                    placeholder="Nhập địa điểm..."
+                    error={!editDialog.formData.location}
+                    helperText={!editDialog.formData.location ? 'Vui lòng nhập địa điểm' : ''}
+                  />
+                </Grid>
+
+                {/* Special Notes - Force new row */}
+                <Grid item xs={12} sx={{ width: '100%' }}>
+                  <TextField
+                    fullWidth
+                    size="small"
+                    label="Ghi chú đặc biệt"
+                    value={editDialog.formData.specialNotes}
+                    onChange={(e) => {
+                      setEditDialog({
+                        ...editDialog,
+                        formData: { ...editDialog.formData, specialNotes: e.target.value }
+                      });
+                    }}
+                    multiline
+                    rows={3}
+                    placeholder="Nhập yêu cầu đặc biệt (không bắt buộc)..."
+                  />
+                </Grid>
+              </Grid>
+            </LocalizationProvider>
+          </Box>
+        </DialogContent>
+        <DialogActions sx={{
+          borderTop: '1px solid #f0f0f0',
+          p: 2
+        }}>
+          <Button
+            onClick={() => setEditDialog({ open: false, booking: null, formData: {} })}
+            sx={{ color: '#666' }}
+          >
+            Hủy
+          </Button>
+          <Button
+            onClick={handleUpdateBooking}
+            variant="contained"
+            disabled={
+              !editDialog.formData.bookingDate ||
+              !editDialog.formData.startTime ||
+              !editDialog.formData.endTime ||
+              !editDialog.formData.location
+            }
+            sx={{
+              backgroundColor: '#e91e63',
+              '&:hover': {
+                backgroundColor: '#d81b60'
+              }
+            }}
+          >
+            Cập nhật
           </Button>
         </DialogActions>
       </Dialog>

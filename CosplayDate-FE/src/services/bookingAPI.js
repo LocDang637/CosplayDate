@@ -181,7 +181,7 @@ export const bookingAPI = {
   getUpcomingBookings: async (params = {}) => {
     try {
       const queryParams = new URLSearchParams(params);
-      const response = await api.get(`/booking/upcoming?${queryParams}`);
+      const response = await api.get(`/booking/upcoming`);
       return {
         success: true,
         data: response.data.data || response.data || [],
@@ -203,7 +203,7 @@ export const bookingAPI = {
   getBookingHistory: async (params = {}) => {
     try {
       const queryParams = new URLSearchParams(params);
-      const response = await api.get(`/booking/history?${queryParams}`);
+      const response = await api.get(`/booking/history`);
       return {
         success: true,
         data: response.data.data || response.data || [],

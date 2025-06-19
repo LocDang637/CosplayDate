@@ -128,7 +128,7 @@ namespace CosplayDate.Application.Services.Implementations
                 }
 
                 // Update booking payment status
-                booking.PaymentStatus = "Paid";
+                //booking.PaymentStatus = "Paid";
                 _unitOfWork.Bookings.Update(booking);
                 await _unitOfWork.SaveChangesAsync();
 
