@@ -188,46 +188,37 @@ namespace CosplayDate.Application.Services.Implementations
                     return ApiResponse<GetBookingsResponseDto>.Error("User not found");
                 }
 
-                _logger.LogInformation("Getting bookings for user {UserId} with type {UserType}", userId, user.UserType);
-
                 // Get bookings based on user type
                 IEnumerable<Booking> bookings;
 
                 if (user.UserType == "Customer")
                 {
-                    // For customers: get bookings they created (where they are the customer)
+                    // For customers: get all bookings where they are the customer
                     bookings = await _unitOfWork.Bookings.FindAsync(b => b.CustomerId == userId);
-                    _logger.LogInformation("Found {Count} bookings for customer {UserId}", bookings.Count(), userId);
                 }
                 else if (user.UserType == "Cosplayer")
                 {
-                    // For cosplayers: first find their cosplayer profile, then get bookings assigned to them
+                    // For cosplayers: find their cosplayer profile first, then get bookings
                     var cosplayerProfile = await _unitOfWork.Repository<Cosplayer>()
                         .FirstOrDefaultAsync(c => c.UserId == userId);
 
                     if (cosplayerProfile == null)
                     {
-                        _logger.LogWarning("Cosplayer profile not found for user {UserId}", userId);
                         return ApiResponse<GetBookingsResponseDto>.Error("Cosplayer profile not found");
                     }
 
-                    // Get bookings where this cosplayer is assigned
+                    // Get all bookings for this cosplayer
                     bookings = await _unitOfWork.Bookings.FindAsync(b => b.CosplayerId == cosplayerProfile.Id);
-                    _logger.LogInformation("Found {Count} bookings for cosplayer {CosplayerId} (user {UserId})",
-                        bookings.Count(), cosplayerProfile.Id, userId);
                 }
                 else
                 {
-                    _logger.LogWarning("Invalid user type {UserType} for user {UserId}", user.UserType, userId);
                     return ApiResponse<GetBookingsResponseDto>.Error("Invalid user type");
                 }
 
                 var bookingsList = bookings.ToList();
-                _logger.LogInformation("Total bookings before filtering: {Count}", bookingsList.Count);
 
                 // Apply filters
                 bookingsList = ApplyBookingFilters(bookingsList, request);
-                _logger.LogInformation("Total bookings after filtering: {Count}", bookingsList.Count);
 
                 // Apply sorting
                 bookingsList = ApplyBookingSorting(bookingsList, request);
@@ -241,9 +232,6 @@ namespace CosplayDate.Application.Services.Implementations
                     .Take(request.PageSize)
                     .ToList();
 
-                _logger.LogInformation("Returning {Count} bookings on page {Page} of {TotalPages}",
-                    paginatedBookings.Count, request.Page, totalPages);
-
                 // Convert to DTOs
                 var bookingDtos = new List<BookingDto>();
                 foreach (var booking in paginatedBookings)
@@ -252,7 +240,7 @@ namespace CosplayDate.Application.Services.Implementations
                     bookingDtos.Add(dto);
                 }
 
-                // Calculate stats
+                // Calculate stats based on user type
                 var stats = CalculateBookingStats(bookingsList, user.UserType);
 
                 var response = new GetBookingsResponseDto
