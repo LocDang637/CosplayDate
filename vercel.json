@@ -6,26 +6,6 @@
   "framework": "vite",
   "rewrites": [
     {
-      "source": "/payment/cancel",
-      "destination": "/index.html"
-    },
-    {
-      "source": "/payment/success", 
-      "destination": "/index.html"
-    },
-    {
-      "source": "/payment/:path*",
-      "destination": "/index.html"
-    },
-    {
-      "source": "/payment/cancelOrderCode:path*",
-      "destination": "/payment/cancel?orderCode=:path"
-    },
-    {
-      "source": "/payment/successOrderCode:path*",
-      "destination": "/payment/success?orderCode=:path"
-    },
-    {
       "source": "/(.*)",
       "destination": "/index.html"
     }

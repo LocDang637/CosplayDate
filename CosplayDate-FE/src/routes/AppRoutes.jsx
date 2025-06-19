@@ -16,7 +16,7 @@ import PaymentFailedPage from "../pages/PaymentFailedPage";
 import BecomeCosplayerPage from "../pages/BecomeCosplayerPage";
 import BookingPage from "../pages/BookingPage";
 import MyBookingsPage from "../pages/MyBookingsPage";
-
+import PaymentRedirectHandler from "../components/wallet/PaymentRedirectHandler";
 function AppRoutes() {
   return (
     <Routes>
@@ -30,6 +30,9 @@ function AppRoutes() {
       {/* Payment routes */}
       <Route path="/payment/success" element={<PaymentSuccessPage />} />
       <Route path="/payment/cancel" element={<PaymentFailedPage />} />
+
+      <Route path="/payment/*" element={<PaymentRedirectHandler />} />
+
 
       {/* Cosplayer public routes */}
       <Route path="/cosplayers" element={<Cosplayers />} />
