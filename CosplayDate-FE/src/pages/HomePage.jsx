@@ -1,18 +1,18 @@
 // src/pages/HomePage.jsx - Updated with API integration
 import React, { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { 
-  Box, 
-  Container, 
-  Typography, 
-  Grid, 
-  Card, 
+import {
+  Box,
+  Container,
+  Typography,
+  Grid,
+  Card,
   Button,
   Alert,
   Snackbar,
   Avatar
 } from '@mui/material';
-import { 
+import {
   TrendingUp,
   People,
   Event,
@@ -63,19 +63,30 @@ const HomePage = () => {
   const loadFeaturedCosplayers = async () => {
     try {
       setLoading(true);
-      
+
       const result = await cosplayerAPI.getCosplayers({
         page: 1,
         pageSize: 8,
-        sortBy: 'rating', // Get top rated cosplayers
+        sortBy: 'rating',
         sortOrder: 'desc'
       });
 
-      if (result.success) {
-        setCosplayers(result.data.items || result.data || []);
+      console.log('HomePage - API Result:', {
+        success: result.success,
+        dataLength: result.data?.length || 0,
+        data: result.data
+      });
+
+      if (result.success && result.data) {
+        // The fixed API now returns the array directly in result.data
+        setCosplayers(result.data);
+      } else {
+        setCosplayers([]);
+        console.warn('No cosplayers data received');
       }
     } catch (err) {
       console.error('Failed to load featured cosplayers:', err);
+      setCosplayers([]);
     } finally {
       setLoading(false);
     }
@@ -90,8 +101,8 @@ const HomePage = () => {
   };
 
   const handleSearch = (filters) => {
-    navigate('/cosplayers', { 
-      state: { filters } 
+    navigate('/cosplayers', {
+      state: { filters }
     });
   };
 
@@ -114,9 +125,9 @@ const HomePage = () => {
           onClose={() => setShowWelcomeMessage(false)}
           anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
         >
-          <Alert 
-            onClose={() => setShowWelcomeMessage(false)} 
-            severity="success" 
+          <Alert
+            onClose={() => setShowWelcomeMessage(false)}
+            severity="success"
             sx={{ width: '100%', borderRadius: '12px' }}
           >
             {welcomeMessage}
@@ -159,7 +170,7 @@ const HomePage = () => {
             >
               Kết nối với những Cosplayer tuyệt vời, tìm ra người phù hợp nhất và chia sẻ niềm đam mê cosplay của bạn!
             </Typography>
-            
+
             {!user ? (
               <Box sx={{ display: 'flex', gap: 2, justifyContent: 'center', flexWrap: 'wrap' }}>
                 <Button
@@ -197,18 +208,18 @@ const HomePage = () => {
                 </Button>
               </Box>
             ) : (
-              <Box sx={{ 
-                background: 'rgba(255,255,255,0.8)', 
-                borderRadius: '16px', 
-                p: 3, 
-                maxWidth: '400px', 
-                mx: 'auto' 
+              <Box sx={{
+                background: 'rgba(255,255,255,0.8)',
+                borderRadius: '16px',
+                p: 3,
+                maxWidth: '400px',
+                mx: 'auto'
               }}>
-                <Avatar sx={{ 
-                  width: 64, 
-                  height: 64, 
-                  backgroundColor: 'primary.main', 
-                  mx: 'auto', 
+                <Avatar sx={{
+                  width: 64,
+                  height: 64,
+                  backgroundColor: 'primary.main',
+                  mx: 'auto',
                   mb: 2,
                   fontSize: '24px'
                 }}>
@@ -242,8 +253,8 @@ const HomePage = () => {
         </Container>
 
         <Container maxWidth="lg" sx={{ py: 4 }}>
-          <Box sx={{ 
-            display: 'flex', 
+          <Box sx={{
+            display: 'flex',
             gap: '10px',
             flexDirection: { xs: 'column', md: 'row' },
             justifyContent: 'flex-start',

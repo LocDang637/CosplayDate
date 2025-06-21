@@ -51,9 +51,109 @@ const CosplayerProfilePage = () => {
     return user.id || user.userId;
   }, [user?.id, user?.userId]); // Only depend on the actual ID values
 
+  const handleEditProfile = useCallback(() => {
+    console.log('📝 Edit profile clicked');
+    navigate('/profile/edit');
+  }, [navigate]);
+
+  const handleFollow = useCallback(async (targetUserId) => {
+    try {
+      // Assuming you have a follow API endpoint
+      const result = await userAPI.followUser(targetUserId);
+      if (result.success) {
+        showSnackbar('Đã theo dõi thành công!', 'success');
+        // Update the profileUser state
+        setProfileUser(prev => ({
+          ...prev,
+          isFollowing: true,
+          followersCount: (prev.followersCount || 0) + 1
+        }));
+      }
+    } catch (error) {
+      console.error('Follow error:', error);
+      showSnackbar('Không thể theo dõi. Vui lòng thử lại.', 'error');
+    }
+  }, []);
+
+  const handleUnfollow = useCallback(async (targetUserId) => {
+    try {
+      // Assuming you have an unfollow API endpoint
+      const result = await userAPI.unfollowUser(targetUserId);
+      if (result.success) {
+        showSnackbar('Đã bỏ theo dõi!', 'success');
+        // Update the profileUser state
+        setProfileUser(prev => ({
+          ...prev,
+          isFollowing: false,
+          followersCount: Math.max((prev.followersCount || 0) - 1, 0)
+        }));
+      }
+    } catch (error) {
+      console.error('Unfollow error:', error);
+      showSnackbar('Không thể bỏ theo dõi. Vui lòng thử lại.', 'error');
+    }
+  }, []);
+
+  const handleFavorite = useCallback(async (cosplayerId) => {
+    try {
+      // Toggle favorite status
+      const newFavoriteStatus = !profileUser?.isFavorite;
+
+      // Call API to update favorite status
+      // const result = await cosplayerAPI.toggleFavorite(cosplayerId);
+
+      // Update local state
+      setProfileUser(prev => ({
+        ...prev,
+        isFavorite: newFavoriteStatus
+      }));
+
+      showSnackbar(
+        newFavoriteStatus ? 'Đã thêm vào yêu thích!' : 'Đã xóa khỏi yêu thích!',
+        'success'
+      );
+    } catch (error) {
+      console.error('Favorite toggle error:', error);
+      showSnackbar('Không thể cập nhật. Vui lòng thử lại.', 'error');
+    }
+  }, [profileUser?.isFavorite]);
+
+  const handleMessage = useCallback((targetUser) => {
+    console.log('💬 Message clicked for:', targetUser);
+    navigate(`/messages/${targetUser.userId || targetUser.id}`);
+  }, [navigate]);
+
+  const handleBooking = useCallback((targetCosplayer) => {
+    console.log('📅 Booking clicked for:', targetCosplayer);
+    navigate(`/booking/${targetCosplayer.id}`);
+  }, [navigate]);
+
   const isOwnProfile = !userId || (user && (
     parseInt(userId) === parseInt(getCurrentUserId())
   ));
+
+  const handleProfileUpdate = useCallback((updatedData) => {
+    console.log('📝 Profile updated:', updatedData);
+
+    // Update the profileUser state with the new data
+    setProfileUser(prev => ({
+      ...prev,
+      ...updatedData
+    }));
+
+    // Update localStorage if it's own profile
+    if (isOwnProfile) {
+      const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
+      const updatedUser = {
+        ...currentUser,
+        ...updatedData
+      };
+      localStorage.setItem('user', JSON.stringify(updatedUser));
+      setUser(updatedUser);
+    }
+
+    showSnackbar('Cập nhật hồ sơ thành công!', 'success');
+  }, [isOwnProfile]);
 
   // ✅ FIXED: Initialize user data only once
   useEffect(() => {
@@ -502,6 +602,14 @@ const CosplayerProfilePage = () => {
           <CosplayerProfileHeader
             user={profileUser}
             isOwnProfile={isOwnProfile}
+            onEditProfile={handleEditProfile}
+            onFollow={handleFollow}
+            onUnfollow={handleUnfollow}
+            onFavorite={handleFavorite}
+            onMessage={handleMessage}
+            onBooking={handleBooking}
+            currentUser={user}
+            onProfileUpdate={handleProfileUpdate}  
           />
 
           {/* Navigation Tabs */}
