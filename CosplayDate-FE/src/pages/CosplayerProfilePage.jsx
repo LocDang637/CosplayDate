@@ -132,6 +132,29 @@ const CosplayerProfilePage = () => {
     parseInt(userId) === parseInt(getCurrentUserId())
   ));
 
+  const handleProfileUpdate = useCallback((updatedData) => {
+    console.log('📝 Profile updated:', updatedData);
+
+    // Update the profileUser state with the new data
+    setProfileUser(prev => ({
+      ...prev,
+      ...updatedData
+    }));
+
+    // Update localStorage if it's own profile
+    if (isOwnProfile) {
+      const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
+      const updatedUser = {
+        ...currentUser,
+        ...updatedData
+      };
+      localStorage.setItem('user', JSON.stringify(updatedUser));
+      setUser(updatedUser);
+    }
+
+    showSnackbar('Cập nhật hồ sơ thành công!', 'success');
+  }, [isOwnProfile]);
+
   // ✅ FIXED: Initialize user data only once
   useEffect(() => {
     const storedUser = localStorage.getItem('user');
@@ -586,6 +609,7 @@ const CosplayerProfilePage = () => {
             onMessage={handleMessage}
             onBooking={handleBooking}
             currentUser={user}
+            onProfileUpdate={handleProfileUpdate}  
           />
 
           {/* Navigation Tabs */}
