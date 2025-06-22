@@ -18,4 +18,8 @@
     <ProjectReference Include="..\CosplayDate.Shared\CosplayDate.Shared.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="8.0.14" />
+  </ItemGroup>
+
 </Project>

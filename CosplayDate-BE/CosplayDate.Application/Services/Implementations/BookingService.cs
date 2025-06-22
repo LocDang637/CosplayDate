@@ -13,14 +13,17 @@ namespace CosplayDate.Application.Services.Implementations
     {
         private readonly IUnitOfWork _unitOfWork;
         private readonly IWalletService _walletService;
+        private readonly IEscrowService _escrowService; // ADD THIS
         private readonly ILogger<BookingService> _logger;
 
         public BookingService(
             IUnitOfWork unitOfWork,
             IWalletService walletService,
+            IEscrowService escrowService, // ADD THIS
             ILogger<BookingService> logger)
         {
             _unitOfWork = unitOfWork;
+            _escrowService = escrowService; // ADD THIS
             _walletService = walletService;
             _logger = logger;
         }
@@ -84,7 +87,6 @@ namespace CosplayDate.Application.Services.Implementations
                     return ApiResponse<CreateBookingResponseDto>.Error("The selected time slot conflicts with another booking");
                 }
 
-                // Generate booking code
                 var bookingCode = GenerateBookingCode();
 
                 // Create booking
@@ -95,19 +97,36 @@ namespace CosplayDate.Application.Services.Implementations
                     CosplayerId = request.CosplayerId,
                     ServiceType = request.ServiceType,
                     BookingDate = request.BookingDate,
-                    StartTime = startTime,  // Use parsed TimeOnly
-                    EndTime = endTime,      // Use parsed TimeOnly
+                    StartTime = startTime,
+                    EndTime = endTime,
                     Duration = duration,
                     Location = request.Location,
                     TotalPrice = totalPrice,
                     Status = "Pending",
-                    PaymentStatus = "Pending",
+                    PaymentStatus = "Held", // Changed to "Held" for escrow
                     SpecialNotes = request.SpecialNotes,
                     CreatedAt = DateTime.UtcNow,
                     UpdatedAt = DateTime.UtcNow
                 };
 
                 await _unitOfWork.Bookings.AddAsync(booking);
+                await _unitOfWork.SaveChangesAsync();
+
+                // Create Payment record
+                var payment = new Payment
+                {
+                    BookingId = booking.Id,
+                    PaymentCode = GeneratePaymentCode(),
+                    Amount = totalPrice,
+                    PaymentMethod = "WALLET",
+                    Status = "Completed", // Payment is completed but money is held in escrow
+                    NetAmount = totalPrice,
+                    ProcessingFee = 0,
+                    ProcessedAt = DateTime.UtcNow,
+                    CreatedAt = DateTime.UtcNow
+                };
+
+                await _unitOfWork.Payments.AddAsync(payment);
                 await _unitOfWork.SaveChangesAsync();
 
                 // Deduct amount from customer wallet
@@ -121,33 +140,34 @@ namespace CosplayDate.Application.Services.Implementations
 
                 if (!deductResult.IsSuccess)
                 {
-                    // Remove the booking if payment fails
-                    _unitOfWork.Bookings.Remove(booking);
-                    await _unitOfWork.SaveChangesAsync();
+                    await _unitOfWork.RollbackTransactionAsync();
                     return ApiResponse<CreateBookingResponseDto>.Error("Payment processing failed");
                 }
 
-                // Update booking payment status
-                //booking.PaymentStatus = "Paid";
-                _unitOfWork.Bookings.Update(booking);
-                await _unitOfWork.SaveChangesAsync();
+                // Create escrow transaction to hold the money
+                var escrow = await _escrowService.CreateEscrowAsync(booking.Id, payment.Id, totalPrice);
+
+                await _unitOfWork.CommitTransactionAsync();
 
                 var response = new CreateBookingResponseDto
                 {
                     BookingId = booking.Id,
                     BookingCode = bookingCode,
                     TotalPrice = totalPrice,
-                    PaymentUrl = "", // Not needed since payment is via wallet
-                    Message = "Booking created successfully",
+                    PaymentUrl = "",
+                    Message = "Booking created successfully. Payment is held in escrow until service completion.",
                     CreatedAt = booking.CreatedAt ?? DateTime.UtcNow
                 };
 
-                _logger.LogInformation("Booking created successfully: {BookingCode} for customer {CustomerId}", bookingCode, customerId);
+                _logger.LogInformation("Booking created with escrow: {BookingCode}, EscrowId: {EscrowId}",
+                    bookingCode, escrow.Id);
+
                 return ApiResponse<CreateBookingResponseDto>.Success(response, "Booking created successfully");
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error creating booking for customer {CustomerId}", customerId);
+                await _unitOfWork.RollbackTransactionAsync();
+                _logger.LogError(ex, "Error creating booking with payment and escrow");
                 return ApiResponse<CreateBookingResponseDto>.Error("An error occurred while creating the booking");
             }
         }
@@ -391,6 +411,8 @@ namespace CosplayDate.Application.Services.Implementations
 
         public async Task<ApiResponse<string>> CancelBookingAsync(int bookingId, int userId, CancelBookingRequestDto request)
         {
+            await _unitOfWork.BeginTransactionAsync();
+
             try
             {
                 var booking = await _unitOfWork.Bookings.GetByIdAsync(bookingId);
@@ -415,42 +437,27 @@ namespace CosplayDate.Application.Services.Implementations
                     return ApiResponse<string>.Error("Cannot cancel a completed booking");
                 }
 
-                // Calculate refund amount based on cancellation policy
-                var refundAmount = CalculateRefundAmount(booking);
-
-                booking.Status = "Cancelled";
-                booking.CancellationReason = request.CancellationReason;
-                booking.UpdatedAt = DateTime.UtcNow;
-
-                // Process refund if applicable
-                if (refundAmount > 0)
+                // Get escrow transaction
+                var escrow = await _escrowService.GetEscrowByBookingAsync(bookingId);
+                if (escrow != null && escrow.Status == "Held")
                 {
-                    var refundResult = await _walletService.ProcessWalletTransactionAsync(
-                        booking.CustomerId,
-                        refundAmount,
-                        "BOOKING_REFUND",
-                        $"Refund for cancelled booking {booking.BookingCode}",
-                        booking.Id.ToString()
-                    );
-
-                    if (!refundResult.IsSuccess)
+                    // Refund escrow instead of direct wallet refund
+                    var refundResult = await _escrowService.RefundEscrowAsync(escrow.Id, request.CancellationReason ?? "Booking cancelled");
+                    if (!refundResult)
                     {
-                        _logger.LogError("Failed to process refund for booking {BookingCode}", booking.BookingCode);
+                        await _unitOfWork.RollbackTransactionAsync();
+                        return ApiResponse<string>.Error("Failed to process refund");
                     }
                 }
 
-                _unitOfWork.Bookings.Update(booking);
-                await _unitOfWork.SaveChangesAsync();
+                await _unitOfWork.CommitTransactionAsync();
 
-                var message = refundAmount > 0
-                    ? $"Booking cancelled successfully. Refund amount: {refundAmount:N0} VND"
-                    : "Booking cancelled successfully";
-
-                _logger.LogInformation("Booking cancelled: {BookingCode} by user {UserId}", booking.BookingCode, userId);
-                return ApiResponse<string>.Success("", message);
+                _logger.LogInformation("Booking cancelled with escrow refund: {BookingCode} by user {UserId}", booking.BookingCode, userId);
+                return ApiResponse<string>.Success("", "Booking cancelled successfully. Refund has been processed.");
             }
             catch (Exception ex)
             {
+                await _unitOfWork.RollbackTransactionAsync();
                 _logger.LogError(ex, "Error cancelling booking {BookingId}", bookingId);
                 return ApiResponse<string>.Error("An error occurred while cancelling the booking");
             }
@@ -495,8 +502,16 @@ namespace CosplayDate.Application.Services.Implementations
             }
         }
 
-        public async Task<ApiResponse<string>> CompleteBookingAsync(int bookingId, int userId)
+        private string GeneratePaymentCode()
         {
+            return $"PAY{DateTime.UtcNow:yyyyMMddHHmmss}{Random.Shared.Next(1000, 9999)}";
+        }
+
+        // ADD method for completing bookings
+        public async Task<ApiResponse<string>> CompleteBookingAsync(int bookingId, int customerId)
+        {
+            await _unitOfWork.BeginTransactionAsync();
+
             try
             {
                 var booking = await _unitOfWork.Bookings.GetByIdAsync(bookingId);
@@ -505,43 +520,41 @@ namespace CosplayDate.Application.Services.Implementations
                     return ApiResponse<string>.Error("Booking not found");
                 }
 
-                // Check if user has permission (customer or cosplayer)
-                var hasPermission = booking.CustomerId == userId;
-                if (!hasPermission)
-                {
-                    var cosplayer = await _unitOfWork.Repository<Cosplayer>()
-                        .FirstOrDefaultAsync(c => c.UserId == userId);
-                    hasPermission = cosplayer != null && booking.CosplayerId == cosplayer.Id;
-                }
-
-                if (!hasPermission)
+                // Verify customer permissions
+                if (booking.CustomerId != customerId)
                 {
                     return ApiResponse<string>.Error("You don't have permission to complete this booking");
                 }
 
+                // Check booking status
                 if (booking.Status != "Confirmed")
                 {
                     return ApiResponse<string>.Error("Only confirmed bookings can be completed");
                 }
 
-                // Check if booking date has passed
-                var bookingDateTime = booking.BookingDate.ToDateTime(booking.EndTime);
-                if (bookingDateTime > DateTime.Now)
+                // Get escrow transaction
+                var escrow = await _escrowService.GetEscrowByBookingAsync(bookingId);
+                if (escrow == null)
                 {
-                    return ApiResponse<string>.Error("Cannot complete booking before the scheduled end time");
+                    return ApiResponse<string>.Error("No escrow transaction found for this booking");
                 }
 
-                booking.Status = "Completed";
-                booking.UpdatedAt = DateTime.UtcNow;
+                // Release escrow (this will transfer money to cosplayer and update booking status)
+                var releaseResult = await _escrowService.ReleaseEscrowAsync(escrow.Id, customerId);
+                if (!releaseResult)
+                {
+                    await _unitOfWork.RollbackTransactionAsync();
+                    return ApiResponse<string>.Error("Failed to release payment");
+                }
 
-                _unitOfWork.Bookings.Update(booking);
-                await _unitOfWork.SaveChangesAsync();
+                await _unitOfWork.CommitTransactionAsync();
 
-                _logger.LogInformation("Booking completed: {BookingCode} by user {UserId}", booking.BookingCode, userId);
-                return ApiResponse<string>.Success("", "Booking completed successfully");
+                _logger.LogInformation("Booking completed and payment released: {BookingCode}", booking.BookingCode);
+                return ApiResponse<string>.Success("", "Booking completed successfully! Payment has been released to the cosplayer.");
             }
             catch (Exception ex)
             {
+                await _unitOfWork.RollbackTransactionAsync();
                 _logger.LogError(ex, "Error completing booking {BookingId}", bookingId);
                 return ApiResponse<string>.Error("An error occurred while completing the booking");
             }
