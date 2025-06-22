@@ -165,6 +165,12 @@ namespace CosplayDate.Application.Services.Implementations
             }
         }
 
+        public async Task<ApiResponse<string>> AddToWalletAsync(int userId, decimal amount, string type, string description, string? referenceId = null)
+        {
+            // This is just a wrapper around ProcessWalletTransactionAsync for cleaner API
+            return await ProcessWalletTransactionAsync(userId, amount, type, description, referenceId);
+        }
+
         // ===== ENHANCED: Better webhook processing with more logging =====
         //public async Task<ApiResponse<string>> ProcessPaymentWebhookAsync(WebhookDataDto webhookData)
         //{

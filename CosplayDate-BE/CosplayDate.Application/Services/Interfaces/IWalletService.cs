@@ -15,5 +15,6 @@ namespace CosplayDate.Application.Services.Interfaces
         Task<ApiResponse<string>> ProcessPaymentWebhookAsync(WebhookDataDto webhookData);
         Task<ApiResponse<string>> ProcessWalletTransactionAsync(int userId, decimal amount, string type, string description, string? referenceId = null);
         Task<ApiResponse<List<RecentTransactionDto>>> GetTransactionHistoryAsync(int userId, int page = 1, int pageSize = 20);
+        Task<ApiResponse<string>> AddToWalletAsync(int userId, decimal amount, string type, string description, string? referenceId = null);
     }
 }

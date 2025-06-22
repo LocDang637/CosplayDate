@@ -17,6 +17,7 @@ public partial class CosplayDateDbContext : DbContext
     }
 
     public virtual DbSet<Booking> Bookings { get; set; }
+    public virtual DbSet<EscrowTransaction> EscrowTransactions { get; set; }
 
     public virtual DbSet<Conversation> Conversations { get; set; }
 
@@ -116,6 +117,21 @@ public partial class CosplayDateDbContext : DbContext
                 .HasForeignKey(d => d.CustomerId)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK__Bookings__Custom__1EA48E88");
+        });
+
+
+        modelBuilder.Entity<EscrowTransaction>(entity =>
+        {
+            entity.HasKey(e => e.Id).HasName("PK__EscrowTr__3214EC079213871B");
+
+            entity.Property(e => e.Amount).HasColumnType("decimal(18, 2)");
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("(getdate())");
+            entity.Property(e => e.Status)
+                .IsRequired()
+                .HasMaxLength(30);
+            entity.Property(e => e.TransactionCode)
+                .IsRequired()
+                .HasMaxLength(100);
         });
 
         modelBuilder.Entity<Conversation>(entity =>
