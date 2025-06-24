@@ -24,6 +24,7 @@ import {
 } from '@mui/material';
 import { Close } from '@mui/icons-material';
 import { cosplayerAPI } from '../../services/cosplayerAPI';
+import { debugToken, hasValidCosplayerToken } from '../../utils/tokenUtils';
 
 const EditCosplayerDialog = ({ open, onClose, cosplayer, onUpdateSuccess }) => {
   const [loading, setLoading] = useState(false);
@@ -108,6 +109,21 @@ const EditCosplayerDialog = ({ open, onClose, cosplayer, onUpdateSuccess }) => {
       setLoading(true);
       setError('');
 
+      // Debug token before making the request
+      console.log('🔍 Checking token before update...');
+      debugToken();
+
+      // Check if token has valid cosplayer claims
+      if (!hasValidCosplayerToken()) {
+        setError('Your session needs to be refreshed. Please log in again.');
+        setTimeout(() => {
+          localStorage.removeItem('token');
+          localStorage.removeItem('user');
+          window.location.href = '/login';
+        }, 2000);
+        return;
+      }
+
       // Validate required fields
       if (!formData.displayName.trim()) {
         setError('Tên hiển thị không được để trống');
@@ -139,7 +155,17 @@ const EditCosplayerDialog = ({ open, onClose, cosplayer, onUpdateSuccess }) => {
         onUpdateSuccess?.(result.data);
         onClose();
       } else {
-        setError(result.message || 'Cập nhật thất bại. Vui lòng thử lại.');
+        // Check if it's an auth error
+        if (result.message?.includes('403') || result.message?.includes('unauthorized')) {
+          setError('Authentication error. Please log in again.');
+          setTimeout(() => {
+            localStorage.removeItem('token');
+            localStorage.removeItem('user');
+            window.location.href = '/login';
+          }, 2000);
+        } else {
+          setError(result.message || 'Cập nhật thất bại. Vui lòng thử lại.');
+        }
       }
     } catch (err) {
       console.error('Update error:', err);
@@ -293,17 +319,21 @@ const EditCosplayerDialog = ({ open, onClose, cosplayer, onUpdateSuccess }) => {
                 />
               )}
               renderTags={(value, getTagProps) =>
-                value.map((option, index) => (
-                  <Chip
-                    label={option}
-                    {...getTagProps({ index })}
-                    sx={{
-                      bgcolor: 'primary.main',
-                      color: 'white',
-                      '& .MuiChip-deleteIcon': { color: 'rgba(255,255,255,0.7)' }
-                    }}
-                  />
-                ))
+                value.map((option, index) => {
+                  const { key, ...otherProps } = getTagProps({ index });
+                  return (
+                    <Chip
+                      key={key}
+                      label={option}
+                      {...otherProps}
+                      sx={{
+                        bgcolor: 'primary.main',
+                        color: 'white',
+                        '& .MuiChip-deleteIcon': { color: 'rgba(255,255,255,0.7)' }
+                      }}
+                    />
+                  );
+                })
               }
             />
 
@@ -323,17 +353,21 @@ const EditCosplayerDialog = ({ open, onClose, cosplayer, onUpdateSuccess }) => {
                 />
               )}
               renderTags={(value, getTagProps) =>
-                value.map((option, index) => (
-                  <Chip
-                    label={option}
-                    {...getTagProps({ index })}
-                    size="small"
-                    sx={{
-                      bgcolor: 'rgba(233, 30, 99, 0.1)',
-                      color: 'primary.main'
-                    }}
-                  />
-                ))
+                value.map((option, index) => {
+                  const { key, ...otherProps } = getTagProps({ index });
+                  return (
+                    <Chip
+                      key={key}
+                      label={option}
+                      {...otherProps}
+                      size="small"
+                      sx={{
+                        bgcolor: 'rgba(233, 30, 99, 0.1)',
+                        color: 'primary.main'
+                      }}
+                    />
+                  );
+                })
               }
             />
           </Box>

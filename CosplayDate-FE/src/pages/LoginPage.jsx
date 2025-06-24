@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { useNavigate, Link, useLocation } from 'react-router-dom';
 import { Box, Typography, Alert } from '@mui/material';
 import { Email, Lock } from '@mui/icons-material';
 import PageLayout from '../components/layout/PageLayout';
@@ -13,15 +13,33 @@ const LoginPage = () => {
   const navigate = useNavigate();
   const [step, setStep] = useState('login'); // 'login' or 'verification'
   const [showPassword, setShowPassword] = useState(false);
-  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [emailError, setEmailError] = useState('');
   const [passwordError, setPasswordError] = useState('');
   const [loading, setLoading] = useState(false);
   const [apiError, setApiError] = useState('');
   const [pendingUser, setPendingUser] = useState(null); // Store user data for verification step
+  const location = useLocation();
+  const [email, setEmail] = useState(location.state?.email || '');
+  const [redirectMessage, setRedirectMessage] = useState('');
 
   const validateEmail = (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+
+  // Check for redirect message and pre-fill email
+  useEffect(() => {
+    if (location.state?.message) {
+      setRedirectMessage(location.state.message);
+      // Auto-dismiss message after 10 seconds
+      const timer = setTimeout(() => {
+        setRedirectMessage('');
+      }, 10000);
+      return () => clearTimeout(timer);
+    }
+
+    if (location.state?.email) {
+      setEmail(location.state.email);
+    }
+  }, [location.state]);
 
   const handleEmailChange = (e) => {
     const value = e.target.value;
@@ -39,63 +57,63 @@ const LoginPage = () => {
 
   const handleSuccessfulLogin = (userData, token = null) => {
     console.log('✅ Login successful!', userData);
-    
+
     // Store user data and token
     localStorage.setItem('user', JSON.stringify(userData));
     if (token) {
       localStorage.setItem('token', token);
     }
-    
+
     // Navigate to home page with welcome message
-    navigate('/', { 
-      state: { 
+    navigate('/', {
+      state: {
         message: `Chào mừng trở lại, ${userData.firstName}!`,
-        user: userData 
+        user: userData
       }
     });
   };
 
   const handleUnverifiedUser = (userData) => {
     console.log('⚠️ User not verified, redirecting to verification');
-    
+
     // Store user data with email for verification step
     const userWithEmail = {
       ...userData,
       email: userData.email || email // Ensure email is available
     };
-    
+
     setPendingUser(userWithEmail);
     setStep('verification');
   };
 
   const handleLogin = async () => {
     // Validation
-    if (!email) { 
-      setEmailError('Email là bắt buộc'); 
-      return; 
+    if (!email) {
+      setEmailError('Email là bắt buộc');
+      return;
     }
-    if (!password) { 
-      setPasswordError('Mật khẩu là bắt buộc'); 
-      return; 
+    if (!password) {
+      setPasswordError('Mật khẩu là bắt buộc');
+      return;
     }
-    if (!validateEmail(email)) { 
-      setEmailError('Vui lòng nhập địa chỉ email hợp lệ'); 
-      return; 
+    if (!validateEmail(email)) {
+      setEmailError('Vui lòng nhập địa chỉ email hợp lệ');
+      return;
     }
 
     setLoading(true);
     setApiError('');
-    
+
     try {
       const credentials = {
         email: email.trim().toLowerCase(),
         password: password
       };
-      
+
       console.log('Sending login request with credentials:', { email: credentials.email, password: '***' });
-      
+
       const result = await authAPI.login(credentials);
-      
+
       console.log('Login API result:', {
         success: result.success,
         message: result.message,
@@ -104,16 +122,16 @@ const LoginPage = () => {
         isVerified: result.data?.isVerified,
         userEmail: result.data?.user?.email
       });
-      
+
       if (result.success) {
         const { user, token, isVerified } = result.data;
-        
+
         console.log('Processing successful result:', {
           isVerified,
           hasToken: !!token,
           userEmail: user?.email
         });
-        
+
         if (isVerified && token) {
           // Case 1: Login successful and verified
           console.log('✅ Case 1: User is verified, proceeding to login');
@@ -121,13 +139,13 @@ const LoginPage = () => {
         } else if (!isVerified) {
           // Case 2: Login successful but not verified
           console.log('⚠️ Case 2: User not verified, going to verification step');
-          
+
           // Ensure we have the email for verification
           const userWithEmail = {
             ...user,
             email: user?.email || email // Use form email as fallback
           };
-          
+
           handleUnverifiedUser(userWithEmail);
         } else {
           // Edge case: verified but no token
@@ -136,7 +154,7 @@ const LoginPage = () => {
         }
       } else {
         console.error('❌ API login failed:', result.message);
-        
+
         // Case 3: Invalid credentials or other errors
         if (result.errors && Object.keys(result.errors).length > 0) {
           // Handle field-specific errors
@@ -146,13 +164,13 @@ const LoginPage = () => {
         } else {
           // Handle different types of login errors based on message content
           const message = result.message.toLowerCase();
-          
+
           console.log('Processing error message:', message);
-          
+
           if (message.includes('email') || message.includes('not found') || message.includes('không tìm thấy')) {
             setEmailError(result.message);
-          } else if (message.includes('password') || message.includes('incorrect') || message.includes('wrong') || 
-                     message.includes('mật khẩu') || message.includes('không đúng') || message.includes('sai')) {
+          } else if (message.includes('password') || message.includes('incorrect') || message.includes('wrong') ||
+            message.includes('mật khẩu') || message.includes('không đúng') || message.includes('sai')) {
             setPasswordError(result.message);
           } else if (message.includes('invalid') && (message.includes('email') || message.includes('password'))) {
             // Generic invalid credentials - could be either field
@@ -162,7 +180,7 @@ const LoginPage = () => {
           }
         }
       }
-      
+
     } catch (error) {
       console.error('Login failed:', error);
       setApiError('Lỗi kết nối. Vui lòng kiểm tra kết nối mạng và thử lại.');
@@ -173,15 +191,15 @@ const LoginPage = () => {
 
   const handleEmailVerified = async (code) => {
     console.log('Verifying email with code:', code);
-    
+
     try {
       const verificationData = {
         email: pendingUser.email,
         code: code
       };
-      
+
       const result = await authAPI.verifyEmail(verificationData);
-      
+
       if (result.success) {
         console.log('✅ Email verified successfully!');
         const verifiedUser = { ...pendingUser, isVerified: true };
@@ -189,7 +207,7 @@ const LoginPage = () => {
       } else {
         throw new Error(result.message || 'Xác thực email thất bại');
       }
-      
+
     } catch (error) {
       console.error('Email verification error:', error);
       throw error; // Re-throw to be handled by CodeVerificationCard
@@ -199,13 +217,13 @@ const LoginPage = () => {
   const handleResendVerificationCode = async () => {
     try {
       console.log('Resending verification code to:', pendingUser.email);
-      
+
       const result = await authAPI.resendVerification(pendingUser.email);
-      
+
       if (!result.success) {
         throw new Error(result.message || 'Không thể gửi lại mã xác thực');
       }
-      
+
     } catch (error) {
       console.error('Resend verification error:', error);
       throw error;
@@ -234,19 +252,30 @@ const LoginPage = () => {
 
   return (
     <PageLayout>
-      <FormContainer 
+      <FormContainer
         title="ĐĂNG NHẬP COSPLAYDATE"
         subtitle="Cosplay theo cách của bạn, lưu giữ nhân vật yêu thích và tìm kiếm kết nối để gặp gỡ & cùng nhau cosplay!"
       >
         <Box component="form" sx={{ mt: 3 }}>
           {/* API Error Alert */}
           {apiError && (
-            <Alert 
-              severity="error" 
+            <Alert
+              severity="error"
               sx={{ mb: 3, borderRadius: '12px' }}
               onClose={() => setApiError('')}
             >
               {apiError}
+            </Alert>
+          )}
+
+          {/* Display redirect message if exists */}
+          {redirectMessage && (
+            <Alert 
+              severity="success" 
+              onClose={() => setRedirectMessage('')}
+              sx={{ mb: 3, borderRadius: '12px' }}
+            >
+              {redirectMessage}
             </Alert>
           )}
 
@@ -297,8 +326,8 @@ const LoginPage = () => {
             </Typography>
           </Box>
 
-          <ActionButton 
-            onClick={handleLogin} 
+          <ActionButton
+            onClick={handleLogin}
             loading={loading}
             disabled={loading}
             sx={{ mb: 3 }}
@@ -325,10 +354,10 @@ const LoginPage = () => {
           </Box>
 
           {/* API Status Info */}
-          <Box sx={{ 
-            mt: 3, 
-            p: 2, 
-            backgroundColor: 'rgba(0,0,0,0.02)', 
+          <Box sx={{
+            mt: 3,
+            p: 2,
+            backgroundColor: 'rgba(0,0,0,0.02)',
             borderRadius: '8px',
             textAlign: 'center'
           }}>
