@@ -58,7 +58,7 @@ const CosplayerCard = ({
   console.log('CosplayerCard - Current user:', user);
 
   // Check if current user is a customer (not a cosplayer)
-  const isCustomer = currentUser && currentUser.userRole === 'Customer';
+  const isCustomer = user && user.userType === 'Customer';
 
   const formatPrice = (price) => {
     return new Intl.NumberFormat('vi-VN').format(price) + 'đ/giờ';
@@ -94,7 +94,7 @@ const CosplayerCard = ({
     e.stopPropagation();
     if (!user) {
       navigate('/login', {
-        state: { 
+        state: {
           message: 'Vui lòng đăng nhập để nhắn tin với cosplayer',
           redirectUrl: `/cosplayer/${cosplayer.id}`
         }
@@ -107,7 +107,7 @@ const CosplayerCard = ({
     e.stopPropagation();
     if (!user) {
       navigate('/login', {
-        state: { 
+        state: {
           message: 'Vui lòng đăng nhập để lưu cosplayer yêu thích',
           redirectUrl: `/cosplayer/${cosplayer.id}`
         }
@@ -377,15 +377,15 @@ const CosplayerCard = ({
             </Button>
 
             <Tooltip
-              title={!currentUser ? "Vui lòng đăng nhập để đặt lịch" : !isCustomer ? "Chỉ khách hàng mới có thể đặt lịch" : ""}
-              disableHoverListener={isCustomer}
+              title={!user ? "Vui lòng đăng nhập để đặt lịch" : !isCustomer ? "Chỉ khách hàng mới có thể đặt lịch" : ""}
+              disableHoverListener={isCustomer && user !== null}
             >
               <span style={{ flex: 1 }}>
                 <Button
                   variant="contained"
                   size="small"
                   onClick={handleBookingClick}
-                  disabled={!isCustomer && currentUser !== null}
+                  disabled={!isCustomer}
                   sx={{
                     width: '100%',
                     background: 'linear-gradient(45deg, #E91E63, #9C27B0)',

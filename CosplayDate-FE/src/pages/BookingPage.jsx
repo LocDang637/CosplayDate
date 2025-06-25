@@ -204,16 +204,6 @@ const BookingPage = () => {
             </Stepper>
           </Box>
 
-          {error && activeStep === 0 && (
-            <Alert 
-              severity="error" 
-              sx={{ mb: 3, borderRadius: '12px' }}
-              onClose={() => setError('')}
-            >
-              {error}
-            </Alert>
-          )}
-
           {renderStepContent()}
         </Container>
       </PageLayout>

@@ -249,6 +249,7 @@ const HomePage = () => {
             cosplayers={cosplayers}
             onSeeAll={handleSeeAll}
             loading={loading}
+            currentUser={user}
           />
         </Container>
 
