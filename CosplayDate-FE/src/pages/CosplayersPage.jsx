@@ -1,4 +1,4 @@
-// src/pages/CosplayersPage.jsx - Complete implementation
+// src/pages/CosplayersPage.jsx - Complete implementation with proper user passing
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
@@ -21,7 +21,9 @@ import {
   FormControl,
   InputLabel,
   Select,
-  MenuItem
+  MenuItem,
+  Grid,
+  CardContent
 } from '@mui/material';
 import {
   Search,
@@ -58,7 +60,7 @@ const CosplayersPage = () => {
   });
   const [sortBy, setSortBy] = useState('rating');
   const [sortOrder, setSortOrder] = useState('desc');
-  
+
   const itemsPerPage = 12;
 
   const categories = [
@@ -79,9 +81,15 @@ const CosplayersPage = () => {
   useEffect(() => {
     const storedUser = localStorage.getItem('user');
     if (storedUser) {
-      setUser(JSON.parse(storedUser));
+      try {
+        const parsedUser = JSON.parse(storedUser);
+        setUser(parsedUser);
+        console.log('CosplayersPage - User loaded:', parsedUser);
+      } catch (error) {
+        console.error('Error parsing stored user:', error);
+      }
     }
-    
+
     const initialFilters = Object.fromEntries(searchParams);
     if (Object.keys(initialFilters).length > 0) {
       setFilters(prev => ({ ...prev, ...initialFilters }));
@@ -139,7 +147,7 @@ const CosplayersPage = () => {
 
   const handleFilterChange = (filterType, value, checked) => {
     let newFilters = { ...filters };
-    
+
     if (Array.isArray(newFilters[filterType])) {
       if (checked) {
         newFilters[filterType] = [...newFilters[filterType], value];
@@ -149,7 +157,7 @@ const CosplayersPage = () => {
     } else {
       newFilters[filterType] = value;
     }
-    
+
     setFilters(newFilters);
     setCurrentPage(1);
     updateSearchParams({ ...newFilters, searchTerm });
@@ -192,6 +200,7 @@ const CosplayersPage = () => {
     setUser(null);
     localStorage.removeItem('user');
     localStorage.removeItem('token');
+    navigate('/');
   };
 
   const clearFilters = () => {
@@ -211,8 +220,8 @@ const CosplayersPage = () => {
   };
 
   const CosplayerSkeleton = () => (
-    <Card sx={{ borderRadius: '16px', overflow: 'hidden', width: 240, height: 380 }}>
-      <Skeleton variant="rectangular" height={200} />
+    <Card sx={{ borderRadius: '16px', overflow: 'hidden', width: 280, height: 380 }}>
+      <Skeleton variant="rectangular" height={240} />
       <Box sx={{ p: 2 }}>
         <Skeleton variant="text" sx={{ fontSize: '1rem', mb: 1 }} />
         <Skeleton variant="text" width="60%" sx={{ mb: 1 }} />
@@ -226,9 +235,9 @@ const CosplayersPage = () => {
       <Box sx={{ minHeight: '100vh', backgroundColor: '#FFE8F5' }}>
         <Header user={user} onLogout={handleLogout} />
 
-        <Box sx={{ 
-          display: 'flex', 
-          backgroundColor: '#FFE8F5', 
+        <Box sx={{
+          display: 'flex',
+          backgroundColor: '#FFE8F5',
           minHeight: 'calc(100vh - 64px)',
           position: 'relative',
           justifyContent: 'center',
@@ -425,8 +434,8 @@ const CosplayersPage = () => {
           </Box>
 
           {/* Main Content */}
-          <Box sx={{ 
-            flex: 1, 
+          <Box sx={{
+            flex: 1,
             py: 4,
             display: 'flex',
             flexDirection: 'column',
@@ -459,7 +468,7 @@ const CosplayersPage = () => {
               >
                 Khám phá ngay
               </Typography>
-              
+
               {totalCount > 0 && (
                 <Typography
                   variant="body1"
@@ -479,65 +488,36 @@ const CosplayersPage = () => {
               </Alert>
             )}
 
-            {loading ? (
-              <Box
-                sx={{
-                  display: 'grid',
-                  gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
-                  gap: '24px',
-                  justifyContent: 'center',
-                  width: '100%',
-                  maxWidth: '900px',
-                }}
-              >
-                {Array.from({ length: 12 }).map((_, index) => (
-                  <CosplayerSkeleton key={index} />
-                ))}
-              </Box>
-            ) : cosplayers.length > 0 ? (
-              <Box
-                sx={{
-                  display: 'grid',
-                  gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
-                  gap: '24px',
-                  justifyContent: 'center',
-                  width: '100%',
-                  maxWidth: '900px',
-                }}
-              >
-                {cosplayers.map((cosplayer) => (
-                  <CosplayerCard 
-                    key={cosplayer.id} 
-                    cosplayer={cosplayer}
-                    onBooking={handleBooking}
-                    onMessage={handleMessage}
-                    onFavorite={handleFavorite}
-                    isFavorite={favorites.has(cosplayer.id)}
-                  />
-                ))}
-              </Box>
-            ) : (
-              <Box sx={{ textAlign: 'center', py: 8 }}>
-                <Typography variant="h6" sx={{ color: 'text.secondary', mb: 2 }}>
-                  Không tìm thấy cosplayer nào
-                </Typography>
-                <Typography variant="body2" sx={{ color: 'text.secondary', mb: 3 }}>
-                  Hãy thử thay đổi bộ lọc tìm kiếm
-                </Typography>
-                <Button
-                  variant="contained"
-                  onClick={clearFilters}
-                  sx={{
-                    background: 'linear-gradient(45deg, #E91E63, #9C27B0)',
-                    borderRadius: '12px',
-                    textTransform: 'none',
-                    fontWeight: 600,
-                  }}
-                >
-                  Xóa tất cả bộ lọc
-                </Button>
-              </Box>
-            )}
+            {/* Cosplayers Grid */}
+            <Grid container spacing={3} justifyContent="center">
+              {loading ? (
+                // Loading skeletons
+                Array.from(new Array(6)).map((_, index) => (
+                  <Grid item key={index}>
+                    <CosplayerSkeleton />
+                  </Grid>
+                ))
+              ) : cosplayers.length > 0 ? (
+                cosplayers.map((cosplayer) => (
+                  <Grid item key={cosplayer.id}>
+                    <CosplayerCard
+                      cosplayer={cosplayer}
+                      currentUser={user}  // Pass the current user properly
+                      isFavorite={favorites.has(cosplayer.id)}
+                      onFavorite={handleFavorite}
+                      onMessage={handleMessage}
+                      onBooking={handleBooking}
+                    />
+                  </Grid>
+                ))
+              ) : (
+                <Grid item xs={12}>
+                  <Alert severity="info" sx={{ borderRadius: '12px' }}>
+                    Không tìm thấy cosplayer nào phù hợp với tiêu chí tìm kiếm.
+                  </Alert>
+                </Grid>
+              )}
+            </Grid>
 
             {!loading && totalPages > 1 && (
               <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}>

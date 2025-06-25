@@ -16,11 +16,11 @@ import {
 import { ArrowBack } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 
-const BookingServiceSelect = ({ 
-  services = [], 
-  selectedService, 
+const BookingServiceSelect = ({
+  services = [],
+  selectedService,
   onServiceSelect,
-  cosplayer 
+  cosplayer
 }) => {
   const navigate = useNavigate();
   const [selectedId, setSelectedId] = React.useState(selectedService?.id?.toString() || '');
@@ -45,6 +45,29 @@ const BookingServiceSelect = ({
         <Typography variant="h6" color="text.secondary">
           Cosplayer này chưa có dịch vụ nào
         </Typography>
+        <Box sx={{ mt: 4, display: 'flex', justifyContent: 'space-between' }}>
+          <Button
+            variant="outlined"
+            size="large"
+            onClick={() => navigate('/')}
+            startIcon={<ArrowBack />}
+            sx={{
+              borderRadius: '12px',
+              textTransform: 'none',
+              fontWeight: 600,
+              px: 3,
+              py: 1.5,
+              borderColor: 'primary.main',
+              color: 'primary.main',
+              '&:hover': {
+                borderColor: 'primary.dark',
+                backgroundColor: 'rgba(233, 30, 99, 0.05)'
+              }
+            }}
+          >
+            Về trang chủ
+          </Button>
+        </Box>
       </Box>
     );
   }
@@ -52,8 +75,8 @@ const BookingServiceSelect = ({
   return (
     <Box>
       {/* Cosplayer Info */}
-      <Card sx={{ 
-        mb: 3, 
+      <Card sx={{
+        mb: 3,
         borderRadius: '16px',
         border: '1px solid rgba(233, 30, 99, 0.1)',
         boxShadow: 'none'
@@ -62,8 +85,8 @@ const BookingServiceSelect = ({
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
             <Avatar
               src={cosplayer?.avatar}
-              sx={{ 
-                width: 64, 
+              sx={{
+                width: 64,
                 height: 64,
                 border: '3px solid rgba(233, 30, 99, 0.2)'
               }}
@@ -75,12 +98,12 @@ const BookingServiceSelect = ({
                 {cosplayer?.displayName}
               </Typography>
               <Box sx={{ display: 'flex', gap: 1, mt: 0.5 }}>
-                <Chip 
+                <Chip
                   label={`⭐ ${cosplayer?.rating || 5.0}`}
                   size="small"
                   sx={{ backgroundColor: 'rgba(255, 193, 7, 0.1)' }}
                 />
-                <Chip 
+                <Chip
                   label={`${cosplayer?.completedBookings || 0} lần đặt`}
                   size="small"
                   variant="outlined"
@@ -100,11 +123,11 @@ const BookingServiceSelect = ({
         <Grid container spacing={2}>
           {servicesList.map((service) => (
             <Grid item xs={12} key={service.id}>
-              <Card 
-                sx={{ 
+              <Card
+                sx={{
                   borderRadius: '12px',
-                  border: selectedId === service.id.toString() 
-                    ? '2px solid #E91E63' 
+                  border: selectedId === service.id.toString()
+                    ? '2px solid #E91E63'
                     : '1px solid rgba(0, 0, 0, 0.1)',
                   cursor: 'pointer',
                   transition: 'all 0.2s ease',
@@ -119,8 +142,8 @@ const BookingServiceSelect = ({
                   <FormControlLabel
                     value={service.id.toString()}
                     control={
-                      <Radio 
-                        sx={{ 
+                      <Radio
+                        sx={{
                           color: 'primary.main',
                           '&.Mui-checked': { color: 'primary.main' }
                         }}
@@ -128,8 +151,8 @@ const BookingServiceSelect = ({
                     }
                     label={
                       <Box sx={{ width: '100%' }}>
-                        <Box sx={{ 
-                          display: 'flex', 
+                        <Box sx={{
+                          display: 'flex',
                           justifyContent: 'space-between',
                           alignItems: 'flex-start',
                           mb: 1
@@ -139,8 +162,8 @@ const BookingServiceSelect = ({
                           </Typography>
                         </Box>
 
-                        <Typography 
-                          variant="body2" 
+                        <Typography
+                          variant="body2"
                           color="text.secondary"
                           sx={{ mb: 2 }}
                         >
@@ -148,12 +171,12 @@ const BookingServiceSelect = ({
                         </Typography>
                       </Box>
                     }
-                    sx={{ 
-                      m: 0, 
+                    sx={{
+                      m: 0,
                       width: '100%',
-                      '& .MuiFormControlLabel-label': { 
+                      '& .MuiFormControlLabel-label': {
                         width: '100%',
-                        ml: 2 
+                        ml: 2
                       }
                     }}
                   />
@@ -186,7 +209,7 @@ const BookingServiceSelect = ({
         >
           Về trang chủ
         </Button>
-        
+
         <Button
           variant="contained"
           size="large"
