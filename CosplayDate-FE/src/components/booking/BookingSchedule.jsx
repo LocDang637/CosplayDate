@@ -14,9 +14,10 @@ import {
   Divider,
   InputAdornment,
   Dialog,
-  DialogTitle,
   DialogContent,
-  DialogActions
+  Avatar,
+  IconButton,
+  Fade
 } from '@mui/material';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { TimePicker } from '@mui/x-date-pickers/TimePicker';
@@ -30,7 +31,11 @@ import {
   ArrowBack,
   AttachMoney,
   LocationOn,
-  CheckCircle
+  CheckCircle,
+  Close,
+  Person,
+  EventNote,
+  Info
 } from '@mui/icons-material';
 import { format, addDays, isBefore, parse, isValid } from 'date-fns';
 import { bookingAPI } from '../../services/bookingAPI';
@@ -67,10 +72,11 @@ const BookingSchedule = ({
       setLoading(true);
       setError('');
       
-      // Format times as HH:mm
+      // Format times as HH:mm for the API
       const startTimeStr = format(startTime, 'HH:mm');
       const endTimeStr = format(endTime, 'HH:mm');
       
+      // Call the calculate-price API
       const result = await bookingAPI.calculatePrice(
         cosplayer.id,
         startTimeStr,
@@ -80,11 +86,25 @@ const BookingSchedule = ({
       if (result.success) {
         setTotalPrice(result.data);
       } else {
-        setError('Không thể tính giá. Vui lòng thử lại.');
+        // Fallback to manual calculation if API fails
+        const hours = calculateDuration();
+        if (hours > 0) {
+          const calculatedPrice = cosplayer.pricePerHour * hours;
+          setTotalPrice(calculatedPrice);
+        } else {
+          setError('Thời gian không hợp lệ');
+        }
       }
     } catch (err) {
       console.error('Failed to calculate price:', err);
-      setError('Không thể tính giá. Vui lòng thử lại.');
+      // Fallback to manual calculation
+      const hours = calculateDuration();
+      if (hours > 0) {
+        const calculatedPrice = cosplayer.pricePerHour * hours;
+        setTotalPrice(calculatedPrice);
+      } else {
+        setError('Không thể tính giá. Vui lòng thử lại.');
+      }
     } finally {
       setLoading(false);
     }
@@ -118,16 +138,18 @@ const BookingSchedule = ({
       setCreating(true);
       setError('');
       
-      // Create booking data matching the API structure
+      // Create booking data matching the exact API structure
       const bookingData = {
-        cosplayerId: parseInt(cosplayer.id),
-        serviceType: service.name,
-        bookingDate: format(date, 'yyyy-MM-dd'),
-        startTime: format(startTime, 'HH:mm'),
-        endTime: format(endTime, 'HH:mm'),
+        cosplayerId: parseInt(cosplayer.id), // Ensure it's a number
+        serviceType: service?.serviceName || service?.name || 'General Service', // Use serviceName
+        bookingDate: format(date, 'yyyy-MM-dd'), // Format: "2025-06-25"
+        startTime: format(startTime, 'HH:mm'), // Format: "HH:mm"
+        endTime: format(endTime, 'HH:mm'), // Format: "HH:mm"
         location: location.trim(),
-        specialNotes: note.trim() || ''
+        specialNotes: note.trim() || '' // Empty string if no notes
       };
+
+      console.log('Sending booking data:', bookingData); // Debug log
 
       const result = await bookingAPI.createBooking(bookingData);
       
@@ -163,6 +185,30 @@ const BookingSchedule = ({
     }).format(price);
   };
 
+  // Calculate duration in hours
+  const calculateDuration = () => {
+    if (!startTime || !endTime) return 0;
+    const start = startTime.getHours() + startTime.getMinutes() / 60;
+    const end = endTime.getHours() + endTime.getMinutes() / 60;
+    return end - start;
+  };
+
+  // Prepare booking data for confirmation dialog
+  const bookingData = {
+    cosplayer: {
+      name: cosplayer?.displayName,
+      avatar: cosplayer?.avatarUrl
+    },
+    service: service?.serviceName || service?.name,
+    date: formatSelectedDate(),
+    time: startTime && endTime ? `${format(startTime, 'HH:mm')} - ${format(endTime, 'HH:mm')}` : '',
+    duration: `${calculateDuration()} giờ`,
+    location: location,
+    notes: note,
+    totalPrice: totalPrice,
+    pricePerHour: cosplayer?.pricePerHour || 0
+  };
+
   return (
     <Box>
       {/* Service Summary */}
@@ -174,10 +220,10 @@ const BookingSchedule = ({
       }}>
         <CardContent>
           <Typography variant="h6" sx={{ fontWeight: 600, mb: 1 }}>
-            {service?.name}
+            {service?.serviceName || service?.name}
           </Typography>
           <Typography variant="body2" color="text.secondary">
-            {service?.description}
+            {service?.serviceDescription || service?.description}
           </Typography>
         </CardContent>
       </Card>
@@ -217,8 +263,8 @@ const BookingSchedule = ({
           Chọn thời gian:
         </Typography>
         
-        <Grid container spacing={2}>
-          <Grid item xs={12} sm={6}>
+        <Grid container spacing={2} sx={{ mb: 3 }}>
+          <Grid item xs={6}>
             <TimePicker
               label="Thời gian bắt đầu"
               value={startTime}
@@ -237,8 +283,7 @@ const BookingSchedule = ({
               }}
             />
           </Grid>
-          
-          <Grid item xs={12} sm={6}>
+          <Grid item xs={6}>
             <TimePicker
               label="Thời gian kết thúc"
               value={endTime}
@@ -260,8 +305,8 @@ const BookingSchedule = ({
           </Grid>
         </Grid>
 
-        {/* Location */}
-        <Typography variant="h6" sx={{ mt: 3, mb: 2, fontWeight: 600 }}>
+        {/* Location Input */}
+        <Typography variant="h6" sx={{ mb: 2, fontWeight: 600 }}>
           Địa điểm:
         </Typography>
         
@@ -269,7 +314,8 @@ const BookingSchedule = ({
           fullWidth
           value={location}
           onChange={(e) => setLocation(e.target.value)}
-          placeholder="Nhập địa điểm buổi hẹn..."
+          placeholder="Nhập địa điểm gặp mặt"
+          sx={{ mb: 3 }}
           InputProps={{
             startAdornment: (
               <InputAdornment position="start">
@@ -277,10 +323,9 @@ const BookingSchedule = ({
               </InputAdornment>
             )
           }}
-          sx={{ mb: 3 }}
         />
 
-        {/* Note */}
+        {/* Note Input */}
         <Typography variant="h6" sx={{ mb: 2, fontWeight: 600 }}>
           Ghi chú (tùy chọn):
         </Typography>
@@ -291,7 +336,8 @@ const BookingSchedule = ({
           rows={3}
           value={note}
           onChange={(e) => setNote(e.target.value)}
-          placeholder="Nhập yêu cầu đặc biệt hoặc thông tin thêm..."
+          placeholder="Nhập yêu cầu đặc biệt hoặc ghi chú..."
+          sx={{ mb: 3 }}
           InputProps={{
             startAdornment: (
               <InputAdornment position="start" sx={{ alignSelf: 'flex-start', mt: 1 }}>
@@ -299,17 +345,46 @@ const BookingSchedule = ({
               </InputAdornment>
             )
           }}
-          sx={{ mb: 3 }}
         />
       </LocalizationProvider>
 
-      {/* Actions */}
+      {/* Price Summary */}
+      {totalPrice > 0 && (
+        <Card sx={{ 
+          mb: 3, 
+          borderRadius: '16px',
+          bgcolor: 'rgba(233, 30, 99, 0.05)',
+          border: '1px solid rgba(233, 30, 99, 0.1)'
+        }}>
+          <CardContent>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <AttachMoney sx={{ color: 'primary.main' }} />
+                <Typography variant="body1">
+                  Tổng chi phí:
+                </Typography>
+              </Box>
+              <Typography variant="h5" sx={{ fontWeight: 700, color: 'primary.main' }}>
+                {formatPrice(totalPrice)}
+              </Typography>
+            </Box>
+            {loading && (
+              <Box sx={{ mt: 1, display: 'flex', alignItems: 'center', gap: 1 }}>
+                <CircularProgress size={16} />
+                <Typography variant="caption" color="text.secondary">
+                  Đang tính toán...
+                </Typography>
+              </Box>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Action Buttons */}
       <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 4 }}>
         <Button
-          variant="outlined"
-          size="large"
-          onClick={onBack}
           startIcon={<ArrowBack />}
+          onClick={onBack}
           sx={{
             borderRadius: '12px',
             textTransform: 'none',
@@ -323,23 +398,19 @@ const BookingSchedule = ({
         
         <Button
           variant="contained"
-          size="large"
           onClick={handleOpenConfirmDialog}
-          startIcon={<CheckCircle />}
           disabled={!date || !startTime || !endTime || !location || loading}
           sx={{
             background: 'linear-gradient(45deg, #E91E63, #9C27B0)',
-            color: 'white',
-            px: 4,
-            py: 1.5,
             borderRadius: '12px',
             textTransform: 'none',
             fontWeight: 600,
-            fontSize: '16px',
-            boxShadow: 'none',
+            px: 4,
+            py: 1.5,
+            boxShadow: '0 4px 12px rgba(233, 30, 99, 0.3)',
             '&:hover': {
-              background: 'linear-gradient(45deg, #AD1457, #7B1FA2)',
-              boxShadow: '0 4px 12px rgba(233, 30, 99, 0.3)',
+              background: 'linear-gradient(45deg, #D81B60, #8E24AA)',
+              boxShadow: '0 6px 16px rgba(233, 30, 99, 0.4)',
             },
             '&:disabled': {
               background: 'rgba(0, 0, 0, 0.12)',
@@ -351,116 +422,282 @@ const BookingSchedule = ({
         </Button>
       </Box>
 
-      {/* Confirmation Dialog */}
+      {/* New Booking Confirmation Dialog */}
       <Dialog
         open={confirmDialogOpen}
         onClose={() => !creating && setConfirmDialogOpen(false)}
         maxWidth="sm"
         fullWidth
+        TransitionComponent={Fade}
+        PaperProps={{
+          sx: {
+            borderRadius: '20px',
+            overflow: 'visible',
+            position: 'relative',
+            backgroundImage: 'linear-gradient(to bottom, rgba(233, 30, 99, 0.03), rgba(255, 255, 255, 0))',
+          }
+        }}
       >
-        <DialogTitle sx={{ fontWeight: 600 }}>
-          Xác nhận đặt lịch
-        </DialogTitle>
-        <DialogContent dividers>
+        {/* Success Badge */}
+        <Box
+          sx={{
+            position: 'absolute',
+            top: -20,
+            left: '50%',
+            transform: 'translateX(-50%)',
+            bgcolor: 'success.main',
+            color: 'white',
+            borderRadius: '50%',
+            width: 40,
+            height: 40,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            boxShadow: '0 4px 12px rgba(76, 175, 80, 0.3)',
+          }}
+        >
+          <CheckCircle />
+        </Box>
+
+        {/* Close Button */}
+        <IconButton
+          onClick={() => setConfirmDialogOpen(false)}
+          disabled={creating}
+          sx={{
+            position: 'absolute',
+            right: 12,
+            top: 12,
+            bgcolor: 'rgba(0, 0, 0, 0.04)',
+            '&:hover': {
+              bgcolor: 'rgba(0, 0, 0, 0.08)',
+            }
+          }}
+        >
+          <Close />
+        </IconButton>
+
+        <DialogContent sx={{ px: 4, py: 4 }}>
+          {/* Header */}
+          <Box sx={{ textAlign: 'center', mb: 3, mt: 2 }}>
+            <Typography variant="h5" sx={{ fontWeight: 700, mb: 0.5 }}>
+              Xác nhận đặt lịch
+            </Typography>
+            <Typography variant="body2" color="text.secondary">
+              Vui lòng kiểm tra thông tin trước khi xác nhận
+            </Typography>
+          </Box>
+
+          {/* Error Alert in Dialog */}
           {error && (
-            <Alert severity="error" sx={{ mb: 2 }}>
+            <Alert severity="error" sx={{ mb: 3, borderRadius: '12px' }}>
               {error}
             </Alert>
           )}
-          
-          <Typography variant="h6" sx={{ fontWeight: 600, mb: 2 }}>
-            Tóm tắt đặt lịch:
-          </Typography>
-          
-          <Grid container spacing={2}>
-            <Grid item xs={12}>
-              <Typography variant="body2" color="text.secondary">
-                Cosplayer:
-              </Typography>
-              <Typography variant="body1" sx={{ fontWeight: 600 }}>
-                {cosplayer?.displayName}
-              </Typography>
-            </Grid>
-            
-            <Grid item xs={12}>
-              <Typography variant="body2" color="text.secondary">
-                Dịch vụ:
-              </Typography>
-              <Typography variant="body1" sx={{ fontWeight: 600 }}>
-                {service?.name}
-              </Typography>
-            </Grid>
-            
-            <Grid item xs={12}>
-              <Typography variant="body2" color="text.secondary">
-                Ngày:
-              </Typography>
-              <Typography variant="body1" sx={{ fontWeight: 600 }}>
-                {formatSelectedDate()}
-              </Typography>
-            </Grid>
-            
-            <Grid item xs={12}>
-              <Typography variant="body2" color="text.secondary">
-                Thời gian:
-              </Typography>
-              <Typography variant="body1" sx={{ fontWeight: 600 }}>
-                {startTime && format(startTime, 'HH:mm')} - {endTime && format(endTime, 'HH:mm')}
-              </Typography>
-            </Grid>
-            
-            <Grid item xs={12}>
-              <Typography variant="body2" color="text.secondary">
-                Địa điểm:
-              </Typography>
-              <Typography variant="body1" sx={{ fontWeight: 600 }}>
-                {location}
-              </Typography>
-            </Grid>
-            
-            {note && (
-              <Grid item xs={12}>
-                <Typography variant="body2" color="text.secondary">
-                  Ghi chú:
+
+          {/* Main Content */}
+          <Box sx={{ bgcolor: 'rgba(0, 0, 0, 0.02)', borderRadius: '16px', p: 3, mb: 3 }}>
+            {/* Cosplayer Info */}
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 3 }}>
+              <Avatar 
+                src={bookingData.cosplayer.avatar} 
+                sx={{ 
+                  width: 56, 
+                  height: 56,
+                  border: '3px solid white',
+                  boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
+                }}
+              >
+                {bookingData.cosplayer.name?.charAt(0)}
+              </Avatar>
+              <Box sx={{ flex: 1 }}>
+                <Typography variant="subtitle2" color="text.secondary" sx={{ fontSize: '12px' }}>
+                  COSPLAYER
                 </Typography>
-                <Typography variant="body1">
-                  {note}
-                </Typography>
-              </Grid>
-            )}
-            
-            <Grid item xs={12}>
-              <Divider sx={{ my: 1 }} />
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <Typography variant="h6">
-                  Tổng cộng:
-                </Typography>
-                <Typography variant="h5" sx={{ color: 'primary.main', fontWeight: 700 }}>
-                  {formatPrice(totalPrice)}
+                <Typography variant="h6" sx={{ fontWeight: 600, fontSize: '18px' }}>
+                  {bookingData.cosplayer.name}
                 </Typography>
               </Box>
-            </Grid>
-          </Grid>
-        </DialogContent>
-        <DialogActions sx={{ p: 2 }}>
-          <Button 
-            onClick={() => setConfirmDialogOpen(false)}
-            disabled={creating}
-          >
-            Hủy
-          </Button>
-          <Button 
-            variant="contained"
-            onClick={handleCreateBooking}
-            disabled={creating}
-            sx={{
-              background: 'linear-gradient(45deg, #E91E63, #9C27B0)',
-              minWidth: 120
+              <Chip 
+                label={bookingData.service} 
+                size="small" 
+                sx={{ 
+                  bgcolor: '#E91E63',
+                  color: 'white',
+                  fontWeight: 500,
+                  borderRadius: '8px'
+                }} 
+              />
+            </Box>
+
+            <Divider sx={{ mb: 3 }} />
+
+            {/* Booking Details */}
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2.5 }}>
+              {/* Date & Time */}
+              <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 2 }}>
+                <CalendarToday sx={{ fontSize: 20, color: 'text.secondary', mt: 0.3 }} />
+                <Box sx={{ flex: 1 }}>
+                  <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
+                    Ngày và giờ
+                  </Typography>
+                  <Typography variant="body1" sx={{ fontWeight: 600 }}>
+                    {bookingData.date}
+                  </Typography>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 0.5 }}>
+                    <AccessTime sx={{ fontSize: 16, color: 'text.secondary' }} />
+                    <Typography variant="body2">
+                      {bookingData.time} ({bookingData.duration})
+                    </Typography>
+                  </Box>
+                </Box>
+              </Box>
+
+              {/* Location */}
+              <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 2 }}>
+                <LocationOn sx={{ fontSize: 20, color: 'text.secondary', mt: 0.3 }} />
+                <Box sx={{ flex: 1 }}>
+                  <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
+                    Địa điểm
+                  </Typography>
+                  <Typography variant="body1" sx={{ fontWeight: 600 }}>
+                    {bookingData.location}
+                  </Typography>
+                </Box>
+              </Box>
+
+              {/* Notes */}
+              {bookingData.notes && (
+                <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 2 }}>
+                  <EventNote sx={{ fontSize: 20, color: 'text.secondary', mt: 0.3 }} />
+                  <Box sx={{ flex: 1 }}>
+                    <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
+                      Ghi chú
+                    </Typography>
+                    <Typography variant="body1">
+                      {bookingData.notes}
+                    </Typography>
+                  </Box>
+                </Box>
+              )}
+            </Box>
+          </Box>
+
+          {/* Price Summary */}
+          <Box 
+            sx={{ 
+              bgcolor: 'rgba(233, 30, 99, 0.05)', 
+              borderRadius: '12px', 
+              p: 2.5,
+              mb: 3,
+              border: '1px solid rgba(233, 30, 99, 0.1)'
             }}
           >
-            {creating ? <CircularProgress size={24} color="inherit" /> : 'Xác nhận'}
-          </Button>
-        </DialogActions>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
+              <Typography variant="body2" color="text.secondary">
+                Đơn giá
+              </Typography>
+              <Typography variant="body2">
+                {formatPrice(bookingData.pricePerHour)}/giờ
+              </Typography>
+            </Box>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
+              <Typography variant="body2" color="text.secondary">
+                Thời gian
+              </Typography>
+              <Typography variant="body2">
+                {bookingData.duration}
+              </Typography>
+            </Box>
+            <Divider sx={{ my: 1.5 }} />
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <Typography variant="h6" sx={{ fontWeight: 600 }}>
+                Tổng cộng
+              </Typography>
+              <Typography 
+                variant="h5" 
+                sx={{ 
+                  fontWeight: 700, 
+                  color: '#E91E63',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 0.5
+                }}
+              >
+                {formatPrice(bookingData.totalPrice)}
+              </Typography>
+            </Box>
+          </Box>
+
+          {/* Info Alert */}
+          <Box 
+            sx={{ 
+              display: 'flex', 
+              gap: 1.5,
+              p: 2,
+              bgcolor: 'info.lighter',
+              borderRadius: '12px',
+              mb: 3,
+              backgroundColor: 'rgba(33, 150, 243, 0.08)'
+            }}
+          >
+            <Info sx={{ fontSize: 20, color: 'info.main', flexShrink: 0, mt: 0.2 }} />
+            <Typography variant="body2" color="text.secondary" sx={{ lineHeight: 1.6 }}>
+              Sau khi xác nhận, đặt lịch sẽ được gửi đến cosplayer. 
+              Bạn sẽ nhận thông báo khi cosplayer phản hồi.
+            </Typography>
+          </Box>
+
+          {/* Action Buttons */}
+          <Box sx={{ display: 'flex', gap: 2 }}>
+            <Button
+              variant="outlined"
+              fullWidth
+              onClick={() => setConfirmDialogOpen(false)}
+              disabled={creating}
+              sx={{
+                py: 1.5,
+                borderRadius: '12px',
+                textTransform: 'none',
+                fontWeight: 600,
+                borderColor: 'divider',
+                color: 'text.secondary',
+                '&:hover': {
+                  borderColor: 'text.secondary',
+                  bgcolor: 'rgba(0, 0, 0, 0.04)'
+                }
+              }}
+            >
+              Hủy
+            </Button>
+            <Button
+              variant="contained"
+              fullWidth
+              onClick={handleCreateBooking}
+              disabled={creating}
+              sx={{
+                py: 1.5,
+                borderRadius: '12px',
+                textTransform: 'none',
+                fontWeight: 600,
+                background: 'linear-gradient(45deg, #E91E63, #9C27B0)',
+                boxShadow: '0 4px 16px rgba(233, 30, 99, 0.3)',
+                '&:hover': {
+                  background: 'linear-gradient(45deg, #D81B60, #8E24AA)',
+                  boxShadow: '0 6px 20px rgba(233, 30, 99, 0.4)',
+                },
+                '&:disabled': {
+                  background: 'rgba(0, 0, 0, 0.12)'
+                }
+              }}
+            >
+              {creating ? (
+                <CircularProgress size={24} sx={{ color: 'white' }} />
+              ) : (
+                'Xác nhận đặt lịch'
+              )}
+            </Button>
+          </Box>
+        </DialogContent>
       </Dialog>
     </Box>
   );

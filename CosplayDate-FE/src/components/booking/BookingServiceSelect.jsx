@@ -158,7 +158,7 @@ const BookingServiceSelect = ({
                           mb: 1
                         }}>
                           <Typography variant="h6" sx={{ fontWeight: 600 }}>
-                            {service.name}
+                            {service.serviceName}
                           </Typography>
                         </Box>
 
@@ -167,7 +167,7 @@ const BookingServiceSelect = ({
                           color="text.secondary"
                           sx={{ mb: 2 }}
                         >
-                          {service.description}
+                          {service.serviceDescription}
                         </Typography>
                       </Box>
                     }

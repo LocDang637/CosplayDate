@@ -369,16 +369,17 @@ export const cosplayerAPI = {
         services = response.data.data.services || [];
         cosplayerName = response.data.data.cosplayerName || '';
 
-        // Transform services to match expected structure
+        // FIXED: Keep the original field names instead of transforming them
         services = services.map(service => ({
           id: service.id,
-          name: service.serviceName,
-          description: service.serviceDescription,
+          serviceName: service.serviceName,  // Keep original field name
+          serviceDescription: service.serviceDescription,  // Keep original field name
           // Price and duration will need to be added from another source or set as defaults
           price: service.price || service.pricePerSlot || 500000, // Default price
           duration: service.duration || 60, // Default 60 minutes
           category: service.category || 'General',
-          includedItems: service.includedItems || []
+          includedItems: service.includedItems || [],
+          isActive: service.isActive !== undefined ? service.isActive : true
         }));
       }
 
