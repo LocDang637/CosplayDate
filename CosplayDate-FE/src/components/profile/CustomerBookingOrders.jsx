@@ -1,4 +1,4 @@
-// src/components/profile/CustomerBookingOrders.jsx - FIXED VERSION
+// src/components/profile/CustomerBookingOrders.jsx - WITH BOOKING PROGRESS
 import React, { useState, useEffect } from 'react';
 import {
   Box,
@@ -483,6 +483,22 @@ const CustomerBookingOrders = () => {
                 </Button>
               )}
 
+              {/* View Progress Button - Show for active bookings */}
+              {(booking.status === 'Pending' || booking.status === 'Confirmed') && (
+                <Button
+                  variant="outlined"
+                  size="small"
+                  color="primary"
+                  startIcon={<Schedule />}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    navigate(`/booking/${booking.cosplayer?.id}?bookingId=${booking.id}`);
+                  }}
+                >
+                  Xem tiến trình
+                </Button>
+              )}
+
               <Button
                 variant="outlined"
                 size="small"
@@ -498,6 +514,7 @@ const CustomerBookingOrders = () => {
     );
   };
 
+  // Rest of the component remains the same...
   if (loading) {
     return (
       <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>

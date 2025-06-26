@@ -1,6 +1,5 @@
 // src/pages/BookingPage.jsx
 import React, { useState, useEffect, useRef } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
 import {
   Box,
   Container,
@@ -20,6 +19,7 @@ import BookingWaitingConfirmation from '../components/booking/BookingWaitingConf
 import BookingSuccessConfirmation from '../components/booking/BookingSuccessConfirmation';
 import { cosplayerAPI } from '../services/cosplayerAPI';
 import { bookingAPI } from '../services/bookingAPI';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 
 const steps = ['Chọn dịch vụ', 'Chọn thời gian', 'Chờ xác nhận', 'Hoàn tất'];
 
@@ -29,16 +29,86 @@ const BookingPage = () => {
   const [activeStep, setActiveStep] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  
+  const location = useLocation();
+
   // Booking data
   const [cosplayer, setCosplayer] = useState(null);
   const [services, setServices] = useState([]);
   const [selectedService, setSelectedService] = useState(null);
   const [bookingResult, setBookingResult] = useState(null);
   const [bookingStatus, setBookingStatus] = useState('Pending');
-  
+
+  const searchParams = new URLSearchParams(location.search);
+  const bookingId = searchParams.get('bookingId');
+
   // Polling ref
   const pollingIntervalRef = useRef(null);
+
+  useEffect(() => {
+    if (bookingId) {
+      loadExistingBooking();
+    } else if (cosplayerId) {
+      loadInitialData();
+    }
+  }, [cosplayerId, bookingId]);
+
+  const loadExistingBooking = async () => {
+    try {
+      setLoading(true);
+      setError('');
+
+      // Load booking details
+      const bookingResult = await bookingAPI.getBookingById(bookingId);
+
+      if (bookingResult.success && bookingResult.data) {
+        const booking = bookingResult.data;
+
+        // Set booking data
+        setBookingResult(booking);
+        setBookingStatus(booking.status);
+
+        // Load cosplayer data
+        const cosplayerResult = await cosplayerAPI.getCosplayerDetails(booking.cosplayer?.id || cosplayerId);
+        if (cosplayerResult.success) {
+          setCosplayer(cosplayerResult.data);
+        }
+
+        // Set selected service from booking
+        if (booking.serviceType) {
+          setSelectedService({
+            serviceType: booking.serviceType,
+            price: booking.totalPrice,
+            duration: booking.duration
+          });
+        }
+
+        // Set active step based on booking status
+        switch (booking.status) {
+          case 'Pending':
+            setActiveStep(2); // Waiting confirmation
+            break;
+          case 'Confirmed':
+            setActiveStep(3); // Success confirmation
+            break;
+          case 'Cancelled':
+            setActiveStep(3); // Show cancelled status
+            break;
+          case 'Completed':
+            setActiveStep(3); // Show completed status
+            break;
+          default:
+            setActiveStep(2);
+        }
+      } else {
+        setError('Không thể tải thông tin đặt lịch');
+      }
+    } catch (err) {
+      console.error('Failed to load existing booking:', err);
+      setError('Không thể tải thông tin đặt lịch. Vui lòng thử lại.');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   // Load initial data
   useEffect(() => {
@@ -50,9 +120,12 @@ const BookingPage = () => {
   // Poll for booking status updates when waiting for confirmation
   useEffect(() => {
     if (activeStep === 2 && bookingResult?.id) {
+      if (bookingId && bookingStatus !== 'Pending') {
+        return;
+      }
       // Start polling for booking status
       startStatusPolling();
-      
+
       return () => {
         // Cleanup polling on unmount
         if (pollingIntervalRef.current) {
@@ -60,22 +133,22 @@ const BookingPage = () => {
         }
       };
     }
-  }, [activeStep, bookingResult]);
+  }, [activeStep, bookingResult, bookingId, bookingStatus]);
 
   const startStatusPolling = () => {
     let pollCount = 0;
     const maxPolls = 288; // 24 hours with 5-second intervals
-    
+
     // Poll every 5 seconds
     pollingIntervalRef.current = setInterval(async () => {
       pollCount++;
-      
+
       try {
-        const result = await bookingAPI.getBookingDetails(bookingResult.id);
+        const result = await bookingAPI.getBookingById(bookingResult.id);
         if (result.success && result.data) {
           const newStatus = result.data.status;
           setBookingStatus(newStatus);
-          
+
           // Stop polling and navigate based on status
           if (newStatus === 'Confirmed') {
             clearInterval(pollingIntervalRef.current);
@@ -87,13 +160,13 @@ const BookingPage = () => {
         }
       } catch (error) {
         console.error('Error polling booking status:', error);
-        
+
         // Optional: Show error after multiple failures
         if (pollCount > 3) {
           setError('Không thể kiểm tra trạng thái đặt lịch. Vui lòng tải lại trang.');
         }
       }
-      
+
       // Auto-cancel if no response after 24 hours
       if (pollCount >= maxPolls) {
         clearInterval(pollingIntervalRef.current);
@@ -104,6 +177,7 @@ const BookingPage = () => {
   };
 
   const loadInitialData = async () => {
+    if (bookingId) return;
     try {
       setLoading(true);
       setError('');
@@ -119,7 +193,7 @@ const BookingPage = () => {
       const servicesResult = await cosplayerAPI.getServices(cosplayerId);
       if (servicesResult.success && servicesResult.data.length > 0) {
         setServices(servicesResult.data);
-        
+
         // Update cosplayer name if provided
         if (servicesResult.cosplayerName && cosplayer) {
           setCosplayer({
@@ -158,6 +232,9 @@ const BookingPage = () => {
   const renderStepContent = () => {
     switch (activeStep) {
       case 0:
+        if (bookingId) {
+          return null;
+        }
         return (
           <BookingServiceSelect
             services={services}
@@ -166,8 +243,11 @@ const BookingPage = () => {
             cosplayer={cosplayer}
           />
         );
-      
+
       case 1:
+        if (bookingId) {
+          return null;
+        }
         return (
           <BookingSchedule
             cosplayer={cosplayer}
@@ -176,7 +256,7 @@ const BookingPage = () => {
             onBack={handleBack}
           />
         );
-      
+
       case 2:
         return (
           <BookingWaitingConfirmation
@@ -187,7 +267,7 @@ const BookingPage = () => {
             onBackToHome={() => navigate('/')}
           />
         );
-      
+
       case 3:
         return (
           <BookingSuccessConfirmation
@@ -198,7 +278,7 @@ const BookingPage = () => {
             onBackToHome={() => navigate('/')}
           />
         );
-      
+
       default:
         return null;
     }
@@ -209,11 +289,11 @@ const BookingPage = () => {
       <ThemeProvider theme={cosplayTheme}>
         <PageLayout>
           <Container maxWidth="lg">
-            <Box sx={{ 
-              display: 'flex', 
-              justifyContent: 'center', 
-              alignItems: 'center', 
-              minHeight: '60vh' 
+            <Box sx={{
+              display: 'flex',
+              justifyContent: 'center',
+              alignItems: 'center',
+              minHeight: '60vh'
             }}>
               <CircularProgress />
             </Box>
@@ -228,16 +308,15 @@ const BookingPage = () => {
       <PageLayout>
         <Container maxWidth="lg">
           <Box sx={{ py: 4 }}>
-            {/* Page Title */}
-            <Typography variant="h4" sx={{ fontWeight: 700, mb: 1, textAlign: 'center' }}>
-              Đặt lịch hẹn
-            </Typography>
-            
             {/* Stepper */}
             <Box sx={{ mb: 4, mt: 3 }}>
-              <Stepper activeStep={activeStep} alternativeLabel>
-                {steps.map((label) => (
-                  <Step key={label}>
+              <Typography variant="h4" sx={{ fontWeight: 700, mb: 3, textAlign: 'center' }}>
+                {bookingId ? 'Tiến trình đặt lịch' : 'Đặt lịch với Cosplayer'}
+              </Typography>
+
+              <Stepper activeStep={activeStep} alternativeLabel sx={{ mb: 4 }}>
+                {steps.map((label, index) => (
+                  <Step key={label} completed={index < activeStep}>
                     <StepLabel>{label}</StepLabel>
                   </Step>
                 ))}
