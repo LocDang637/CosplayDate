@@ -95,15 +95,24 @@ const CosplayerBookingOrders = () => {
 
   // Add this function to handle opening edit dialog
   const handleEditBooking = (booking) => {
+    // Parse the date properly
+    let bookingDate;
+    try {
+      bookingDate = parseISO(booking.bookingDate);
+    } catch (e) {
+      console.error('Error parsing booking date:', e);
+      bookingDate = new Date();
+    }
+
     setEditDialog({
       open: true,
       booking,
       formData: {
-        bookingDate: parseISO(booking.bookingDate),
-        startTime: booking.startTime,
-        endTime: booking.endTime,
+        bookingDate: bookingDate,
+        startTime: booking.startTime || '', // Should be in "HH:mm" format
+        endTime: booking.endTime || '', // Should be in "HH:mm" format
         location: booking.location || '',
-        specialNotes: booking.notes || ''
+        specialNotes: booking.specialNotes || booking.notes || ''
       }
     });
   };
@@ -113,13 +122,16 @@ const CosplayerBookingOrders = () => {
     if (!editDialog.booking) return;
 
     try {
+      // Format the data according to API requirements
       const updateData = {
-        bookingDate: format(editDialog.formData.bookingDate, 'yyyy-MM-dd'),
-        startTime: editDialog.formData.startTime,
-        endTime: editDialog.formData.endTime,
-        location: editDialog.formData.location,
-        specialNotes: editDialog.formData.specialNotes
+        bookingDate: format(editDialog.formData.bookingDate, 'yyyy-MM-dd'), // "2025-06-25" format
+        startTime: editDialog.formData.startTime, // Should already be in "HH:mm" format
+        endTime: editDialog.formData.endTime, // Should already be in "HH:mm" format
+        location: editDialog.formData.location.trim(),
+        specialNotes: editDialog.formData.specialNotes.trim() || ''
       };
+
+      console.log('Updating booking with data:', updateData);
 
       const result = await bookingAPI.updateBooking(editDialog.booking.id, updateData);
 
@@ -127,12 +139,15 @@ const CosplayerBookingOrders = () => {
         await loadBookings();
         setEditDialog({ open: false, booking: null, formData: {} });
         // Optional: Show success message
+        console.log('Booking updated successfully');
       } else {
         console.error('Failed to update booking:', result.message);
         // Optional: Show error message
+        setError(result.message || 'Failed to update booking');
       }
     } catch (err) {
       console.error('Error updating booking:', err);
+      setError('An error occurred while updating the booking');
     }
   };
 
@@ -188,33 +203,37 @@ const CosplayerBookingOrders = () => {
       let result;
       const bookingId = statusDialog.booking.id;
 
+      console.log(`Updating status for booking ${bookingId} to ${statusDialog.newStatus}`);
+
       // Call appropriate API based on new status
       switch (statusDialog.newStatus) {
         case 'Confirmed':
           result = await bookingAPI.confirmBooking(bookingId);
           break;
         case 'Cancelled':
-          // You might want to add a reason field in the dialog for cancellations
+          // Pass the cancellation reason properly
           result = await bookingAPI.cancelBooking(bookingId, statusDialog.cancellationReason || '');
           break;
         case 'Completed':
           result = await bookingAPI.completeBooking(bookingId);
           break;
         default:
-          // Fallback to generic update if needed
-          result = await bookingAPI.updateBooking(bookingId, { status: statusDialog.newStatus });
+          console.error('Unknown status:', statusDialog.newStatus);
+          return;
       }
 
       if (result.success) {
         await loadBookings();
-        setStatusDialog({ open: false, booking: null, newStatus: '', showConfirm: false });
+        setStatusDialog({ open: false, booking: null, newStatus: '', showConfirm: false, cancellationReason: '' });
         // Optionally show success message
+        console.log(`Booking status updated to ${statusDialog.newStatus} successfully`);
       } else {
         console.error('Failed to update status:', result.message);
-        // Optionally show error message
+        setError(result.message || 'Failed to update booking status');
       }
     } catch (err) {
       console.error('Error updating status:', err);
+      setError('An error occurred while updating the booking status');
     }
   };
 
@@ -238,8 +257,18 @@ const CosplayerBookingOrders = () => {
     }
   };
 
+  const getStatusLabel = (status) => {
+    const statusMap = {
+      Pending: 'Chờ xác nhận',
+      Confirmed: 'Đã xác nhận',
+      Completed: 'Hoàn thành',
+      Cancelled: 'Đã hủy'
+    };
+    return statusMap[status] || status; // Fallback to original status if not found
+  };
+
   const getPaymentStatusColor = (status) => {
-    return status === 'Paid' ? 'success' : 'error';
+    return status === 'Completed' ? 'success' : 'warning';
   };
 
   const canUpdateStatus = (booking) => {
@@ -402,13 +431,13 @@ const CosplayerBookingOrders = () => {
                 {/* Line 4: Status • Payment Status • Total Price */}
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
                   <Chip
-                    label={booking.status}
+                    label={getStatusLabel(booking.status)}
                     size="small"
                     color={getStatusColor(booking.status)}
                   />
                   <Typography variant="body2" color="text.secondary">•</Typography>
                   <Chip
-                    label={booking.paymentStatus === 'Paid' ? 'Đã thanh toán' : 'Chưa thanh toán'}
+                    label={booking.paymentStatus === 'Completed' ? 'Đã thanh toán' : 'Đang giữ'}
                     size="small"
                     color={getPaymentStatusColor(booking.paymentStatus)}
                   />
@@ -723,14 +752,14 @@ const CosplayerBookingOrders = () => {
                 label="Thanh toán"
               >
                 <MenuItem value="">Tất cả</MenuItem>
-                <MenuItem value="Paid">
+                <MenuItem value="Completed">
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                     <Chip size="small" label="Đã thanh toán" color="success" />
                   </Box>
                 </MenuItem>
-                <MenuItem value="Unpaid">
+                <MenuItem value="Held">
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <Chip size="small" label="Chưa thanh toán" color="error" />
+                    <Chip size="small" label="Đang giữ" color="error" />
                   </Box>
                 </MenuItem>
               </Select>
@@ -784,7 +813,7 @@ const CosplayerBookingOrders = () => {
             {filterStatus && (
               <Chip
                 size="small"
-                label={`Trạng thái: ${filterStatus}`}
+                label={`Trạng thái: ${getStatusLabel(filterStatus)}`}
                 onDelete={() => setFilterStatus('')}
                 color={getStatusColor(filterStatus)}
               />
@@ -792,7 +821,7 @@ const CosplayerBookingOrders = () => {
             {filterPaymentStatus && (
               <Chip
                 size="small"
-                label={`Thanh toán: ${filterPaymentStatus === 'Paid' ? 'Đã thanh toán' : 'Chưa thanh toán'}`}
+                label={`Thanh toán: ${filterPaymentStatus === 'Completed' ? 'Đã thanh toán' : 'Đang giữ'}`}
                 onDelete={() => setFilterPaymentStatus('')}
                 color={getPaymentStatusColor(filterPaymentStatus)}
               />

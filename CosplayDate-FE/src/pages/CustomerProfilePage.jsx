@@ -23,21 +23,29 @@ import CustomerWallet from '../components/profile/CustomerWallet';
 import CustomerBookingHistory from '../components/profile/CustomerBookingHistory';
 import ProfileGallery from '../components/profile/ProfileGallery';
 import ProfileEditModal from '../components/profile/ProfileEditModal';
+import CustomerBookingOrders from '../components/profile/CustomerBookingOrders';
 
 const CustomerProfilePage = () => {
   const { userId } = useParams();
   const navigate = useNavigate();
-  
+
   const [user, setUser] = useState(null);
   const [profileUser, setProfileUser] = useState(null);
   const [activeTab, setActiveTab] = useState('overview');
+  const [selectedTab, setSelectedTab] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [isFollowing, setIsFollowing] = useState(false);
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
 
- 
+  const tabs = [
+    { label: 'Thông tin', value: 0 },
+    { label: 'Đặt lịch của tôi', value: 1 },  // New tab
+    { label: 'Yêu thích', value: 2 },
+    { label: 'Đánh giá', value: 3 }
+  ];
+
   const isOwnProfile = !userId || (user?.id && parseInt(userId) === parseInt(user.id));
   console.log('userId:', userId, 'isOwnProfile:', isOwnProfile);
   // Load current user
@@ -87,18 +95,18 @@ const CustomerProfilePage = () => {
         console.log('📊 Profile API result:', result);
 
         if (result.success) {
-      // ✅ FIX: Ensure the profile data has both avatar fields
-      const profileData = {
-        ...result.data,
-        id: result.data.id || result.data.userId,
-        userId: result.data.userId || result.data.id,
-        // Ensure both avatar fields are available
-        avatar: result.data.avatar || result.data.avatarUrl,
-        avatarUrl: result.data.avatarUrl || result.data.avatar
-      };
-          
+          // ✅ FIX: Ensure the profile data has both avatar fields
+          const profileData = {
+            ...result.data,
+            id: result.data.id || result.data.userId,
+            userId: result.data.userId || result.data.id,
+            // Ensure both avatar fields are available
+            avatar: result.data.avatar || result.data.avatarUrl,
+            avatarUrl: result.data.avatarUrl || result.data.avatar
+          };
+
           setProfileUser(profileData);
-          
+
           // Update local storage if it's own profile
           if (isOwnProfile && profileData) {
             const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
@@ -141,68 +149,68 @@ const CustomerProfilePage = () => {
 
   const handleProfileUpdated = (updatedProfile) => {
     setProfileUser(prev => ({ ...prev, ...updatedProfile }));
-    
+
     // Update user state and localStorage if it's own profile
     if (isOwnProfile) {
       const updatedUser = { ...user, ...updatedProfile };
       setUser(updatedUser);
       localStorage.setItem('user', JSON.stringify(updatedUser));
     }
-    
+
     showSnackbar('Profile updated successfully!', 'success');
   };
 
   const handleEditAvatar = async () => {
-  const input = document.createElement('input');
-  input.type = 'file';
-  input.accept = 'image/*';
-  input.onchange = async (event) => {
-    const file = event.target.files[0];
-    if (file) {
-      try {
-        setLoading(true);
-        const result = await userAPI.uploadAvatar(file);
-        
-        if (result.success) {
-          const newAvatarUrl = result.data.avatarUrl;
-          
-          // ✅ FIX: Update profileUser state with both avatar and avatarUrl fields
-          setProfileUser(prev => ({ 
-            ...prev, 
-            avatar: newAvatarUrl,      // ← Add this for CustomerProfileHeader compatibility
-            avatarUrl: newAvatarUrl    // ← Keep this for API compatibility
-          }));
-          
-          // ✅ FIX: If it's own profile, also update the user state
-          if (isOwnProfile) {
-            const updatedUser = { 
-              ...user, 
-              avatar: newAvatarUrl,      // ← Add this for header compatibility
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'image/*';
+    input.onchange = async (event) => {
+      const file = event.target.files[0];
+      if (file) {
+        try {
+          setLoading(true);
+          const result = await userAPI.uploadAvatar(file);
+
+          if (result.success) {
+            const newAvatarUrl = result.data.avatarUrl;
+
+            // ✅ FIX: Update profileUser state with both avatar and avatarUrl fields
+            setProfileUser(prev => ({
+              ...prev,
+              avatar: newAvatarUrl,      // ← Add this for CustomerProfileHeader compatibility
               avatarUrl: newAvatarUrl    // ← Keep this for API compatibility
-            };
-            setUser(updatedUser);
-            localStorage.setItem('user', JSON.stringify(updatedUser));
+            }));
+
+            // ✅ FIX: If it's own profile, also update the user state
+            if (isOwnProfile) {
+              const updatedUser = {
+                ...user,
+                avatar: newAvatarUrl,      // ← Add this for header compatibility
+                avatarUrl: newAvatarUrl    // ← Keep this for API compatibility
+              };
+              setUser(updatedUser);
+              localStorage.setItem('user', JSON.stringify(updatedUser));
+            }
+
+            showSnackbar('Avatar updated successfully!', 'success');
+          } else {
+            showSnackbar(result.message || 'Failed to upload avatar', 'error');
           }
-          
-          showSnackbar('Avatar updated successfully!', 'success');
-        } else {
-          showSnackbar(result.message || 'Failed to upload avatar', 'error');
+        } catch (error) {
+          console.error('Avatar upload error:', error);
+          showSnackbar('Error uploading avatar', 'error');
+        } finally {
+          setLoading(false);
         }
-      } catch (error) {
-        console.error('Avatar upload error:', error);
-        showSnackbar('Error uploading avatar', 'error');
-      } finally {
-        setLoading(false);
       }
-    }
+    };
+    input.click();
   };
-  input.click();
-};
 
   const handleFollowToggle = () => {
     setIsFollowing(!isFollowing);
     showSnackbar(
-      isFollowing ? 'Unfollowed successfully' : 'Followed successfully', 
+      isFollowing ? 'Unfollowed successfully' : 'Followed successfully',
       'success'
     );
   };
@@ -349,7 +357,7 @@ const CustomerProfilePage = () => {
           />
         );
       case 'bookings':
-        return <CustomerBookingHistory />;
+        return <CustomerBookingOrders />;
       case 'gallery':
         return (
           <ProfileGallery
@@ -361,8 +369,8 @@ const CustomerProfilePage = () => {
         );
       case 'favorites':
         return (
-          <Box sx={{ 
-            p: 4, 
+          <Box sx={{
+            p: 4,
             textAlign: 'center',
             backgroundColor: 'rgba(255,255,255,0.95)',
             borderRadius: '16px',
@@ -400,8 +408,8 @@ const CustomerProfilePage = () => {
         <Box sx={{ minHeight: '100vh', backgroundColor: '#FFE8F5' }}>
           <Header user={user} onLogout={handleLogout} />
           <Container maxWidth="lg" sx={{ py: 8 }}>
-            <Alert 
-              severity="error" 
+            <Alert
+              severity="error"
               sx={{ mb: 4, borderRadius: '12px' }}
               action={
                 <Button color="inherit" onClick={() => window.location.reload()}>
@@ -422,7 +430,7 @@ const CustomerProfilePage = () => {
     <ThemeProvider theme={cosplayTheme}>
       <Box sx={{ minHeight: '100vh', backgroundColor: '#FFE8F5' }}>
         <Header user={user} onLogout={handleLogout} />
-        
+
         <Container maxWidth="lg" sx={{ py: 4 }}>
           <CustomerProfileHeader
             user={profileUser}
@@ -465,8 +473,8 @@ const CustomerProfilePage = () => {
           onClose={handleCloseSnackbar}
           anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
         >
-          <Alert 
-            onClose={handleCloseSnackbar} 
+          <Alert
+            onClose={handleCloseSnackbar}
             severity={snackbar.severity}
             sx={{ borderRadius: '12px' }}
           >

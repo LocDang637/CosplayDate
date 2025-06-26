@@ -1,5 +1,5 @@
 // src/pages/BookingPage.jsx
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
   Box,
@@ -35,7 +35,10 @@ const BookingPage = () => {
   const [services, setServices] = useState([]);
   const [selectedService, setSelectedService] = useState(null);
   const [bookingResult, setBookingResult] = useState(null);
-  const [isConfirmed, setIsConfirmed] = useState(false);
+  const [bookingStatus, setBookingStatus] = useState('Pending');
+  
+  // Polling ref
+  const pollingIntervalRef = useRef(null);
 
   // Load initial data
   useEffect(() => {
@@ -44,18 +47,61 @@ const BookingPage = () => {
     }
   }, [cosplayerId]);
 
-  // Simulate cosplayer confirmation (for demo)
+  // Poll for booking status updates when waiting for confirmation
   useEffect(() => {
-    if (activeStep === 2 && bookingResult) {
-      // Simulate confirmation after 5 seconds
-      const timer = setTimeout(() => {
-        setIsConfirmed(true);
-        setActiveStep(3);
-      }, 5000);
+    if (activeStep === 2 && bookingResult?.id) {
+      // Start polling for booking status
+      startStatusPolling();
       
-      return () => clearTimeout(timer);
+      return () => {
+        // Cleanup polling on unmount
+        if (pollingIntervalRef.current) {
+          clearInterval(pollingIntervalRef.current);
+        }
+      };
     }
   }, [activeStep, bookingResult]);
+
+  const startStatusPolling = () => {
+    let pollCount = 0;
+    const maxPolls = 288; // 24 hours with 5-second intervals
+    
+    // Poll every 5 seconds
+    pollingIntervalRef.current = setInterval(async () => {
+      pollCount++;
+      
+      try {
+        const result = await bookingAPI.getBookingDetails(bookingResult.id);
+        if (result.success && result.data) {
+          const newStatus = result.data.status;
+          setBookingStatus(newStatus);
+          
+          // Stop polling and navigate based on status
+          if (newStatus === 'Confirmed') {
+            clearInterval(pollingIntervalRef.current);
+            setActiveStep(3);
+          } else if (newStatus === 'Cancelled') {
+            clearInterval(pollingIntervalRef.current);
+            setActiveStep(3);
+          }
+        }
+      } catch (error) {
+        console.error('Error polling booking status:', error);
+        
+        // Optional: Show error after multiple failures
+        if (pollCount > 3) {
+          setError('Không thể kiểm tra trạng thái đặt lịch. Vui lòng tải lại trang.');
+        }
+      }
+      
+      // Auto-cancel if no response after 24 hours
+      if (pollCount >= maxPolls) {
+        clearInterval(pollingIntervalRef.current);
+        setBookingStatus('Cancelled');
+        setActiveStep(3);
+      }
+    }, 5000);
+  };
 
   const loadInitialData = async () => {
     try {
@@ -101,6 +147,7 @@ const BookingPage = () => {
 
   const handleBookingCreated = (booking, totalPrice) => {
     setBookingResult({ ...booking, totalPrice });
+    setBookingStatus('Pending');
     setActiveStep(2);
   };
 
@@ -135,6 +182,7 @@ const BookingPage = () => {
           <BookingWaitingConfirmation
             booking={bookingResult}
             cosplayer={cosplayer}
+            bookingStatus={bookingStatus}
             onViewBookings={() => navigate('/my-bookings')}
             onBackToHome={() => navigate('/')}
           />
@@ -145,6 +193,7 @@ const BookingPage = () => {
           <BookingSuccessConfirmation
             booking={bookingResult}
             cosplayer={cosplayer}
+            bookingStatus={bookingStatus}
             onViewBookings={() => navigate('/my-bookings')}
             onBackToHome={() => navigate('/')}
           />
@@ -177,34 +226,34 @@ const BookingPage = () => {
   return (
     <ThemeProvider theme={cosplayTheme}>
       <PageLayout>
-        <Container maxWidth="lg" sx={{ py: 4 }}>
-          <Typography
-            variant="h4"
-            sx={{
-              fontWeight: 700,
-              color: 'text.primary',
-              mb: 4,
-              textAlign: 'center',
-              background: 'linear-gradient(45deg, #E91E63, #9C27B0)',
-              backgroundClip: 'text',
-              WebkitBackgroundClip: 'text',
-              WebkitTextFillColor: 'transparent',
-            }}
-          >
-            Đặt lịch với {cosplayer?.displayName}
-          </Typography>
+        <Container maxWidth="lg">
+          <Box sx={{ py: 4 }}>
+            {/* Page Title */}
+            <Typography variant="h4" sx={{ fontWeight: 700, mb: 1, textAlign: 'center' }}>
+              Đặt lịch hẹn
+            </Typography>
+            
+            {/* Stepper */}
+            <Box sx={{ mb: 4, mt: 3 }}>
+              <Stepper activeStep={activeStep} alternativeLabel>
+                {steps.map((label) => (
+                  <Step key={label}>
+                    <StepLabel>{label}</StepLabel>
+                  </Step>
+                ))}
+              </Stepper>
+            </Box>
 
-          <Box sx={{ mb: 4 }}>
-            <Stepper activeStep={activeStep} alternativeLabel>
-              {steps.map((label) => (
-                <Step key={label}>
-                  <StepLabel>{label}</StepLabel>
-                </Step>
-              ))}
-            </Stepper>
+            {/* Error Display */}
+            {error && activeStep === 0 && (
+              <Alert severity="error" sx={{ mb: 3 }}>
+                {error}
+              </Alert>
+            )}
+
+            {/* Step Content */}
+            {renderStepContent()}
           </Box>
-
-          {renderStepContent()}
         </Container>
       </PageLayout>
     </ThemeProvider>
