@@ -15,7 +15,6 @@ import PaymentSuccessPage from "../pages/PaymentSuccessPage";
 import PaymentFailedPage from "../pages/PaymentFailedPage";
 import BecomeCosplayerPage from "../pages/BecomeCosplayerPage";
 import BookingPage from "../pages/BookingPage";
-import MyBookingsPage from "../pages/MyBookingsPage";
 import PaymentRedirectHandler from "../components/wallet/PaymentRedirectHandler";
 function AppRoutes() {
   return (
@@ -100,14 +99,6 @@ function AppRoutes() {
         element={
           <ProtectedRoute>
             <BookingPage />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/my-bookings"
-        element={
-          <ProtectedRoute>
-            <MyBookingsPage />
           </ProtectedRoute>
         }
       />

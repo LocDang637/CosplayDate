@@ -23,26 +23,73 @@ import { useParams, useNavigate, useLocation } from 'react-router-dom';
 
 const steps = ['Chọn dịch vụ', 'Chọn thời gian', 'Chờ xác nhận', 'Hoàn tất'];
 
+// Helper function to save booking state
+const saveBookingState = (cosplayerId, state) => {
+  try {
+    sessionStorage.setItem(`booking_${cosplayerId}`, JSON.stringify({
+      ...state,
+      timestamp: Date.now()
+    }));
+  } catch (e) {
+    console.error('Failed to save booking state:', e);
+  }
+};
+
+// Helper function to load booking state
+const loadBookingState = (cosplayerId) => {
+  try {
+    const stored = sessionStorage.getItem(`booking_${cosplayerId}`);
+    if (stored) {
+      const data = JSON.parse(stored);
+      // Check if data is not older than 24 hours
+      if (data.timestamp && Date.now() - data.timestamp < 24 * 60 * 60 * 1000) {
+        return data;
+      } else {
+        sessionStorage.removeItem(`booking_${cosplayerId}`);
+      }
+    }
+  } catch (e) {
+    console.error('Failed to load booking state:', e);
+  }
+  return null;
+};
+
 const BookingPage = () => {
   const { cosplayerId } = useParams();
   const navigate = useNavigate();
-  const [activeStep, setActiveStep] = useState(0);
+  const location = useLocation();
+  
+  // Load saved state if exists
+  const savedState = loadBookingState(cosplayerId);
+  
+  const [activeStep, setActiveStep] = useState(savedState?.activeStep || 0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const location = useLocation();
 
   // Booking data
   const [cosplayer, setCosplayer] = useState(null);
   const [services, setServices] = useState([]);
-  const [selectedService, setSelectedService] = useState(null);
-  const [bookingResult, setBookingResult] = useState(null);
-  const [bookingStatus, setBookingStatus] = useState('Pending');
+  const [selectedService, setSelectedService] = useState(savedState?.selectedService || null);
+  const [bookingResult, setBookingResult] = useState(savedState?.bookingResult || null);
+  const [bookingStatus, setBookingStatus] = useState(savedState?.bookingStatus || 'Pending');
 
   const searchParams = new URLSearchParams(location.search);
   const bookingId = searchParams.get('bookingId');
 
   // Polling ref
   const pollingIntervalRef = useRef(null);
+
+  // Save state whenever it changes
+  useEffect(() => {
+    if (cosplayerId && !bookingId) {
+      saveBookingState(cosplayerId, {
+        activeStep,
+        selectedService,
+        bookingResult,
+        bookingStatus
+      });
+    }
+  }, [activeStep, selectedService, bookingResult, bookingStatus, cosplayerId, bookingId]);
 
   useEffect(() => {
     if (bookingId) {
@@ -119,12 +166,22 @@ const BookingPage = () => {
 
   // Poll for booking status updates when waiting for confirmation
   useEffect(() => {
-    if (activeStep === 2 && bookingResult?.id) {
+    if (activeStep === 2 && bookingResult) {
+      // Get the booking ID from different possible properties
+      const bookingIdToUse = bookingResult.id || bookingResult.bookingId || bookingId;
+      
+      if (!bookingIdToUse) {
+        console.error('No booking ID available for polling');
+        return;
+      }
+      
+      // Skip polling if we're viewing an existing booking that's not pending
       if (bookingId && bookingStatus !== 'Pending') {
         return;
       }
+      
       // Start polling for booking status
-      startStatusPolling();
+      startStatusPolling(bookingIdToUse);
 
       return () => {
         // Cleanup polling on unmount
@@ -135,16 +192,18 @@ const BookingPage = () => {
     }
   }, [activeStep, bookingResult, bookingId, bookingStatus]);
 
-  const startStatusPolling = () => {
+  const startStatusPolling = (bookingIdToUse) => {
     let pollCount = 0;
     const maxPolls = 288; // 24 hours with 5-second intervals
+
+    console.log('Starting status polling for booking:', bookingIdToUse);
 
     // Poll every 5 seconds
     pollingIntervalRef.current = setInterval(async () => {
       pollCount++;
 
       try {
-        const result = await bookingAPI.getBookingById(bookingResult.id);
+        const result = await bookingAPI.getBookingById(bookingIdToUse);
         if (result.success && result.data) {
           const newStatus = result.data.status;
           setBookingStatus(newStatus);
@@ -153,9 +212,13 @@ const BookingPage = () => {
           if (newStatus === 'Confirmed') {
             clearInterval(pollingIntervalRef.current);
             setActiveStep(3);
+            // Clear saved state when booking is confirmed
+            sessionStorage.removeItem(`booking_${cosplayerId}`);
           } else if (newStatus === 'Cancelled') {
             clearInterval(pollingIntervalRef.current);
             setActiveStep(3);
+            // Clear saved state when booking is cancelled
+            sessionStorage.removeItem(`booking_${cosplayerId}`);
           }
         }
       } catch (error) {
@@ -220,9 +283,18 @@ const BookingPage = () => {
   };
 
   const handleBookingCreated = (booking, totalPrice) => {
-    setBookingResult({ ...booking, totalPrice });
+    // Ensure we have the booking ID (might be 'id' or 'bookingId' from backend)
+    const bookingId = booking.id || booking.bookingId;
+    const bookingWithId = { ...booking, id: bookingId, totalPrice };
+    
+    setBookingResult(bookingWithId);
     setBookingStatus('Pending');
     setActiveStep(2);
+    
+    // Update URL with bookingId if available
+    if (bookingId) {
+      navigate(`/booking/${cosplayerId}?bookingId=${bookingId}`, { replace: true });
+    }
   };
 
   const handleBack = () => {
@@ -263,8 +335,16 @@ const BookingPage = () => {
             booking={bookingResult}
             cosplayer={cosplayer}
             bookingStatus={bookingStatus}
-            onViewBookings={() => navigate('/my-bookings')}
-            onBackToHome={() => navigate('/')}
+            onViewBookings={() => {
+              sessionStorage.removeItem(`booking_${cosplayerId}`);
+              // Navigate to customer profile with bookings tab
+              const user = JSON.parse(localStorage.getItem('user') || '{}');
+              navigate(`/customer-profile/${user.id}?tab=bookings`);
+            }}
+            onBackToHome={() => {
+              sessionStorage.removeItem(`booking_${cosplayerId}`);
+              navigate('/');
+            }}
           />
         );
 
@@ -274,8 +354,16 @@ const BookingPage = () => {
             booking={bookingResult}
             cosplayer={cosplayer}
             bookingStatus={bookingStatus}
-            onViewBookings={() => navigate('/my-bookings')}
-            onBackToHome={() => navigate('/')}
+            onViewBookings={() => {
+              sessionStorage.removeItem(`booking_${cosplayerId}`);
+              // Navigate to customer profile with bookings tab
+              const user = JSON.parse(localStorage.getItem('user') || '{}');
+              navigate(`/customer-profile/${user.id}?tab=bookings`);
+            }}
+            onBackToHome={() => {
+              sessionStorage.removeItem(`booking_${cosplayerId}`);
+              navigate('/');
+            }}
           />
         );
 

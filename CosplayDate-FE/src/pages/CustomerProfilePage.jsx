@@ -1,6 +1,6 @@
 // Updated CustomerProfilePage.jsx with API integration
 import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import {
   Box,
   Container,
@@ -20,7 +20,6 @@ import CustomerProfileHeader from '../components/profile/CustomerProfileHeader';
 import ProfileTabs from '../components/profile/ProfileTabs';
 import CustomerProfileOverview from '../components/profile/CustomerProfileOverview';
 import CustomerWallet from '../components/profile/CustomerWallet';
-import CustomerBookingHistory from '../components/profile/CustomerBookingHistory';
 import ProfileGallery from '../components/profile/ProfileGallery';
 import ProfileEditModal from '../components/profile/ProfileEditModal';
 import CustomerBookingOrders from '../components/profile/CustomerBookingOrders';
@@ -28,6 +27,7 @@ import CustomerBookingOrders from '../components/profile/CustomerBookingOrders';
 const CustomerProfilePage = () => {
   const { userId } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
 
   const [user, setUser] = useState(null);
   const [profileUser, setProfileUser] = useState(null);
@@ -48,6 +48,7 @@ const CustomerProfilePage = () => {
 
   const isOwnProfile = !userId || (user?.id && parseInt(userId) === parseInt(user.id));
   console.log('userId:', userId, 'isOwnProfile:', isOwnProfile);
+
   // Load current user
   useEffect(() => {
     const storedUser = localStorage.getItem('user');
@@ -65,6 +66,32 @@ const CustomerProfilePage = () => {
     }
   }, []);
 
+  // Add this useEffect to handle URL query parameters:
+  useEffect(() => {
+    // Check for tab query parameter
+    const searchParams = new URLSearchParams(location.search);
+    const tabParam = searchParams.get('tab');
+
+    if (tabParam) {
+      // Map tab parameter to activeTab value
+      switch (tabParam) {
+        case 'bookings':
+          setActiveTab('bookings');
+          break;
+        case 'wallet':
+          setActiveTab('wallet');
+          break;
+        case 'gallery':
+          setActiveTab('gallery');
+          break;
+        case 'favorites':
+          setActiveTab('favorites');
+          break;
+        default:
+          setActiveTab('overview');
+      }
+    }
+  }, [location.search]);
 
   // Load profile data using API
   useEffect(() => {
