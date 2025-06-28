@@ -42,6 +42,7 @@ namespace CosplayDate.Application.Services.Implementations
                 if (payment == null)
                     throw new ArgumentException("Payment not found");
 
+                var transactionCode = GenerateTransactionCode();
                 var escrow = new EscrowTransaction
                 {
                     BookingId = bookingId,
@@ -50,64 +51,155 @@ namespace CosplayDate.Application.Services.Implementations
                     CosplayerId = booking.CosplayerId,
                     Amount = amount,
                     Status = "Held",
-                    TransactionCode = GenerateTransactionCode(),
+                    TransactionCode = transactionCode,
                     CreatedAt = DateTime.UtcNow
                 };
 
-                await _unitOfWork.EscrowTransactions.AddAsync(escrow);
-                await _unitOfWork.SaveChangesAsync();
 
-                _logger.LogInformation("Escrow created: {TransactionCode} for booking {BookingId}",
-                    escrow.TransactionCode, bookingId);
+                await _unitOfWork.EscrowTransactions.AddAsync(escrow);
+                //await _unitOfWork.SaveChangesAsync();
+
+                var holdResult = await _walletService.HoldEscrowAsync(booking.CustomerId, amount, escrow.Id, transactionCode);
+                if (!holdResult.IsSuccess)
+                {
+                    //await _unitOfWork.RollbackTransactionAsync();
+                    _logger.LogError("Failed to hold escrow for booking {BookingId}: {Error}", bookingId, holdResult.Message ?? string.Join(", ", holdResult.Errors));
+                    throw new InvalidOperationException(holdResult.Message ?? string.Join(", ", holdResult.Errors));
+                }
+
+                await _unitOfWork.SaveChangesAsync();
+                //await _unitOfWork.CommitTransactionAsync();
+
+
+                _logger.LogInformation("Escrow created: {TransactionCode} for booking {BookingId}", escrow.TransactionCode, bookingId);
+
+                // Send notification to customer
+                await _notificationService.SendPaymentNotificationAsync(
+                    escrow.CustomerId,
+                    "ESCROW_HOLD",
+                    escrow.Amount,
+                    booking.BookingCode,
+                    true);
 
                 return escrow;
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error creating escrow for booking {BookingId}", bookingId);
+                await _unitOfWork.RollbackTransactionAsync();
                 throw;
             }
         }
 
-        public async Task<bool> ReleaseEscrowAsync(int escrowId, int userId)
-        {
-            await _unitOfWork.BeginTransactionAsync();
+        //public async Task<bool> ReleaseEscrowAsync(int escrowId, int userId)
+        //{
+        //    //await _unitOfWork.BeginTransactionAsync();
 
+        //    try
+        //    {
+        //        var escrow = await _unitOfWork.EscrowTransactions.GetByIdAsync(escrowId);
+        //        if (escrow == null || escrow.Status != "Held")
+        //        {
+        //            _logger.LogWarning("Cannot release escrow {EscrowId} - not found or not held", escrowId);
+        //            return false;
+        //        }
+
+        //        var booking = await _unitOfWork.Bookings.GetByIdAsync(escrow.BookingId);
+        //        if (booking == null)
+        //        {
+        //            _logger.LogError("Booking not found for escrow {EscrowId}", escrowId);
+        //            return false;
+        //        }
+
+        //        // Only customer can release escrow when service is completed
+        //        //if (userId != escrow.CustomerId)
+        //        //{
+        //        //    _logger.LogWarning("User {UserId} not authorized to release escrow {EscrowId}", userId, escrowId);
+        //        //    return false;
+        //        //}
+
+        //        // Transfer money to cosplayer's wallet
+        //        var releaseResult = await _walletService.ReleaseEscrowAsync(
+        //            escrow.CosplayerId,
+        //            escrow.Amount,
+        //            escrow.Id,
+        //            escrow.TransactionCode);
+
+        //        if (!releaseResult.IsSuccess)
+        //        {
+        //            _logger.LogError("Failed to release escrow {EscrowId}: {Error}", escrowId, releaseResult.Message ?? string.Join(", ", releaseResult.Errors));
+        //         //   await _unitOfWork.RollbackTransactionAsync();
+        //            return false;
+        //        }
+
+        //        // Update escrow status
+        //        escrow.Status = "Released";
+        //        escrow.ReleasedAt = DateTime.UtcNow;
+        //        _unitOfWork.EscrowTransactions.Update(escrow);
+
+        //        // Update booking status
+        //        booking.Status = "Completed";
+        //        booking.PaymentStatus = "Completed";
+        //        _unitOfWork.Bookings.Update(booking);
+
+        //        await _unitOfWork.SaveChangesAsync();
+        //        //await _unitOfWork.CommitTransactionAsync();
+        //        _unitOfWork.Clear();
+
+        //        // Send notifications
+        //        await _notificationService.SendPaymentNotificationAsync(
+        //            escrow.CosplayerId,
+        //            "ESCROW_RELEASE",
+        //            escrow.Amount,
+        //            booking.BookingCode,
+        //            true);
+
+        //        _logger.LogInformation("Escrow released: {TransactionCode} for booking {BookingCode}",
+        //            escrow.TransactionCode, booking.BookingCode);
+
+        //        return true;
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        //await _unitOfWork.RollbackTransactionAsync();
+        //        _logger.LogError(ex, "Error releasing escrow {EscrowId}", escrowId);
+        //        throw;
+        //    }
+        //}
+
+        public async Task<bool> ReleaseEscrowAsync(int bookingId)
+        {
             try
             {
-                var escrow = await _unitOfWork.EscrowTransactions.GetByIdAsync(escrowId);
-                if (escrow == null || escrow.Status != "Held")
-                {
-                    _logger.LogWarning("Cannot release escrow {EscrowId} - not found or not held", escrowId);
-                    return false;
-                }
-
-                var booking = await _unitOfWork.Bookings.GetByIdAsync(escrow.BookingId);
+                // 1. Check booking
+                var booking = await _unitOfWork.Bookings.GetByIdAsync(bookingId);
                 if (booking == null)
                 {
-                    _logger.LogError("Booking not found for escrow {EscrowId}", escrowId);
+                    _logger.LogWarning("Booking not found: {BookingId}", bookingId);
                     return false;
                 }
 
-                // Only customer can release escrow when service is completed
-                if (userId != escrow.CustomerId)
+                // 2. Check EscrowTransaction by booking
+                var escrow = await _unitOfWork.EscrowTransactions.FirstOrDefaultAsync(e => e.BookingId == bookingId);
+                if (escrow == null)
                 {
-                    _logger.LogWarning("User {UserId} not authorized to release escrow {EscrowId}", userId, escrowId);
+                    _logger.LogWarning("Escrow transaction not found for booking: {BookingId}", bookingId);
                     return false;
                 }
 
-                // Transfer money to cosplayer's wallet
-                var addResult = await _walletService.AddToWalletAsync(
-                    escrow.CosplayerId,
-                    escrow.Amount,
-                    "ESCROW_RELEASE",
-                    $"Payment for booking {booking.BookingCode}",
-                    escrow.TransactionCode);
+                var userId = escrow.CustomerId;
+                var amount = escrow.Amount;
 
-                if (!addResult.IsSuccess)
+                // 3. Check WalletTransaction and deduct amount
+                var walletResult = await _walletService.ReleaseEscrowAsync(
+                    userId, // Deduct from this user
+                    amount,
+                    escrow.Id
+                );
+
+                if (!walletResult.IsSuccess)
                 {
-                    _logger.LogError("Failed to add money to cosplayer wallet for escrow {EscrowId}", escrowId);
-                    await _unitOfWork.RollbackTransactionAsync();
+                    _logger.LogError("Failed to deduct wallet for user {UserId}: {Error}", userId, walletResult.Message);
                     return false;
                 }
 
@@ -122,32 +214,22 @@ namespace CosplayDate.Application.Services.Implementations
                 _unitOfWork.Bookings.Update(booking);
 
                 await _unitOfWork.SaveChangesAsync();
-                await _unitOfWork.CommitTransactionAsync();
+                _unitOfWork.Clear();
 
-                // Send notifications
-                await _notificationService.SendPaymentNotificationAsync(
-                    escrow.CosplayerId,
-                    "ESCROW_RELEASE",
-                    escrow.Amount,
-                    booking.BookingCode,
-                    true);
-
-                _logger.LogInformation("Escrow released: {TransactionCode} for booking {BookingCode}",
-                    escrow.TransactionCode, booking.BookingCode);
-
+                _logger.LogInformation("Escrow released and wallet deducted for booking {BookingId}", bookingId);
                 return true;
             }
             catch (Exception ex)
             {
-                await _unitOfWork.RollbackTransactionAsync();
-                _logger.LogError(ex, "Error releasing escrow {EscrowId}", escrowId);
+                _logger.LogError(ex, "Error in ReleaseEscrowByBookingAsync for booking {BookingId}", bookingId);
                 throw;
             }
         }
 
+
         public async Task<bool> RefundEscrowAsync(int escrowId, string reason)
         {
-            await _unitOfWork.BeginTransactionAsync();
+            //await _unitOfWork.BeginTransactionAsync();
 
             try
             {
@@ -166,17 +248,17 @@ namespace CosplayDate.Application.Services.Implementations
                 }
 
                 // Refund money to customer's wallet
-                var refundResult = await _walletService.AddToWalletAsync(
+                var refundResult = await _walletService.RefundEscrowAsync(
                     escrow.CustomerId,
                     escrow.Amount,
-                    "ESCROW_REFUND",
-                    $"Refund for booking {booking.BookingCode}: {reason}",
+                    escrow.Id,
                     escrow.TransactionCode);
 
                 if (!refundResult.IsSuccess)
                 {
-                    _logger.LogError("Failed to refund money to customer wallet for escrow {EscrowId}", escrowId);
-                    await _unitOfWork.RollbackTransactionAsync();
+
+                    _logger.LogError("Failed to refund escrow {EscrowId}: {Error}", escrowId, refundResult.Message ?? string.Join(", ", refundResult.Errors));
+                    //await _unitOfWork.RollbackTransactionAsync();
                     return false;
                 }
 
@@ -192,15 +274,22 @@ namespace CosplayDate.Application.Services.Implementations
                 _unitOfWork.Bookings.Update(booking);
 
                 await _unitOfWork.SaveChangesAsync();
-                await _unitOfWork.CommitTransactionAsync();
+                //await _unitOfWork.CommitTransactionAsync();
 
-                // Send notification
+                // Send notifications
                 await _notificationService.SendPaymentNotificationAsync(
                     escrow.CustomerId,
                     "ESCROW_REFUND",
                     escrow.Amount,
                     booking.BookingCode,
                     true);
+
+                await _notificationService.SendPaymentNotificationAsync(
+                    escrow.CosplayerId,
+                    "ESCROW_REFUND",
+                    escrow.Amount,
+                    booking.BookingCode,
+                    false);
 
                 _logger.LogInformation("Escrow refunded: {TransactionCode} for booking {BookingCode}",
                     escrow.TransactionCode, booking.BookingCode);
@@ -209,7 +298,7 @@ namespace CosplayDate.Application.Services.Implementations
             }
             catch (Exception ex)
             {
-                await _unitOfWork.RollbackTransactionAsync();
+                //await _unitOfWork.RollbackTransactionAsync();
                 _logger.LogError(ex, "Error refunding escrow {EscrowId}", escrowId);
                 throw;
             }

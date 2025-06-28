@@ -7,11 +7,20 @@ import {
   CircularProgress,
   Alert,
   Button,
-  Snackbar
-} from '@mui/material';
-import { ThemeProvider } from '@mui/material/styles';
-import { cosplayTheme } from '../theme/cosplayTheme';
-import { userAPI } from '../services/api';
+  Snackbar,
+} from "@mui/material";
+import { ThemeProvider } from "@mui/material/styles";
+import { cosplayTheme } from "../theme/cosplayTheme";
+import {
+  userAPI,
+  followAPI,
+  customerStatsAPI,
+  enhancedWalletAPI,
+  customerReviewsAPI,
+  favoritesAPI,
+  customerMediaAPI,
+} from "../services/api";
+import { bookingAPI } from "../services/bookingAPI";
 
 // Import components
 import Header from '../components/layout/Header';
@@ -37,7 +46,11 @@ const CustomerProfilePage = () => {
   const [error, setError] = useState(null);
   const [isFollowing, setIsFollowing] = useState(false);
   const [editModalOpen, setEditModalOpen] = useState(false);
-  const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
+  const [snackbar, setSnackbar] = useState({
+    open: false,
+    message: "",
+    severity: "success",
+  });
 
   const tabs = [
     { label: 'Thông tin', value: 0 },
@@ -51,18 +64,18 @@ const CustomerProfilePage = () => {
 
   // Load current user
   useEffect(() => {
-    const storedUser = localStorage.getItem('user');
+    const storedUser = localStorage.getItem("user");
     if (storedUser) {
       try {
         const parsedUser = JSON.parse(storedUser);
-        console.log('📱 Loaded user from localStorage:', parsedUser);
+        console.log("📱 Loaded user from localStorage:", parsedUser);
         setUser(parsedUser);
       } catch (error) {
-        console.error('❌ Error parsing stored user:', error);
-        localStorage.removeItem('user');
+        console.error("❌ Error parsing stored user:", error);
+        localStorage.removeItem("user");
       }
     } else {
-      console.log('⚠️ No user found in localStorage');
+      console.log("⚠️ No user found in localStorage");
     }
   }, []);
 
@@ -98,7 +111,7 @@ const CustomerProfilePage = () => {
     const loadProfile = async () => {
       // ✅ FIX: Don't load profile until we have current user data (for own profile)
       if (isOwnProfile && !user) {
-        console.log('⏳ Waiting for current user data...');
+        console.log("⏳ Waiting for current user data...");
         return;
       }
 
@@ -106,20 +119,24 @@ const CustomerProfilePage = () => {
         setLoading(true);
         setError(null);
 
-        console.log('🔄 Loading profile...', { isOwnProfile, userId, currentUser: user?.id });
+        console.log("🔄 Loading profile...", {
+          isOwnProfile,
+          userId,
+          currentUser: user?.id,
+        });
 
         let result;
         if (isOwnProfile) {
           // Get current user's profile
-          console.log('📱 Fetching own profile');
+          console.log("📱 Fetching own profile");
           result = await userAPI.getCurrentProfile();
         } else {
           // Get specific user's profile
-          console.log('👤 Fetching user profile for ID:', userId);
+          console.log("👤 Fetching user profile for ID:", userId);
           result = await userAPI.getUserProfile(userId);
         }
 
-        console.log('📊 Profile API result:', result);
+        console.log("📊 Profile API result:", result);
 
         if (result.success) {
           // ✅ FIX: Ensure the profile data has both avatar fields
@@ -134,20 +151,22 @@ const CustomerProfilePage = () => {
 
           setProfileUser(profileData);
 
+
           // Update local storage if it's own profile
           if (isOwnProfile && profileData) {
-            const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
+            const currentUser = JSON.parse(
+              localStorage.getItem("user") || "{}"
+            );
             const updatedUser = { ...currentUser, ...profileData };
-            localStorage.setItem('user', JSON.stringify(updatedUser));
+            localStorage.setItem("user", JSON.stringify(updatedUser));
             setUser(updatedUser);
           }
         } else {
-          setError(result.message || 'Failed to load profile');
+          setError(result.message || "Failed to load profile");
         }
-
       } catch (err) {
-        console.error('❌ Profile loading error:', err);
-        setError('Unable to load profile. Please try again.');
+        console.error("❌ Profile loading error:", err);
+        setError("Unable to load profile. Please try again.");
       } finally {
         setLoading(false);
       }
@@ -161,9 +180,9 @@ const CustomerProfilePage = () => {
 
   const handleLogout = () => {
     setUser(null);
-    localStorage.removeItem('user');
-    localStorage.removeItem('token');
-    navigate('/');
+    localStorage.removeItem("user");
+    localStorage.removeItem("token");
+    navigate("/");
   };
 
   const handleTabChange = (event, newValue) => {
@@ -181,7 +200,7 @@ const CustomerProfilePage = () => {
     if (isOwnProfile) {
       const updatedUser = { ...user, ...updatedProfile };
       setUser(updatedUser);
-      localStorage.setItem('user', JSON.stringify(updatedUser));
+      localStorage.setItem("user", JSON.stringify(updatedUser));
     }
 
     showSnackbar('Profile updated successfully!', 'success');
@@ -246,7 +265,7 @@ const CustomerProfilePage = () => {
     showSnackbar('Photo upload feature coming soon!', 'info');
   };
 
-  const showSnackbar = (message, severity = 'success') => {
+  const showSnackbar = (message, severity = "success") => {
     setSnackbar({ open: true, message, severity });
   };
 
@@ -266,42 +285,42 @@ const CustomerProfilePage = () => {
   };
 
   const mockFavoriteCategories = [
-    { name: 'Anime Cosplay', bookings: 12, color: '#E91E63' },
-    { name: 'Game Characters', bookings: 7, color: '#9C27B0' },
-    { name: 'Photography', bookings: 3, color: '#673AB7' },
-    { name: 'Events', bookings: 1, color: '#3F51B5' },
+    { name: "Anime Cosplay", bookings: 12, color: "#E91E63" },
+    { name: "Game Characters", bookings: 7, color: "#9C27B0" },
+    { name: "Photography", bookings: 3, color: "#673AB7" },
+    { name: "Events", bookings: 1, color: "#3F51B5" },
   ];
 
   const mockRecentActivity = [
     {
-      icon: '📸',
-      title: 'Completed photoshoot',
-      description: 'Rated 5 stars for session with Cosplay A',
-      time: '2 hours ago'
+      icon: "📸",
+      title: "Completed photoshoot",
+      description: "Rated 5 stars for session with Cosplay A",
+      time: "2 hours ago",
     },
     {
-      icon: '💰',
-      title: 'Added funds to wallet',
-      description: 'Added 1,000,000đ to wallet',
-      time: '1 day ago'
+      icon: "💰",
+      title: "Added funds to wallet",
+      description: "Added 1,000,000đ to wallet",
+      time: "1 day ago",
     },
     {
-      icon: '📅',
-      title: 'Confirmed new booking',
-      description: 'Convention participation with Cosplay D',
-      time: '2 days ago'
+      icon: "📅",
+      title: "Confirmed new booking",
+      description: "Convention participation with Cosplay D",
+      time: "2 days ago",
     },
     {
-      icon: '⭐',
-      title: 'Left detailed review',
-      description: 'Reviewed experience with Cosplay C',
-      time: '3 days ago'
+      icon: "⭐",
+      title: "Left detailed review",
+      description: "Reviewed experience with Cosplay C",
+      time: "3 days ago",
     },
     {
-      icon: '🎯',
-      title: 'Achieved Gold status',
-      description: 'Unlocked Gold member benefits',
-      time: '1 week ago'
+      icon: "🎯",
+      title: "Achieved Gold status",
+      description: "Unlocked Gold member benefits",
+      time: "1 week ago",
     },
   ];
 
@@ -310,9 +329,9 @@ const CustomerProfilePage = () => {
     url: `/src/assets/cosplayer${(index % 8) + 1}.png`,
     title: `Event Photo ${index + 1}`,
     description: `Amazing cosplay event experience #${index + 1}`,
-    category: ['event', 'photoshoot', 'convention', 'meetup'][index % 4],
+    category: ["event", "photoshoot", "convention", "meetup"][index % 4],
     likes: Math.floor(Math.random() * 100) + 20,
-    tags: ['cosplay', 'event', 'memories', 'community'],
+    tags: ["cosplay", "event", "memories", "community"],
   }));
 
   const customerTabCounts = {
@@ -328,43 +347,43 @@ const CustomerProfilePage = () => {
 
   const customerTabs = [
     {
-      id: 'overview',
-      label: 'Overview',
-      icon: 'Info',
-      show: true
+      id: "overview",
+      label: "Overview",
+      icon: "Info",
+      show: true,
     },
     {
-      id: 'wallet',
-      label: 'Wallet',
-      icon: 'AccountBalanceWallet',
-      show: isOwnProfile
+      id: "wallet",
+      label: "Wallet",
+      icon: "AccountBalanceWallet",
+      show: isOwnProfile,
     },
     {
-      id: 'bookings',
-      label: 'Bookings',
-      icon: 'Event',
+      id: "bookings",
+      label: "Bookings",
+      icon: "Event",
       count: customerTabCounts.bookings,
-      show: isOwnProfile
+      show: isOwnProfile,
     },
     {
-      id: 'gallery',
-      label: 'Gallery',
-      icon: 'PhotoLibrary',
+      id: "gallery",
+      label: "Gallery",
+      icon: "PhotoLibrary",
       count: customerTabCounts.photos,
-      show: true
+      show: true,
     },
     {
-      id: 'favorites',
-      label: 'Favorites',
-      icon: 'Favorite',
+      id: "favorites",
+      label: "Favorites",
+      icon: "Favorite",
       count: customerTabCounts.favorites,
-      show: isOwnProfile
-    }
+      show: isOwnProfile,
+    },
   ];
 
   const renderTabContent = () => {
     switch (activeTab) {
-      case 'overview':
+      case "overview":
         return (
           <CustomerProfileOverview
             user={profileUser}
@@ -376,11 +395,19 @@ const CustomerProfilePage = () => {
             membershipTier={profileUser?.membershipTier}
           />
         );
-      case 'wallet':
+      case "wallet":
         return (
           <CustomerWallet
             balance={profileUser?.walletBalance}
             loyaltyPoints={profileUser?.loyaltyPoints}
+            // Pass API functions for real data loading
+            onLoadWalletDetails={() => enhancedWalletAPI.getWalletDetails()}
+            onLoadSpendingAnalytics={(timeRange) =>
+              enhancedWalletAPI.getSpendingAnalytics(timeRange)
+            }
+            onLoadTransactionHistory={(params) =>
+              enhancedWalletAPI.getTransactionHistory(params)
+            }
           />
         );
       case 'bookings':
@@ -392,9 +419,16 @@ const CustomerProfilePage = () => {
             isOwnProfile={isOwnProfile}
             onAddPhoto={handleAddPhoto}
             loading={false}
+            // Pass API functions for real gallery data
+            onLoadGallery={(category) =>
+              customerMediaAPI.getCustomerGallery(profileUser?.id, category)
+            }
+            onDeletePhoto={(photoId) =>
+              customerMediaAPI.deleteProfilePhoto(photoId)
+            }
           />
         );
-      case 'favorites':
+      case "favorites":
         return (
           <Box sx={{
             p: 4,
@@ -405,6 +439,7 @@ const CustomerProfilePage = () => {
           }}>
             <h3>Favorite Cosplayers</h3>
             <p>Your favorite cosplayers will appear here!</p>
+            {/* Future: Use favoritesAPI.getFavoriteCosplayers() */}
           </Box>
         );
       default:
@@ -415,10 +450,10 @@ const CustomerProfilePage = () => {
   if (loading) {
     return (
       <ThemeProvider theme={cosplayTheme}>
-        <Box sx={{ minHeight: '100vh', backgroundColor: '#FFE8F5' }}>
+        <Box sx={{ minHeight: "100vh", backgroundColor: "#FFE8F5" }}>
           <Header user={user} onLogout={handleLogout} />
-          <Container maxWidth="lg" sx={{ py: 8, textAlign: 'center' }}>
-            <CircularProgress size={60} sx={{ color: 'primary.main' }} />
+          <Container maxWidth="lg" sx={{ py: 8, textAlign: "center" }}>
+            <CircularProgress size={60} sx={{ color: "primary.main" }} />
             <Box sx={{ mt: 2 }}>
               <h3>Loading customer profile...</h3>
             </Box>
@@ -432,14 +467,17 @@ const CustomerProfilePage = () => {
   if (error) {
     return (
       <ThemeProvider theme={cosplayTheme}>
-        <Box sx={{ minHeight: '100vh', backgroundColor: '#FFE8F5' }}>
+        <Box sx={{ minHeight: "100vh", backgroundColor: "#FFE8F5" }}>
           <Header user={user} onLogout={handleLogout} />
           <Container maxWidth="lg" sx={{ py: 8 }}>
             <Alert
               severity="error"
               sx={{ mb: 4, borderRadius: '12px' }}
               action={
-                <Button color="inherit" onClick={() => window.location.reload()}>
+                <Button
+                  color="inherit"
+                  onClick={() => window.location.reload()}
+                >
                   Retry
                 </Button>
               }
@@ -455,8 +493,9 @@ const CustomerProfilePage = () => {
 
   return (
     <ThemeProvider theme={cosplayTheme}>
-      <Box sx={{ minHeight: '100vh', backgroundColor: '#FFE8F5' }}>
+      <Box sx={{ minHeight: "100vh", backgroundColor: "#FFE8F5" }}>
         <Header user={user} onLogout={handleLogout} />
+
 
         <Container maxWidth="lg" sx={{ py: 4 }}>
           <CustomerProfileHeader
@@ -478,9 +517,7 @@ const CustomerProfilePage = () => {
             customTabs={customerTabs}
           />
 
-          <Box sx={{ minHeight: '400px' }}>
-            {renderTabContent()}
-          </Box>
+          <Box sx={{ minHeight: "400px" }}>{renderTabContent()}</Box>
         </Container>
 
         <Footer />
@@ -498,12 +535,14 @@ const CustomerProfilePage = () => {
           open={snackbar.open}
           autoHideDuration={6000}
           onClose={handleCloseSnackbar}
-          anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+          anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
         >
           <Alert
             onClose={handleCloseSnackbar}
+          <Alert
+            onClose={handleCloseSnackbar}
             severity={snackbar.severity}
-            sx={{ borderRadius: '12px' }}
+            sx={{ borderRadius: "12px" }}
           >
             {snackbar.message}
           </Alert>

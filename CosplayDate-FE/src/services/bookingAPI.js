@@ -66,15 +66,15 @@ export const bookingAPI = {
       return {
         success: true,
         data: response.data.data || response.data,
-        message: response.data.message || 'Booking created successfully'
+        message: response.data.message || "Booking created successfully",
       };
     } catch (error) {
       console.error('Failed to create booking:', error);
       
       return {
         success: false,
-        message: error.response?.data?.message || 'Failed to create booking',
-        errors: error.response?.data?.errors || {}
+        message: error.response?.data?.message || "Failed to create booking",
+        errors: error.response?.data?.errors || {},
       };
     }
   },
@@ -100,12 +100,12 @@ export const bookingAPI = {
         message: 'Bookings loaded successfully'
       };
     } catch (error) {
-      console.error('Failed to load bookings:', error);
+      console.error("Failed to load bookings:", error);
       return {
         success: false,
         data: [],
-        message: error.response?.data?.message || 'Failed to load bookings',
-        errors: error.response?.data?.errors || {}
+        message: error.response?.data?.message || "Failed to load bookings",
+        errors: error.response?.data?.errors || {},
       };
     }
   },
@@ -125,8 +125,9 @@ export const bookingAPI = {
       
       return {
         success: false,
-        message: error.response?.data?.message || 'Failed to load booking details',
-        errors: error.response?.data?.errors || {}
+        message:
+          error.response?.data?.message || "Failed to load booking details",
+        errors: error.response?.data?.errors || {},
       };
     }
   },
@@ -150,15 +151,15 @@ export const bookingAPI = {
       return {
         success: true,
         data: response.data.data || response.data,
-        message: response.data.message || 'Booking updated successfully'
+        message: response.data.message || "Booking updated successfully",
       };
     } catch (error) {
       console.error('Failed to update booking:', error);
       
       return {
         success: false,
-        message: error.response?.data?.message || 'Failed to update booking',
-        errors: error.response?.data?.errors || {}
+        message: error.response?.data?.message || "Failed to update booking",
+        errors: error.response?.data?.errors || {},
       };
     }
   },
@@ -226,15 +227,15 @@ export const bookingAPI = {
       return {
         success: true,
         data: response.data.data || response.data,
-        message: response.data.message || 'Booking completed successfully'
+        message: response.data.message || "Booking completed successfully",
       };
     } catch (error) {
       console.error('Failed to complete booking:', error);
       
       return {
         success: false,
-        message: error.response?.data?.message || 'Failed to complete booking',
-        errors: error.response?.data?.errors || {}
+        message: error.response?.data?.message || "Failed to complete booking",
+        errors: error.response?.data?.errors || {},
       };
     }
   },
@@ -281,5 +282,5 @@ export const bookingAPI = {
         errors: error.response?.data?.errors || []
       };
     }
-  }
+  },
 };
