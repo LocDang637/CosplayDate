@@ -11,7 +11,7 @@ namespace CosplayDate.Application.Services.Interfaces
     public interface IEscrowService
     {
         Task<EscrowTransaction> CreateEscrowAsync(int bookingId, int paymentId, decimal amount);
-        Task<bool> ReleaseEscrowAsync(int escrowId, int userId);
+        Task<bool> ReleaseEscrowAsync(int bookingId);
         Task<bool> RefundEscrowAsync(int escrowId, string reason);
         Task<EscrowTransaction?> GetEscrowByBookingAsync(int bookingId);
         Task<EscrowTransaction?> GetEscrowByIdAsync(int escrowId);
