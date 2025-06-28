@@ -7,8 +7,6 @@ import {
   Button,
   Chip,
   IconButton,
-  Tooltip,
-  Stack,
   Paper,
   Divider,
   Badge,
@@ -17,40 +15,27 @@ import {
 import {
   Edit,
   Share,
-  Favorite,
-  FavoriteBorder,
   LocationOn,
   AttachMoney,
   Schedule,
   Star,
-  StarBorder,
   Check,
-  PersonAdd,
-  PersonRemove,
-  Message,
   CalendarMonth,
   WorkspacePremium,
-  Visibility,
   Groups,
   PhotoLibrary,
-  VideoLibrary
+  VideoLibrary,
+  Favorite
 } from '@mui/icons-material';
 import EditCosplayerDialog from './EditCosplayerDialog';
 
 const CosplayerProfileHeader = ({
   user,  // Changed from cosplayer to user to match the parent component
-  isOwnProfile = false,
-  onEditProfile,
-  onFollow,
-  onUnfollow,
-  onFavorite,
-  onMessage,
+  isOwnProfile = true,
   onBooking,
   currentUser,
   onProfileUpdate
 }) => {
-  const [isFollowing, setIsFollowing] = useState(user?.isFollowing || false);
-  const [isFavorite, setIsFavorite] = useState(user?.isFavorite || false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
 
   if (!user) return null;
@@ -69,21 +54,6 @@ const CosplayerProfileHeader = ({
   const handleEditSuccess = (updatedData) => {
     onProfileUpdate?.(updatedData);
     setEditDialogOpen(false);
-  };
-
-  const handleFollowToggle = async () => {
-    if (isFollowing) {
-      await onUnfollow?.(cosplayer.userId);
-      setIsFollowing(false);
-    } else {
-      await onFollow?.(cosplayer.userId);
-      setIsFollowing(true);
-    }
-  };
-
-  const handleFavoriteToggle = async () => {
-    await onFavorite?.(cosplayer.id);
-    setIsFavorite(!isFavorite);
   };
 
   const formatPrice = (price) => {
@@ -299,113 +269,36 @@ const CosplayerProfileHeader = ({
 
             {/* Action Buttons */}
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5, minWidth: 200 }}>
-              {isOwnProfile ? (
-                <Button
-                  variant="contained"
-                  startIcon={<Edit />}
-                  onClick={handleEditClick}
-                  sx={{
-                    background: 'linear-gradient(45deg, #E91E63, #9C27B0)',
-                    textTransform: 'none',
-                    fontWeight: 600,
-                    borderRadius: '12px',
-                    py: 1.5,
-                    '&:hover': {
-                      background: 'linear-gradient(45deg, #AD1457, #7B1FA2)',
-                    }
-                  }}
-                >
-                  Chỉnh sửa hồ sơ
-                </Button>
-              ) : (
-                <>
-                  {isCustomer && (
-                    <Button
-                      variant="contained"
-                      startIcon={<CalendarMonth />}
-                      onClick={() => onBooking?.(cosplayer)}
-                      sx={{
-                        background: 'linear-gradient(45deg, #E91E63, #9C27B0)',
-                        textTransform: 'none',
-                        fontWeight: 600,
-                        borderRadius: '12px',
-                        py: 1.5,
-                        '&:hover': {
-                          background: 'linear-gradient(45deg, #AD1457, #7B1FA2)',
-                        }
-                      }}
-                    >
-                      Đặt lịch ngay
-                    </Button>
-                  )}
-
-                  <Stack direction="row" spacing={1}>
-                    <Button
-                      variant={isFollowing ? "outlined" : "contained"}
-                      startIcon={isFollowing ? <PersonRemove /> : <PersonAdd />}
-                      onClick={handleFollowToggle}
-                      sx={{
-                        flex: 1,
-                        textTransform: 'none',
-                        fontWeight: 600,
-                        borderRadius: '12px',
-                        py: 1,
-                        ...(isFollowing ? {
-                          borderColor: 'primary.main',
-                          color: 'primary.main',
-                          '&:hover': {
-                            borderColor: 'primary.dark',
-                            bgcolor: 'rgba(233, 30, 99, 0.05)'
-                          }
-                        } : {
-                          bgcolor: 'primary.main',
-                          color: 'white',
-                          '&:hover': { bgcolor: 'primary.dark' }
-                        })
-                      }}
-                    >
-                      {isFollowing ? 'Đang theo dõi' : 'Theo dõi'}
-                    </Button>
-
-                    <IconButton
-                      onClick={handleFavoriteToggle}
-                      sx={{
-                        border: '1px solid',
-                        borderColor: isFavorite ? 'primary.main' : 'divider',
-                        color: isFavorite ? 'primary.main' : 'text.secondary',
-                        '&:hover': {
-                          bgcolor: 'rgba(233, 30, 99, 0.05)',
-                          borderColor: 'primary.main'
-                        }
-                      }}
-                    >
-                      {isFavorite ? <Favorite /> : <FavoriteBorder />}
-                    </IconButton>
-
-                    <IconButton
-                      onClick={() => onMessage?.(cosplayer)}
-                      sx={{
-                        border: '1px solid',
-                        borderColor: 'divider',
-                        '&:hover': {
-                          bgcolor: 'rgba(0, 0, 0, 0.05)',
-                          borderColor: 'text.secondary'
-                        }
-                      }}
-                    >
-                      <Message />
-                    </IconButton>
-                  </Stack>
-                </>
-              )}
+              <Button
+                variant="contained"
+                startIcon={<Edit />}
+                onClick={handleEditClick}
+                sx={{
+                  background: 'linear-gradient(45deg, #E91E63, #9C27B0)',
+                  textTransform: 'none',
+                  fontWeight: 600,
+                  borderRadius: '12px',
+                  py: 1.5,
+                  '&:hover': {
+                    background: 'linear-gradient(45deg, #AD1457, #7B1FA2)',
+                  }
+                }}
+              >
+                Chỉnh sửa hồ sơ
+              </Button>
 
               <Button
-                variant="text"
+                variant="contained"
                 startIcon={<Share />}
                 sx={{
+                  background: 'linear-gradient(45deg, #E91E63, #9C27B0)',
                   textTransform: 'none',
-                  color: 'text.secondary',
-                  '&:hover': { bgcolor: 'rgba(0, 0, 0, 0.05)' }
+                  fontWeight: 600,
+                  borderRadius: '12px',
+                  py: 1.5,
+                  '&:hover': {
+                    background: 'linear-gradient(45deg, #AD1457, #7B1FA2)',
+                  }
                 }}
               >
                 Chia sẻ

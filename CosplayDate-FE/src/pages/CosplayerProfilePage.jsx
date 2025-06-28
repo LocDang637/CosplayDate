@@ -56,73 +56,6 @@ const CosplayerProfilePage = () => {
     navigate('/profile/edit');
   }, [navigate]);
 
-  const handleFollow = useCallback(async (targetUserId) => {
-    try {
-      // Assuming you have a follow API endpoint
-      const result = await userAPI.followUser(targetUserId);
-      if (result.success) {
-        showSnackbar('Đã theo dõi thành công!', 'success');
-        // Update the profileUser state
-        setProfileUser(prev => ({
-          ...prev,
-          isFollowing: true,
-          followersCount: (prev.followersCount || 0) + 1
-        }));
-      }
-    } catch (error) {
-      console.error('Follow error:', error);
-      showSnackbar('Không thể theo dõi. Vui lòng thử lại.', 'error');
-    }
-  }, []);
-
-  const handleUnfollow = useCallback(async (targetUserId) => {
-    try {
-      // Assuming you have an unfollow API endpoint
-      const result = await userAPI.unfollowUser(targetUserId);
-      if (result.success) {
-        showSnackbar('Đã bỏ theo dõi!', 'success');
-        // Update the profileUser state
-        setProfileUser(prev => ({
-          ...prev,
-          isFollowing: false,
-          followersCount: Math.max((prev.followersCount || 0) - 1, 0)
-        }));
-      }
-    } catch (error) {
-      console.error('Unfollow error:', error);
-      showSnackbar('Không thể bỏ theo dõi. Vui lòng thử lại.', 'error');
-    }
-  }, []);
-
-  const handleFavorite = useCallback(async (cosplayerId) => {
-    try {
-      // Toggle favorite status
-      const newFavoriteStatus = !profileUser?.isFavorite;
-
-      // Call API to update favorite status
-      // const result = await cosplayerAPI.toggleFavorite(cosplayerId);
-
-      // Update local state
-      setProfileUser(prev => ({
-        ...prev,
-        isFavorite: newFavoriteStatus
-      }));
-
-      showSnackbar(
-        newFavoriteStatus ? 'Đã thêm vào yêu thích!' : 'Đã xóa khỏi yêu thích!',
-        'success'
-      );
-    } catch (error) {
-      console.error('Favorite toggle error:', error);
-      showSnackbar('Không thể cập nhật. Vui lòng thử lại.', 'error');
-    }
-  }, [profileUser?.isFavorite]);
-
-  const handleMessage = useCallback((targetUser) => {
-    console.log('💬 Message clicked for:', targetUser);
-    navigate(`/messages/${targetUser.userId || targetUser.id}`);
-  }, [navigate]);
-
   const handleBooking = useCallback((targetCosplayer) => {
     console.log('📅 Booking clicked for:', targetCosplayer);
     navigate(`/booking/${targetCosplayer.id}`);
@@ -401,7 +334,7 @@ const CosplayerProfilePage = () => {
       id: 'bookings',
       label: 'Đặt lịch',
       icon: 'Event',
-      show: isOwnProfile // Only show for own profile
+      show: true 
     },
     {
       id: 'gallery',
@@ -603,10 +536,6 @@ const CosplayerProfilePage = () => {
             user={profileUser}
             isOwnProfile={isOwnProfile}
             onEditProfile={handleEditProfile}
-            onFollow={handleFollow}
-            onUnfollow={handleUnfollow}
-            onFavorite={handleFavorite}
-            onMessage={handleMessage}
             onBooking={handleBooking}
             currentUser={user}
             onProfileUpdate={handleProfileUpdate}  
