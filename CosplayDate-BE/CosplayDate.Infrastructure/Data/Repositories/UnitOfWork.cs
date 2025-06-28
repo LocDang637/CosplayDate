@@ -86,5 +86,10 @@ namespace CosplayDate.Infrastructure.Data.Repositories
             _transaction?.Dispose();
             _context.Dispose();
         }
+
+        public void Clear()
+        {
+            _context.ChangeTracker.Clear();
+        }
     }
 }

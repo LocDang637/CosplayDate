@@ -610,5 +610,207 @@ namespace CosplayDate.Application.Services.Implementations
                 _ => "Bronze"
             };
         }
+
+        public async Task<ApiResponse<string>> HoldEscrowAsync(int userId, decimal amount, int escrowId, string transactionCode)
+        {
+            try
+            {
+                //await _unitOfWork.BeginTransactionAsync();
+
+                var user = await _unitOfWork.Users.GetByIdAsync(userId);
+                if (user == null)
+                {
+                    return ApiResponse<string>.Error("User not found");
+                }
+
+                // Check if user has sufficient balance
+                var currentBalance = user.WalletBalance ?? 0;
+                if (currentBalance < amount)
+                {
+                    return ApiResponse<string>.Error("Insufficient wallet balance");
+                }
+
+                // Update user balance
+                user.WalletBalance = currentBalance - amount;
+                user.UpdatedAt = DateTime.UtcNow;
+
+                // Create transaction record
+                var transaction = new WalletTransaction
+                {
+                    UserId = userId,
+                    TransactionCode = transactionCode,
+                    Type = "EscrowHold",
+                    Amount = -amount,
+                    Description = $"Hold for escrow #{escrowId}",
+                    ReferenceId = escrowId.ToString(),
+                    Status = "Completed",
+                    BalanceAfter = user.WalletBalance ?? 0,
+                    CreatedAt = DateTime.UtcNow
+                };
+
+                _unitOfWork.Users.Update(user);
+                await _unitOfWork.WalletTransactions.AddAsync(transaction);
+                await _unitOfWork.SaveChangesAsync();
+                
+                await _unitOfWork.CommitTransactionAsync();
+
+                _logger.LogInformation("Escrow hold processed: User={UserId}, Amount={Amount}, EscrowId={EscrowId}, NewBalance={NewBalance}",
+                    userId, amount, escrowId, user.WalletBalance);
+
+                return ApiResponse<string>.Success(transaction.TransactionCode, "Escrow hold processed successfully");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error holding escrow for user {UserId}, escrow {EscrowId}", userId, escrowId);
+                await _unitOfWork.RollbackTransactionAsync();
+                return ApiResponse<string>.Error("Failed to hold escrow");
+            }
+        }
+
+        //public async Task<ApiResponse<string>> ReleaseEscrowAsync(int cosplayerId, decimal amount, int escrowId, string transactionCode)
+        //{
+        //    try
+        //    {
+        //        //await _unitOfWork.BeginTransactionAsync();
+
+        //        var cosplayer = await _unitOfWork.Users.GetByIdAsync(cosplayerId);
+        //        if (cosplayer == null)
+        //        {
+        //            return ApiResponse<string>.Error("Cosplayer not found");
+        //        }
+
+        //        // Update cosplayer balance
+        //        var currentBalance = cosplayer.WalletBalance ?? 0;
+        //        cosplayer.WalletBalance = currentBalance + amount;
+        //        cosplayer.UpdatedAt = DateTime.UtcNow;
+        //        _unitOfWork.Users.Update(cosplayer);
+        //        await _unitOfWork.SaveChangesAsync();
+        //        _unitOfWork.Clear();
+        //        // Create transaction record
+        //        var transaction = new WalletTransaction
+        //        {
+        //            UserId = cosplayerId,
+        //            TransactionCode = transactionCode,
+        //            Type = "EscrowRelease",
+        //            Amount = amount,
+        //            Description = $"Release from escrow #{escrowId}",
+        //            ReferenceId = escrowId.ToString(),
+        //            Status = "Completed",
+        //            BalanceAfter = cosplayer.WalletBalance ?? 0,
+        //            CreatedAt = DateTime.UtcNow
+        //        };
+
+
+        //        await _unitOfWork.WalletTransactions.AddAsync(transaction);
+        //        await _unitOfWork.SaveChangesAsync();
+        //        //await _unitOfWork.CommitTransactionAsync();
+
+        //        _logger.LogInformation("Escrow release processed: Cosplayer={CosplayerId}, Amount={Amount}, EscrowId={EscrowId}, NewBalance={NewBalance}",
+        //            cosplayerId, amount, escrowId, cosplayer.WalletBalance);
+
+        //        return ApiResponse<string>.Success(transaction.TransactionCode, "Escrow release processed successfully");
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        _logger.LogError(ex, "Error releasing escrow for cosplayer {CosplayerId}, escrow {EscrowId}", cosplayerId, escrowId);
+        //        //await _unitOfWork.RollbackTransactionAsync();
+        //        return ApiResponse<string>.Error("Failed to release escrow");
+        //    }
+        //}
+
+
+        public async Task<ApiResponse<string>> ReleaseEscrowAsync(int cosplayerId, decimal amount, int escrowId)
+        {
+            try
+            {
+                var cosplayer = await _unitOfWork.Users.GetByIdAsync(cosplayerId);
+                if (cosplayer == null)
+                {
+                    return ApiResponse<string>.Error("Cosplayer not found");
+                }
+
+                var currentBalance = cosplayer.WalletBalance ?? 0;
+                cosplayer.WalletBalance = currentBalance + amount;
+                cosplayer.UpdatedAt = DateTime.UtcNow;
+                _unitOfWork.Users.Update(cosplayer);
+                await _unitOfWork.SaveChangesAsync();
+                _unitOfWork.Clear();
+
+                var transaction = new WalletTransaction
+                {
+                    UserId = cosplayerId,
+                    TransactionCode = GenerateTransactionCode(), // Always unique
+                    Type = "EscrowRelease",
+                    Amount = amount,
+                    Description = $"Release from escrow #{escrowId}",
+                    ReferenceId = escrowId.ToString(),
+                    Status = "Completed",
+                    BalanceAfter = cosplayer.WalletBalance ?? 0,
+                    CreatedAt = DateTime.UtcNow
+                };
+
+                await _unitOfWork.WalletTransactions.AddAsync(transaction);
+                await _unitOfWork.SaveChangesAsync();
+
+                _logger.LogInformation("Escrow release processed: Cosplayer={CosplayerId}, Amount={Amount}, EscrowId={EscrowId}, NewBalance={NewBalance}",
+                    cosplayerId, amount, escrowId, cosplayer.WalletBalance);
+
+                return ApiResponse<string>.Success(transaction.TransactionCode, "Escrow release processed successfully");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error releasing escrow for cosplayer {CosplayerId}, escrow {EscrowId}", cosplayerId, escrowId);
+                return ApiResponse<string>.Error("Failed to release escrow");
+            }
+        }
+
+        public async Task<ApiResponse<string>> RefundEscrowAsync(int userId, decimal amount, int escrowId, string transactionCode)
+        {
+            try
+            {
+                await _unitOfWork.BeginTransactionAsync();
+
+                var user = await _unitOfWork.Users.GetByIdAsync(userId);
+                if (user == null)
+                {
+                    return ApiResponse<string>.Error("User not found");
+                }
+
+                // Update user balance
+                var currentBalance = user.WalletBalance ?? 0;
+                user.WalletBalance = currentBalance + amount;
+                user.UpdatedAt = DateTime.UtcNow;
+
+                // Create transaction record
+                var transaction = new WalletTransaction
+                {
+                    UserId = userId,
+                    TransactionCode = transactionCode,
+                    Type = "EscrowRefund",
+                    Amount = amount,
+                    Description = $"Refund from escrow #{escrowId}",
+                    ReferenceId = escrowId.ToString(),
+                    Status = "Completed",
+                    BalanceAfter = user.WalletBalance ?? 0,
+                    CreatedAt = DateTime.UtcNow
+                };
+
+                _unitOfWork.Users.Update(user);
+                await _unitOfWork.WalletTransactions.AddAsync(transaction);
+                await _unitOfWork.SaveChangesAsync();
+                await _unitOfWork.CommitTransactionAsync();
+
+                _logger.LogInformation("Escrow refund processed: User={UserId}, Amount={Amount}, EscrowId={EscrowId}, NewBalance={NewBalance}",
+                    userId, amount, escrowId, user.WalletBalance);
+
+                return ApiResponse<string>.Success(transaction.TransactionCode, "Escrow refund processed successfully");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error refunding escrow for user {UserId}, escrow {EscrowId}", userId, escrowId);
+                await _unitOfWork.RollbackTransactionAsync();
+                return ApiResponse<string>.Error("Failed to refund escrow");
+            }
+        }
     }
 }

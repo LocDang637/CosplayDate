@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
 using System.Security.Claims;
+using System.Threading.Tasks;
 
 namespace CosplayDate.API.Controllers
 {
@@ -27,29 +28,20 @@ namespace CosplayDate.API.Controllers
         [HttpPost]
         [Authorize(Policy = "RequireVerifiedUser")]
         [EnableRateLimiting("ApiPolicy")]
-        public async Task<IActionResult> CreateBooking([FromBody] CreateBookingRequestDto request)
+        public async Task<IActionResult> CreateBooking([FromForm] CreateBookingRequestDto request)
         {
-            if (!ModelState.IsValid)
-            {
-                return BadRequest(ModelState);
-            }
+            //if (!ModelState.IsValid)
+            //{
+            //    return BadRequest(ModelState);
+            //}
 
             try
             {
-                var currentUserId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
+                var currentUserId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? throw new InvalidOperationException("User ID not found"));
                 var userType = User.FindFirst("UserType")?.Value;
 
-                // Log for debugging
                 _logger.LogInformation("Creating booking for User ID: {UserId}, UserType: {UserType}", currentUserId, userType);
 
-                // Debug: Log all claims
-                foreach (var claim in User.Claims)
-                {
-                    _logger.LogInformation("Claim Type: {Type}, Value: {Value}", claim.Type, claim.Value);
-                }
-
-                // Check if user type is valid for booking creation
-                // Allow both "Customer" and "Khách hàng" (Vietnamese)
                 if (userType != "Customer" && userType != "Khách hàng")
                 {
                     _logger.LogWarning("Invalid user type for booking creation: {UserType}", userType);
@@ -65,15 +57,32 @@ namespace CosplayDate.API.Controllers
 
                 if (result.IsSuccess)
                 {
-                    return CreatedAtAction(nameof(GetBookingDetails), new { id = result.Data?.BookingId }, result);
+                    // CẢI TIẾN: Thêm EscrowId vào phản hồi
+                    var escrow = await _bookingService.GetEscrowByBookingAsync(result.Data.BookingId);
+                    var response = new
+                    {
+                        result.IsSuccess,
+                        result.Message,
+                        Data = new
+                        {
+                            result.Data.BookingId,
+                            result.Data.BookingCode,
+                            result.Data.TotalPrice,
+                            result.Data.PaymentUrl,
+                            result.Data.Message,
+                            result.Data.CreatedAt,
+                            EscrowId = escrow.Data?.Id// Thêm EscrowId
+                        }
+                    };
+                    return CreatedAtAction(nameof(GetBookingDetails), new { id = result.Data?.BookingId }, response);
                 }
 
                 return BadRequest(result);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error creating booking");
-                return StatusCode(500, "An error occurred while creating the booking");
+                _logger.LogError(ex, "Error creating booking for User ID: {UserId}", User.FindFirst(ClaimTypes.NameIdentifier)?.Value);
+                return StatusCode(500, new { isSuccess = false, message = "An error occurred while creating the booking" });
             }
         }
 
@@ -85,7 +94,7 @@ namespace CosplayDate.API.Controllers
         {
             try
             {
-                var currentUserId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
+                var currentUserId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? throw new InvalidOperationException("User ID not found"));
                 var result = await _bookingService.GetBookingDetailsAsync(id, currentUserId);
 
                 if (result.IsSuccess)
@@ -97,8 +106,8 @@ namespace CosplayDate.API.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error getting booking details for ID: {BookingId}", id);
-                return StatusCode(500, "An error occurred while retrieving booking details");
+                _logger.LogError(ex, "Error getting booking details for ID: {BookingId}, User ID: {UserId}", id, User.FindFirst(ClaimTypes.NameIdentifier)?.Value);
+                return StatusCode(500, new { isSuccess = false, message = "An error occurred while retrieving booking details" });
             }
         }
 
@@ -112,7 +121,7 @@ namespace CosplayDate.API.Controllers
         {
             try
             {
-                var currentUserId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
+                var currentUserId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? throw new InvalidOperationException("User ID not found"));
                 var result = await _bookingService.GetBookingsAsync(currentUserId, request);
 
                 if (result.IsSuccess)
@@ -124,8 +133,8 @@ namespace CosplayDate.API.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error getting bookings for user");
-                return StatusCode(500, "An error occurred while retrieving bookings");
+                _logger.LogError(ex, "Error getting bookings for User ID: {UserId}", User.FindFirst(ClaimTypes.NameIdentifier)?.Value);
+                return StatusCode(500, new { isSuccess = false, message = "An error occurred while retrieving bookings" });
             }
         }
 
@@ -138,12 +147,12 @@ namespace CosplayDate.API.Controllers
         {
             if (!ModelState.IsValid)
             {
-                return BadRequest(ModelState);
+                return BadRequest(ModelState); // CẢI TIẾN: Đảm bảo kiểm tra ModelState
             }
 
             try
             {
-                var currentUserId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
+                var currentUserId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? throw new InvalidOperationException("User ID not found"));
                 var result = await _bookingService.UpdateBookingAsync(id, currentUserId, request);
 
                 if (result.IsSuccess)
@@ -155,8 +164,8 @@ namespace CosplayDate.API.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error updating booking {BookingId}", id);
-                return StatusCode(500, "An error occurred while updating the booking");
+                _logger.LogError(ex, "Error updating booking {BookingId} for User ID: {UserId}", id, User.FindFirst(ClaimTypes.NameIdentifier)?.Value);
+                return StatusCode(500, new { isSuccess = false, message = "An error occurred while updating the booking" });
             }
         }
 
@@ -167,27 +176,40 @@ namespace CosplayDate.API.Controllers
         [EnableRateLimiting("ApiPolicy")]
         public async Task<IActionResult> CancelBooking(int id, [FromBody] CancelBookingRequestDto request)
         {
-            if (!ModelState.IsValid)
+            if (!ModelState.IsValid || string.IsNullOrEmpty(request.CancellationReason))
             {
-                return BadRequest(ModelState);
+                return BadRequest(new
+                {
+                    isSuccess = false,
+                    message = "Cancellation reason is required",
+                    errors = new[] { "Cancellation reason cannot be empty" }
+                });
             }
 
             try
             {
-                var currentUserId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
+                var currentUserId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? throw new InvalidOperationException("User ID not found"));
                 var result = await _bookingService.CancelBookingAsync(id, currentUserId, request);
 
                 if (result.IsSuccess)
                 {
-                    return Ok(result);
+                    // CẢI TIẾN: Thêm EscrowId vào phản hồi
+                    var escrow = await _bookingService.GetEscrowByBookingAsync(id);
+                    var response = new
+                    {
+                        result.IsSuccess,
+                        result.Message,
+                        EscrowId = escrow.Data?.Id// Thêm EscrowId
+                    };
+                    return Ok(response);
                 }
 
                 return BadRequest(result);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error cancelling booking {BookingId}", id);
-                return StatusCode(500, "An error occurred while cancelling the booking");
+                _logger.LogError(ex, "Error cancelling booking {BookingId} for User ID: {UserId}", id, User.FindFirst(ClaimTypes.NameIdentifier)?.Value);
+                return StatusCode(500, new { isSuccess = false, message = "An error occurred while cancelling the booking" });
             }
         }
 
@@ -201,7 +223,7 @@ namespace CosplayDate.API.Controllers
         {
             try
             {
-                var currentUserId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
+                var currentUserId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? throw new InvalidOperationException("User ID not found"));
                 var result = await _bookingService.ConfirmBookingAsync(id, currentUserId);
 
                 if (result.IsSuccess)
@@ -213,8 +235,8 @@ namespace CosplayDate.API.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error confirming booking {BookingId}", id);
-                return StatusCode(500, "An error occurred while confirming the booking");
+                _logger.LogError(ex, "Error confirming booking {BookingId} for User ID: {UserId}", id, User.FindFirst(ClaimTypes.NameIdentifier)?.Value);
+                return StatusCode(500, new { isSuccess = false, message = "An error occurred while confirming the booking" });
             }
         }
 
@@ -223,24 +245,38 @@ namespace CosplayDate.API.Controllers
         /// </summary>
         [HttpPost("{id}/complete")]
         [EnableRateLimiting("ApiPolicy")]
+        
         public async Task<IActionResult> CompleteBooking(int id)
         {
+            //if (!ModelState.IsValid) // CẢI TIẾN: Đảm bảo kiểm tra ModelState (nếu có body trong tương lai)
+            //{
+            //    return BadRequest(ModelState);
+            //}
+
             try
             {
-                var currentUserId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
+                var currentUserId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? throw new InvalidOperationException("User ID not found"));
                 var result = await _bookingService.CompleteBookingAsync(id, currentUserId);
 
                 if (result.IsSuccess)
                 {
-                    return Ok(result);
+                    // CẢI TIẾN: Thêm EscrowId vào phản hồi
+                    var escrow = await _bookingService.GetEscrowByBookingAsync(id);
+                    var response = new
+                    {
+                        result.IsSuccess,
+                        result.Message,
+                        EscrowId = escrow.Data?.Id// Thêm EscrowId
+                    };
+                    return Ok(response);
                 }
 
                 return BadRequest(result);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error completing booking {BookingId}", id);
-                return StatusCode(500, "An error occurred while completing the booking");
+                _logger.LogError(ex, "Error completing booking {BookingId} for User ID: {UserId}", id, User.FindFirst(ClaimTypes.NameIdentifier)?.Value);
+                return StatusCode(500, new { isSuccess = false, message = "An error occurred while completing the booking" });
             }
         }
 
@@ -276,8 +312,8 @@ namespace CosplayDate.API.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error calculating booking price");
-                return StatusCode(500, "An error occurred while calculating the booking price");
+                _logger.LogError(ex, "Error calculating booking price for Cosplayer ID: {CosplayerId}", cosplayerId);
+                return StatusCode(500, new { isSuccess = false, message = "An error occurred while calculating the booking price" });
             }
         }
 
@@ -299,7 +335,7 @@ namespace CosplayDate.API.Controllers
                     SortOrder = "asc"
                 };
 
-                var currentUserId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
+                var currentUserId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? throw new InvalidOperationException("User ID not found"));
                 var result = await _bookingService.GetBookingsAsync(currentUserId, request);
 
                 if (result.IsSuccess && result.Data != null)
@@ -327,8 +363,8 @@ namespace CosplayDate.API.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error getting upcoming bookings");
-                return StatusCode(500, "An error occurred while retrieving upcoming bookings");
+                _logger.LogError(ex, "Error getting upcoming bookings for User ID: {UserId}", User.FindFirst(ClaimTypes.NameIdentifier)?.Value);
+                return StatusCode(500, new { isSuccess = false, message = "An error occurred while retrieving upcoming bookings" });
             }
         }
 
@@ -345,7 +381,7 @@ namespace CosplayDate.API.Controllers
                 request.SortBy = "booking_date";
                 request.SortOrder = "desc";
 
-                var currentUserId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
+                var currentUserId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? throw new InvalidOperationException("User ID not found"));
                 var result = await _bookingService.GetBookingsAsync(currentUserId, request);
 
                 if (result.IsSuccess && result.Data != null)
@@ -379,8 +415,8 @@ namespace CosplayDate.API.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error getting booking history");
-                return StatusCode(500, "An error occurred while retrieving booking history");
+                _logger.LogError(ex, "Error getting booking history for User ID: {UserId}", User.FindFirst(ClaimTypes.NameIdentifier)?.Value);
+                return StatusCode(500, new { isSuccess = false, message = "An error occurred while retrieving booking history" });
             }
         }
 
@@ -400,7 +436,7 @@ namespace CosplayDate.API.Controllers
                     SortOrder = "desc"
                 };
 
-                var currentUserId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
+                var currentUserId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? throw new InvalidOperationException("User ID not found"));
                 var result = await _bookingService.GetBookingsAsync(currentUserId, request);
 
                 if (result.IsSuccess && result.Data != null)
@@ -417,8 +453,8 @@ namespace CosplayDate.API.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error getting booking stats");
-                return StatusCode(500, "An error occurred while retrieving booking statistics");
+                _logger.LogError(ex, "Error getting booking stats for User ID: {UserId}", User.FindFirst(ClaimTypes.NameIdentifier)?.Value);
+                return StatusCode(500, new { isSuccess = false, message = "An error occurred while retrieving booking statistics" });
             }
         }
     }

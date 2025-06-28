@@ -1,5 +1,6 @@
 ﻿using CosplayDate.Application.DTOs.Escrow;
 using CosplayDate.Application.Services.Interfaces;
+using CosplayDate.Domain.Entities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
@@ -24,12 +25,12 @@ namespace CosplayDate.API.Controllers
         /// Customer marks service as completed and releases payment
         /// </summary>
         [HttpPost("release/{escrowId}")]
-        public async Task<IActionResult> ReleaseEscrow(int escrowId, [FromBody] ReleaseEscrowRequestDto? request = null)
+        public async Task<IActionResult> ReleaseEscrow(int bookingId, [FromBody] ReleaseEscrowRequestDto? request = null)
         {
             try
             {
                 var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
-                var success = await _escrowService.ReleaseEscrowAsync(escrowId, userId);
+                var success = await _escrowService.ReleaseEscrowAsync(bookingId);
 
                 if (!success)
                 {
@@ -40,7 +41,7 @@ namespace CosplayDate.API.Controllers
                     });
                 }
 
-                var escrow = await _escrowService.GetEscrowByIdAsync(escrowId);
+                var escrow = await _escrowService.GetEscrowByIdAsync(bookingId);
 
                 return Ok(new EscrowActionResponseDto
                 {
@@ -54,7 +55,7 @@ namespace CosplayDate.API.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error releasing escrow {EscrowId}", escrowId);
+                _logger.LogError(ex, "Error releasing escrow {bookingId}", bookingId);
                 return StatusCode(500, new EscrowActionResponseDto
                 {
                     IsSuccess = false,

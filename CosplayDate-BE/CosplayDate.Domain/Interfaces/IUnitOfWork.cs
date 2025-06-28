@@ -29,5 +29,8 @@ namespace CosplayDate.Domain.Interfaces
         Task BeginTransactionAsync();
         Task CommitTransactionAsync();
         Task RollbackTransactionAsync();
+        void Clear();
+
     }
+
 }

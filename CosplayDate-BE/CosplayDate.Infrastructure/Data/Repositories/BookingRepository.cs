@@ -14,10 +14,11 @@ namespace CosplayDate.Infrastructure.Data.Repositories
         // Override GetByIdAsync to include Cosplayer relationship
         public override async Task<Booking?> GetByIdAsync(int id)
         {
-            return await _dbSet
-                .Include(b => b.Cosplayer)
-                .Include(b => b.Customer)
+            var item = await _dbSet
+                //.Include(b => b.Cosplayer)
+                //.Include(b => b.Customer)
                 .FirstOrDefaultAsync(b => b.Id == id);
+            return item;
         }
 
         // Additional method to get booking with all relationships if needed
