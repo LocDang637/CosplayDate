@@ -18,6 +18,8 @@ namespace CosplayDate.Infrastructure.Data.Repositories
             PasswordResetTokens = new PasswordResetTokenRepository(_context);
 
             Bookings = new BookingRepository(_context);
+            Payments = new Repository<Payment>(_context);              // ADD THIS LINE
+            EscrowTransactions = new Repository<EscrowTransaction>(_context); // ADD THIS LINE
             Reviews = new Repository<Review>(_context);
             WalletTransactions = new Repository<WalletTransaction>(_context);
             UserFollows = new Repository<UserFollow>(_context);
@@ -33,6 +35,8 @@ namespace CosplayDate.Infrastructure.Data.Repositories
         public IPasswordResetTokenRepository PasswordResetTokens { get; private set; }
 
         public IBookingRepository Bookings { get; private set; }
+        public IRepository<Payment> Payments { get; private set; }              // ADD THIS LINE
+        public IRepository<EscrowTransaction> EscrowTransactions { get; private set; } // ADD THIS LINE
         public IRepository<Review> Reviews { get; private set; }
         public IRepository<WalletTransaction> WalletTransactions { get; private set; }
         public IRepository<UserFollow> UserFollows { get; private set; }
@@ -81,6 +85,11 @@ namespace CosplayDate.Infrastructure.Data.Repositories
         {
             _transaction?.Dispose();
             _context.Dispose();
+        }
+
+        public void Clear()
+        {
+            _context.ChangeTracker.Clear();
         }
     }
 }

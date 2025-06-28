@@ -1,4 +1,5 @@
 ﻿using CosplayDate.Application.DTOs.Booking;
+using CosplayDate.Application.DTOs.Escrow;
 using CosplayDate.Shared.Models;
 using System;
 using System.Collections.Generic;
@@ -18,5 +19,14 @@ namespace CosplayDate.Application.Services.Interfaces
         Task<ApiResponse<string>> ConfirmBookingAsync(int bookingId, int cosplayerId);
         Task<ApiResponse<string>> CompleteBookingAsync(int bookingId, int userId);
         Task<ApiResponse<decimal>> CalculateBookingPriceAsync(int cosplayerId, TimeOnly startTime, TimeOnly endTime);
+
+        // Thêm mới: Lấy thông tin escrow liên quan đến một booking
+        Task<ApiResponse<EscrowTransactionDto>> GetEscrowByBookingAsync(int bookingId);
+
+        // Thêm mới: Lấy lịch sử escrow của người dùng
+        Task<ApiResponse<List<EscrowHistoryDto>>> GetEscrowHistoryAsync(int userId, bool isCustomer = true);
+
+        // Thêm mới: Lấy chi tiết escrow của một booking
+        Task<ApiResponse<EscrowSummaryDto>> GetBookingEscrowDetailsAsync(int bookingId, int userId);
     }
 }

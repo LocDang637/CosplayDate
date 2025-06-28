@@ -213,6 +213,7 @@ builder.Services.AddScoped<IBookingService, BookingService>();
 builder.Services.AddScoped<IBookingNotificationService, BookingNotificationService>();
 builder.Services.AddScoped<BookingValidationService>();
 builder.Services.AddScoped<BookingReminderBackgroundService>();
+builder.Services.AddScoped<IEscrowService, EscrowService>();
 
 // ===== JWT AUTHENTICATION CONFIGURATION =====
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)

@@ -14,6 +14,8 @@ namespace CosplayDate.Domain.Interfaces
         IPasswordResetTokenRepository PasswordResetTokens { get; }
 
         IBookingRepository Bookings { get; }
+        IRepository<Payment> Payments { get; }              // ADD THIS LINE
+        IRepository<EscrowTransaction> EscrowTransactions { get; } // ADD THIS LINE
         IRepository<Review> Reviews { get; }
         IRepository<WalletTransaction> WalletTransactions { get; }
         IRepository<UserFollow> UserFollows { get; }
@@ -27,5 +29,8 @@ namespace CosplayDate.Domain.Interfaces
         Task BeginTransactionAsync();
         Task CommitTransactionAsync();
         Task RollbackTransactionAsync();
+        void Clear();
+
     }
+
 }
