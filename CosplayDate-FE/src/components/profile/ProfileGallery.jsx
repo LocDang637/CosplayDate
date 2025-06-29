@@ -47,7 +47,7 @@ import MediaUploadDialog from '../media/MediaUploadDialog';
 
 const ProfileGallery = ({ 
   cosplayerId,
-  isOwnProfile = false,
+  isOwnProfile = true,
   loading: externalLoading = false 
 }) => {
   const [photos, setPhotos] = useState([]);

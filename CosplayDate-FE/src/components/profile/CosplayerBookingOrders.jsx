@@ -437,7 +437,7 @@ const CosplayerBookingOrders = () => {
                   />
                   <Typography variant="body2" color="text.secondary">•</Typography>
                   <Chip
-                    label={booking.paymentStatus === 'Completed' ? 'Đã thanh toán' : 'Đang giữ'}
+                    label={booking.paymentStatus === 'Completed' ? 'Đã thanh toán' : 'Đang tạm giữ'}
                     size="small"
                     color={getPaymentStatusColor(booking.paymentStatus)}
                   />
@@ -759,7 +759,7 @@ const CosplayerBookingOrders = () => {
                 </MenuItem>
                 <MenuItem value="Held">
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <Chip size="small" label="Đang giữ" color="error" />
+                    <Chip size="small" label="Đang tạm giữ" color="error" />
                   </Box>
                 </MenuItem>
               </Select>
@@ -821,7 +821,7 @@ const CosplayerBookingOrders = () => {
             {filterPaymentStatus && (
               <Chip
                 size="small"
-                label={`Thanh toán: ${filterPaymentStatus === 'Completed' ? 'Đã thanh toán' : 'Đang giữ'}`}
+                label={`Thanh toán: ${filterPaymentStatus === 'Completed' ? 'Đã thanh toán' : 'Đang tạm giữ'}`}
                 onDelete={() => setFilterPaymentStatus('')}
                 color={getPaymentStatusColor(filterPaymentStatus)}
               />

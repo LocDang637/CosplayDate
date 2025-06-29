@@ -28,7 +28,7 @@ import {
 
 const ProfileHeader = ({ 
   user, 
-  isOwnProfile = false, 
+  isOwnProfile = true, 
   onEditProfile, 
   onEditAvatar,
   onFollowToggle,

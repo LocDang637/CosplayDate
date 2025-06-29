@@ -32,7 +32,7 @@ import {
 } from '@mui/icons-material';
 import { bookingAPI } from '../../services/bookingAPI';
 
-const CosplayerProfileOverview = ({ user, isOwnProfile }) => {
+const CosplayerProfileOverview = ({ user }) => {
   const [upcomingBooking, setUpcomingBooking] = useState(null);
   const [loadingBooking, setLoadingBooking] = useState(true);
 

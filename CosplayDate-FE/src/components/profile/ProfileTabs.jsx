@@ -23,7 +23,7 @@ import {
 const ProfileTabs = ({ 
   activeTab, 
   onTabChange, 
-  isOwnProfile = false,
+  isOwnProfile = true,
   counts = {},
   customTabs = null // Allow custom tab configuration
 }) => {

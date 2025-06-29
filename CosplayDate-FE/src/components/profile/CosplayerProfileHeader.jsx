@@ -20,7 +20,6 @@ import {
   Schedule,
   Star,
   Check,
-  CalendarMonth,
   WorkspacePremium,
   Groups,
   PhotoLibrary,
@@ -30,10 +29,7 @@ import {
 import EditCosplayerDialog from './EditCosplayerDialog';
 
 const CosplayerProfileHeader = ({
-  user,  // Changed from cosplayer to user to match the parent component
-  isOwnProfile = true,
-  onBooking,
-  currentUser,
+  user,  
   onProfileUpdate
 }) => {
   const [editDialogOpen, setEditDialogOpen] = useState(false);
@@ -59,8 +55,6 @@ const CosplayerProfileHeader = ({
   const formatPrice = (price) => {
     return new Intl.NumberFormat('vi-VN').format(price) + 'đ/giờ';
   };
-
-  const isCustomer = currentUser && currentUser.userRole === 'Customer';
 
   return (
     <>
