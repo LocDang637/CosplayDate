@@ -457,7 +457,7 @@ namespace CosplayDate.Application.Services.Implementations
 
             public async Task<ApiResponse<string>> CancelBookingAsync(int bookingId, int userId, CancelBookingRequestDto request)
             {
-                await _unitOfWork.BeginTransactionAsync();
+                //await _unitOfWork.BeginTransactionAsync();
 
                 try
                 {
@@ -518,14 +518,16 @@ namespace CosplayDate.Application.Services.Implementations
                         }
                     }
 
-                    await _unitOfWork.CommitTransactionAsync();
+                    //await _unitOfWork.CommitTransactionAsync();
+                    await _unitOfWork.SaveChangesAsync();
+                    _unitOfWork.Clear();
 
-                    _logger.LogInformation("Booking cancelled with escrow refund: {BookingCode} by user {UserId}, RefundAmount: {RefundAmount}", booking.BookingCode, userId, refundAmount);
+                _logger.LogInformation("Booking cancelled with escrow refund: {BookingCode} by user {UserId}, RefundAmount: {RefundAmount}", booking.BookingCode, userId, refundAmount);
                     return ApiResponse<string>.Success("", $"Booking cancelled successfully. Refunded {refundAmount:N0} VND.");
                 }
                 catch (Exception ex)
                 {
-                    await _unitOfWork.RollbackTransactionAsync();
+                    //await _unitOfWork.RollbackTransactionAsync();
                     _logger.LogError(ex, "Error cancelling booking {BookingId}", bookingId);
                     return ApiResponse<string>.Error("An error occurred while cancelling the booking");
                 }
