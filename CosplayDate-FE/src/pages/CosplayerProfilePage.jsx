@@ -15,6 +15,7 @@ import { Add } from '@mui/icons-material';
 import { ThemeProvider } from '@mui/material/styles';
 import { cosplayTheme } from '../theme/cosplayTheme';
 import { cosplayerAPI, cosplayerMediaAPI } from '../services/cosplayerAPI';
+import { userAPI } from '../services/api';
 
 import Header from '../components/layout/Header';
 import Footer from '../components/layout/Footer';
@@ -276,6 +277,50 @@ const CosplayerProfilePage = () => {
     }
   };
 
+  const handleEditAvatar = async () => {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'image/*';
+    input.onchange = async (event) => {
+      const file = event.target.files[0];
+      if (file) {
+        try {
+          setLoading(true);
+          const result = await userAPI.uploadAvatar(file);
+
+          if (result.success) {
+            const newAvatarUrl = result.data.avatarUrl;
+
+            // ✅ FIX: Update profileUser state with both avatar and avatarUrl fields
+            setProfileUser(prev => ({
+              ...prev,
+              avatar: newAvatarUrl,      // ← Add this for CustomerProfileHeader compatibility
+              avatarUrl: newAvatarUrl    // ← Keep this for API compatibility
+            }));
+
+            const updatedUser = {
+              ...user,
+              avatar: newAvatarUrl,      // ← Add this for header compatibility
+              avatarUrl: newAvatarUrl    // ← Keep this for API compatibility
+            };
+            setUser(updatedUser);
+            localStorage.setItem('user', JSON.stringify(updatedUser));
+
+            showSnackbar('Avatar updated successfully!', 'success');
+          } else {
+            showSnackbar(result.message || 'Failed to upload avatar', 'error');
+          }
+        } catch (error) {
+          console.error('Avatar upload error:', error);
+          showSnackbar('Error uploading avatar', 'error');
+        } finally {
+          setLoading(false);
+        }
+      }
+    };
+    input.click();
+  };
+
   // Event handlers
   const handleLogout = useCallback(() => {
     console.log('👋 Logging out user');
@@ -336,7 +381,7 @@ const CosplayerProfilePage = () => {
       id: 'bookings',
       label: 'Đặt lịch',
       icon: 'Event',
-      show: true 
+      show: true
     },
     {
       id: 'gallery',
@@ -371,7 +416,7 @@ const CosplayerProfilePage = () => {
         );
       case 'bookings':
         return (
-          <CosplayerBookingOrders/>
+          <CosplayerBookingOrders />
         );
       case 'gallery':
         return (
@@ -531,9 +576,10 @@ const CosplayerProfilePage = () => {
           <CosplayerProfileHeader
             user={profileUser}
             onEditProfile={handleEditProfile}
+            onEditAvatar={handleEditAvatar}
             onBooking={handleBooking}
             currentUser={user}
-            onProfileUpdate={handleProfileUpdate}  
+            onProfileUpdate={handleProfileUpdate}
           />
 
           {/* Navigation Tabs */}

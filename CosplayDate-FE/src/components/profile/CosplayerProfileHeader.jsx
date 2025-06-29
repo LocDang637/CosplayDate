@@ -26,7 +26,8 @@ import {
   PhotoLibrary,
   VideoLibrary,
   Favorite,
-  CameraAlt
+  CameraAlt,
+  Verified
 } from '@mui/icons-material';
 import EditCosplayerDialog from './EditCosplayerDialog';
 
@@ -58,6 +59,17 @@ const CosplayerProfileHeader = ({
 
   const formatPrice = (price) => {
     return new Intl.NumberFormat('vi-VN').format(price) + 'đ/giờ';
+  };
+
+  const handleShare = () => {
+    if (navigator.share) {
+      navigator.share({
+        title: `${user.firstName} ${user.lastName} - Khách hàng CosplayDate`,
+        url: window.location.href,
+      });
+    } else {
+      navigator.clipboard.writeText(window.location.href);
+    }
   };
 
   return (
@@ -94,7 +106,7 @@ const CosplayerProfileHeader = ({
       >
         <Box sx={{ position: 'relative', zIndex: 1 }}>
           {/* Top Section with Avatar and Basic Info */}
-          <Box sx={{ display: 'flex', gap: 3, flexWrap: 'wrap', alignItems: 'flex-start' }}>
+          <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 3, mb: 3 }}>
             {/* Avatar Section */}
             <Box
               sx={{ position: 'relative' }}
@@ -105,14 +117,14 @@ const CosplayerProfileHeader = ({
                 overlap="circular"
                 anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
                 badgeContent={
-                  cosplayer.isAvailable && (
-                    <Box
+                  user.isAvailable && (
+                    <Verified
                       sx={{
-                        width: 20,
-                        height: 20,
+                        color: '#4CAF50',
+                        fontSize: 28,
+                        backgroundColor: 'white',
                         borderRadius: '50%',
-                        bgcolor: '#4CAF50',
-                        border: '3px solid white',
+                        p: '2px'
                       }}
                     />
                   )
@@ -123,10 +135,8 @@ const CosplayerProfileHeader = ({
                   sx={{
                     width: 120,
                     height: 120,
-                    fontSize: '3rem',
-                    bgcolor: 'primary.main',
-                    boxShadow: '0 8px 24px rgba(0,0,0,0.12)',
                     border: '4px solid white',
+                    boxShadow: '0 8px 24px rgba(233, 30, 99, 0.2)',
                     cursor: 'pointer',
                     transition: 'all 0.3s ease',
                     '&:hover': {
@@ -140,7 +150,7 @@ const CosplayerProfileHeader = ({
               </Badge>
 
               {/* Camera Overlay for Own Profile */}
-              {avatarHovered && (
+              <Fade in={avatarHovered}>
                 <Box
                   sx={{
                     position: 'absolute',
@@ -154,27 +164,12 @@ const CosplayerProfileHeader = ({
                     alignItems: 'center',
                     justifyContent: 'center',
                     cursor: 'pointer',
-                    pointerEvents: 'none', // Let clicks pass through to avatar
                   }}
+                  onClick={onEditAvatar}
                 >
                   <CameraAlt sx={{ color: 'white', fontSize: 32 }} />
                 </Box>
-              )}
-
-              {/* Photo Icon - Only show if not own profile */}
-              <IconButton
-                size="small"
-                sx={{
-                  position: 'absolute',
-                  bottom: 0,
-                  right: 0,
-                  bgcolor: 'white',
-                  boxShadow: 2,
-                  '&:hover': { bgcolor: 'grey.100' }
-                }}
-              >
-                <PhotoLibrary sx={{ fontSize: 20 }} />
-              </IconButton>
+              </Fade>
             </Box>
 
             {/* Main Info Section */}
@@ -318,6 +313,7 @@ const CosplayerProfileHeader = ({
               </Button>
 
               <Button
+                onClick={handleShare}
                 variant="contained"
                 startIcon={<Share />}
                 sx={{

@@ -40,8 +40,6 @@ const CustomerProfileHeader = ({
   user, 
   onEditProfile, 
   onEditAvatar,
-  onFollowToggle,
-  isFollowing = false,
   walletBalance = 0,
   membershipTier = 'Bronze'
 }) => {

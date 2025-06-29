@@ -13,14 +13,9 @@ import { ThemeProvider } from "@mui/material/styles";
 import { cosplayTheme } from "../theme/cosplayTheme";
 import {
   userAPI,
-  followAPI,
-  customerStatsAPI,
   enhancedWalletAPI,
-  customerReviewsAPI,
-  favoritesAPI,
   customerMediaAPI,
 } from "../services/api";
-import { bookingAPI } from "../services/bookingAPI";
 
 // Import components
 import Header from '../components/layout/Header';
@@ -41,7 +36,6 @@ const CustomerProfilePage = () => {
   const [user, setUser] = useState(null);
   const [profileUser, setProfileUser] = useState(null);
   const [activeTab, setActiveTab] = useState('overview');
-  const [selectedTab, setSelectedTab] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [isFollowing, setIsFollowing] = useState(false);
@@ -51,13 +45,6 @@ const CustomerProfilePage = () => {
     message: "",
     severity: "success",
   });
-
-  const tabs = [
-    { label: 'Thông tin', value: 0 },
-    { label: 'Đặt lịch của tôi', value: 1 },  // New tab
-    { label: 'Yêu thích', value: 2 },
-    { label: 'Đánh giá', value: 3 }
-  ];
 
   const isOwnProfile = !userId || (user?.id && parseInt(userId) === parseInt(user.id));
   console.log('userId:', userId, 'isOwnProfile:', isOwnProfile);
