@@ -4,7 +4,6 @@ import LoginPage from "../pages/LoginPage";
 import SignUpPage from "../pages/SignUpPage";
 import ForgotPasswordPage from "../pages/ForgotPasswordPage";
 import ResetPasswordPage from "../pages/ResetPasswordPage";
-import ProfilePage from "../pages/ProfilePage";
 import ProtectedRoute from "../components/ProtectedRoute";
 import Cosplayers from "../pages/CosplayersPage";
 import CosplayerDetailsPage from "../pages/CosplayerDetailsPage";
@@ -49,15 +48,6 @@ function AppRoutes() {
         }
       />
 
-      {/* Profile routes */}
-      <Route
-        path="/profile"
-        element={
-          <ProtectedRoute>
-            <ProfilePage />
-          </ProtectedRoute>
-        }
-      />
       <Route
         path="/profile/:userId"
         element={

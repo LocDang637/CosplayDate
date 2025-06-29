@@ -1,4 +1,4 @@
-// src/components/profile/CosplayerProfileHeader.jsx - Improved Version
+// src/components/profile/CosplayerProfileHeader.jsx - Improved Version with Avatar Upload
 import React, { useState } from 'react';
 import {
   Box,
@@ -10,7 +10,8 @@ import {
   Paper,
   Divider,
   Badge,
-  Rating
+  Rating,
+  Fade
 } from '@mui/material';
 import {
   Edit,
@@ -24,15 +25,19 @@ import {
   Groups,
   PhotoLibrary,
   VideoLibrary,
-  Favorite
+  Favorite,
+  CameraAlt
 } from '@mui/icons-material';
 import EditCosplayerDialog from './EditCosplayerDialog';
 
 const CosplayerProfileHeader = ({
   user,  
-  onProfileUpdate
+  onProfileUpdate,
+  onEditAvatar,
+  isOwnProfile = false
 }) => {
   const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [avatarHovered, setAvatarHovered] = useState(false);
 
   if (!user) return null;
 
@@ -92,7 +97,11 @@ const CosplayerProfileHeader = ({
           {/* Top Section with Avatar and Basic Info */}
           <Box sx={{ display: 'flex', gap: 3, flexWrap: 'wrap', alignItems: 'flex-start' }}>
             {/* Avatar Section */}
-            <Box sx={{ position: 'relative' }}>
+            <Box 
+              sx={{ position: 'relative' }}
+              onMouseEnter={() => setAvatarHovered(true)}
+              onMouseLeave={() => setAvatarHovered(false)}
+            >
               <Badge
                 overlap="circular"
                 anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
@@ -111,7 +120,7 @@ const CosplayerProfileHeader = ({
                 }
               >
                 <Avatar
-                  src={cosplayer.avatarUrl || cosplayer.featuredPhotoUrl}
+                  src={cosplayer.avatarUrl || cosplayer.avatar || cosplayer.featuredPhotoUrl}
                   sx={{
                     width: 120,
                     height: 120,
@@ -119,26 +128,56 @@ const CosplayerProfileHeader = ({
                     bgcolor: 'primary.main',
                     boxShadow: '0 8px 24px rgba(0,0,0,0.12)',
                     border: '4px solid white',
+                    cursor: isOwnProfile ? 'pointer' : 'default',
+                    transition: 'all 0.3s ease',
+                    '&:hover': isOwnProfile ? {
+                      transform: 'scale(1.05)',
+                    } : {},
                   }}
+                  onClick={isOwnProfile ? onEditAvatar : undefined}
                 >
                   {cosplayer.displayName?.[0] || 'C'}
                 </Avatar>
               </Badge>
 
-              {/* Photo Icon */}
-              <IconButton
-                size="small"
-                sx={{
-                  position: 'absolute',
-                  bottom: 0,
-                  right: 0,
-                  bgcolor: 'white',
-                  boxShadow: 2,
-                  '&:hover': { bgcolor: 'grey.100' }
-                }}
-              >
-                <PhotoLibrary sx={{ fontSize: 20 }} />
-              </IconButton>
+              {/* Camera Overlay for Own Profile */}
+              {isOwnProfile && avatarHovered && (
+                <Box
+                  sx={{
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    borderRadius: '50%',
+                    background: 'rgba(0,0,0,0.5)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    cursor: 'pointer',
+                    pointerEvents: 'none', // Let clicks pass through to avatar
+                  }}
+                >
+                  <CameraAlt sx={{ color: 'white', fontSize: 32 }} />
+                </Box>
+              )}
+
+              {/* Photo Icon - Only show if not own profile */}
+              {!isOwnProfile && (
+                <IconButton
+                  size="small"
+                  sx={{
+                    position: 'absolute',
+                    bottom: 0,
+                    right: 0,
+                    bgcolor: 'white',
+                    boxShadow: 2,
+                    '&:hover': { bgcolor: 'grey.100' }
+                  }}
+                >
+                  <PhotoLibrary sx={{ fontSize: 20 }} />
+                </IconButton>
+              )}
             </Box>
 
             {/* Main Info Section */}
