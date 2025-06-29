@@ -61,8 +61,24 @@ export const bookingAPI = {
         }
       }
       
-      const response = await api.post('/Booking', bookingData);
+      // Convert to FormData because the API expects [FromForm]
+      const formData = new FormData();
+      formData.append('cosplayerId', bookingData.cosplayerId.toString());
+      formData.append('serviceType', bookingData.serviceType);
+      formData.append('bookingDate', bookingData.bookingDate);
+      formData.append('startTime', bookingData.startTime);
+      formData.append('endTime', bookingData.endTime);
+      formData.append('location', bookingData.location);
+      if (bookingData.specialNotes) {
+        formData.append('specialNotes', bookingData.specialNotes);
+      }
       
+      const response = await api.post('/Booking', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+
       return {
         success: true,
         data: response.data.data || response.data,
@@ -70,7 +86,7 @@ export const bookingAPI = {
       };
     } catch (error) {
       console.error('Failed to create booking:', error);
-      
+
       return {
         success: false,
         message: error.response?.data?.message || "Failed to create booking",
@@ -84,7 +100,7 @@ export const bookingAPI = {
     try {
       const queryParams = new URLSearchParams(params);
       const response = await api.get(`/Booking?${queryParams}`);
-      
+
       // Handle the response structure
       if (response.data?.isSuccess) {
         return {
@@ -93,7 +109,7 @@ export const bookingAPI = {
           message: response.data.message || 'Bookings loaded successfully'
         };
       }
-      
+
       return {
         success: true,
         data: response.data || [],
@@ -114,7 +130,7 @@ export const bookingAPI = {
   getBookingById: async (bookingId) => {
     try {
       const response = await api.get(`/Booking/${bookingId}`);
-      
+
       return {
         success: true,
         data: response.data.data || response.data,
@@ -122,7 +138,7 @@ export const bookingAPI = {
       };
     } catch (error) {
       console.error('Failed to load booking details:', error);
-      
+
       return {
         success: false,
         message:
@@ -136,7 +152,7 @@ export const bookingAPI = {
   updateBooking: async (bookingId, updateData) => {
     try {
       console.log(`Updating booking ${bookingId} with data:`, updateData);
-      
+
       // Ensure all date/time fields are in correct format
       const requestBody = {
         bookingDate: updateData.bookingDate, // Should be "yyyy-MM-dd" format
@@ -145,9 +161,9 @@ export const bookingAPI = {
         location: updateData.location || '',
         specialNotes: updateData.specialNotes || ''
       };
-      
+
       const response = await api.put(`/Booking/${bookingId}`, requestBody);
-      
+
       return {
         success: true,
         data: response.data.data || response.data,
@@ -155,7 +171,7 @@ export const bookingAPI = {
       };
     } catch (error) {
       console.error('Failed to update booking:', error);
-      
+
       return {
         success: false,
         message: error.response?.data?.message || "Failed to update booking",
@@ -168,14 +184,14 @@ export const bookingAPI = {
   cancelBooking: async (bookingId, reason = '') => {
     try {
       console.log(`Cancelling booking ${bookingId} with reason:`, reason);
-      
+
       // API expects { cancellationReason: string }
       const requestBody = {
         cancellationReason: reason || ''
       };
-      
+
       const response = await api.post(`/Booking/${bookingId}/cancel`, requestBody);
-      
+
       return {
         success: true,
         data: response.data.data || response.data,
@@ -183,7 +199,7 @@ export const bookingAPI = {
       };
     } catch (error) {
       console.error('Failed to cancel booking:', error);
-      
+
       return {
         success: false,
         message: error.response?.data?.message || 'Failed to cancel booking',
@@ -196,10 +212,10 @@ export const bookingAPI = {
   confirmBooking: async (bookingId) => {
     try {
       console.log(`Confirming booking ${bookingId}`);
-      
+
       // No request body needed
       const response = await api.post(`/Booking/${bookingId}/confirm`, {});
-      
+
       return {
         success: true,
         data: response.data.data || response.data,
@@ -207,7 +223,7 @@ export const bookingAPI = {
       };
     } catch (error) {
       console.error('Failed to confirm booking:', error);
-      
+
       return {
         success: false,
         message: error.response?.data?.message || 'Failed to confirm booking',
@@ -220,10 +236,10 @@ export const bookingAPI = {
   completeBooking: async (bookingId) => {
     try {
       console.log(`Completing booking ${bookingId}`);
-      
+
       // No request body needed
       const response = await api.post(`/Booking/${bookingId}/complete`, {});
-      
+
       return {
         success: true,
         data: response.data.data || response.data,
@@ -231,7 +247,7 @@ export const bookingAPI = {
       };
     } catch (error) {
       console.error('Failed to complete booking:', error);
-      
+
       return {
         success: false,
         message: error.response?.data?.message || "Failed to complete booking",
@@ -245,9 +261,9 @@ export const bookingAPI = {
     try {
       // Ensure cosplayerId is an integer
       const id = parseInt(cosplayerId);
-      
+
       console.log('Calculating price:', { cosplayerId: id, startTime, endTime });
-      
+
       // Make GET request with query parameters
       const response = await api.get('/Booking/calculate-price', {
         params: {
@@ -256,9 +272,9 @@ export const bookingAPI = {
           endTime: endTime
         }
       });
-      
+
       console.log('Price calculation response:', response.data);
-      
+
       // Handle the specific response format
       if (response.data.isSuccess) {
         return {
@@ -275,7 +291,7 @@ export const bookingAPI = {
       }
     } catch (error) {
       console.error('Failed to calculate price:', error);
-      
+
       return {
         success: false,
         message: error.response?.data?.message || 'Failed to calculate price',

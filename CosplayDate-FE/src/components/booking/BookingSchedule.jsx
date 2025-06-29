@@ -71,18 +71,18 @@ const BookingSchedule = ({
     try {
       setLoading(true);
       setError('');
-      
+
       // Format times as HH:mm for the API
       const startTimeStr = format(startTime, 'HH:mm');
       const endTimeStr = format(endTime, 'HH:mm');
-      
+
       // Call the calculate-price API
       const result = await bookingAPI.calculatePrice(
         cosplayer.id,
         startTimeStr,
         endTimeStr
       );
-      
+
       if (result.success) {
         setTotalPrice(result.data);
       } else {
@@ -123,13 +123,13 @@ const BookingSchedule = ({
       setError('Vui lòng nhập địa điểm');
       return;
     }
-    
+
     // Validate end time is after start time
     if (isBefore(endTime, startTime)) {
       setError('Thời gian kết thúc phải sau thời gian bắt đầu');
       return;
     }
-    
+
     setConfirmDialogOpen(true);
   };
 
@@ -137,22 +137,28 @@ const BookingSchedule = ({
     try {
       setCreating(true);
       setError('');
-      
-      // Create booking data matching the exact API structure
-      const bookingData = {
+
+      // Ensure startTime and endTime are Date objects before formatting
+      if (!startTime || !endTime) {
+        setError('Vui lòng chọn thời gian bắt đầu và kết thúc');
+        return;
+      }
+
+      // Create booking request data matching the exact API structure
+      const bookingRequestData = {
         cosplayerId: parseInt(cosplayer.id), // Ensure it's a number
-        serviceType: service?.serviceName || service?.name || 'General Service', // Use serviceName
+        serviceType: service?.serviceName || service?.name || 'General Service',
         bookingDate: format(date, 'yyyy-MM-dd'), // Format: "2025-06-25"
-        startTime: format(startTime, 'HH:mm'), // Format: "HH:mm"
-        endTime: format(endTime, 'HH:mm'), // Format: "HH:mm"
+        startTime: format(startTime, 'HH:mm'), // Format: "14:30"
+        endTime: format(endTime, 'HH:mm'), // Format: "16:30"
         location: location.trim(),
         specialNotes: note.trim() || '' // Empty string if no notes
       };
 
-      console.log('Sending booking data:', bookingData); // Debug log
+      console.log('Sending booking request data:', bookingRequestData); // Debug log
 
-      const result = await bookingAPI.createBooking(bookingData);
-      
+      const result = await bookingAPI.createBooking(bookingRequestData);
+
       if (result.success) {
         setConfirmDialogOpen(false);
         // Pass booking data to parent
@@ -190,7 +196,7 @@ const BookingSchedule = ({
     if (!startTime || !endTime) return 0;
     const start = startTime.getHours() + startTime.getMinutes() / 60;
     const end = endTime.getHours() + endTime.getMinutes() / 60;
-    return end - start;
+    return Math.max(0, end - start); // Ensure non-negative result
   };
 
   // Prepare booking data for confirmation dialog
@@ -201,8 +207,9 @@ const BookingSchedule = ({
     },
     service: service?.serviceName || service?.name,
     date: formatSelectedDate(),
-    time: startTime && endTime ? `${format(startTime, 'HH:mm')} - ${format(endTime, 'HH:mm')}` : '',
-    duration: `${calculateDuration()} giờ`,
+    time: startTime && endTime ?
+      `${format(startTime, 'HH:mm')} - ${format(endTime, 'HH:mm')}` : '',
+    duration: startTime && endTime ? `${calculateDuration()} giờ` : '0 giờ',
     location: location,
     notes: note,
     totalPrice: totalPrice,
@@ -212,8 +219,8 @@ const BookingSchedule = ({
   return (
     <Box>
       {/* Service Summary */}
-      <Card sx={{ 
-        mb: 3, 
+      <Card sx={{
+        mb: 3,
         borderRadius: '16px',
         border: '1px solid rgba(233, 30, 99, 0.1)',
         boxShadow: 'none'
@@ -229,8 +236,8 @@ const BookingSchedule = ({
       </Card>
 
       {error && (
-        <Alert 
-          severity="error" 
+        <Alert
+          severity="error"
           sx={{ mb: 2, borderRadius: '8px' }}
           onClose={() => setError('')}
         >
@@ -243,7 +250,7 @@ const BookingSchedule = ({
         <Typography variant="h6" sx={{ mb: 2, fontWeight: 600 }}>
           Chọn ngày:
         </Typography>
-        
+
         <DatePicker
           value={date}
           onChange={setDate}
@@ -262,7 +269,7 @@ const BookingSchedule = ({
         <Typography variant="h6" sx={{ mb: 2, fontWeight: 600 }}>
           Chọn thời gian:
         </Typography>
-        
+
         <Grid container spacing={2} sx={{ mb: 3 }}>
           <Grid item xs={6}>
             <TimePicker
@@ -309,7 +316,7 @@ const BookingSchedule = ({
         <Typography variant="h6" sx={{ mb: 2, fontWeight: 600 }}>
           Địa điểm:
         </Typography>
-        
+
         <TextField
           fullWidth
           value={location}
@@ -329,7 +336,7 @@ const BookingSchedule = ({
         <Typography variant="h6" sx={{ mb: 2, fontWeight: 600 }}>
           Ghi chú (tùy chọn):
         </Typography>
-        
+
         <TextField
           fullWidth
           multiline
@@ -350,8 +357,8 @@ const BookingSchedule = ({
 
       {/* Price Summary */}
       {totalPrice > 0 && (
-        <Card sx={{ 
-          mb: 3, 
+        <Card sx={{
+          mb: 3,
           borderRadius: '16px',
           bgcolor: 'rgba(233, 30, 99, 0.05)',
           border: '1px solid rgba(233, 30, 99, 0.1)'
@@ -395,7 +402,7 @@ const BookingSchedule = ({
         >
           Quay lại
         </Button>
-        
+
         <Button
           variant="contained"
           onClick={handleOpenConfirmDialog}
@@ -498,10 +505,10 @@ const BookingSchedule = ({
           <Box sx={{ bgcolor: 'rgba(0, 0, 0, 0.02)', borderRadius: '16px', p: 3, mb: 3 }}>
             {/* Cosplayer Info */}
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 3 }}>
-              <Avatar 
-                src={bookingData.cosplayer.avatar} 
-                sx={{ 
-                  width: 56, 
+              <Avatar
+                src={bookingData.cosplayer.avatar}
+                sx={{
+                  width: 56,
                   height: 56,
                   border: '3px solid white',
                   boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
@@ -517,15 +524,15 @@ const BookingSchedule = ({
                   {bookingData.cosplayer.name}
                 </Typography>
               </Box>
-              <Chip 
-                label={bookingData.service} 
-                size="small" 
-                sx={{ 
+              <Chip
+                label={bookingData.service}
+                size="small"
+                sx={{
                   bgcolor: '#E91E63',
                   color: 'white',
                   fontWeight: 500,
                   borderRadius: '8px'
-                }} 
+                }}
               />
             </Box>
 
@@ -583,10 +590,10 @@ const BookingSchedule = ({
           </Box>
 
           {/* Price Summary */}
-          <Box 
-            sx={{ 
-              bgcolor: 'rgba(233, 30, 99, 0.05)', 
-              borderRadius: '12px', 
+          <Box
+            sx={{
+              bgcolor: 'rgba(233, 30, 99, 0.05)',
+              borderRadius: '12px',
               p: 2.5,
               mb: 3,
               border: '1px solid rgba(233, 30, 99, 0.1)'
@@ -613,10 +620,10 @@ const BookingSchedule = ({
               <Typography variant="h6" sx={{ fontWeight: 600 }}>
                 Tổng cộng
               </Typography>
-              <Typography 
-                variant="h5" 
-                sx={{ 
-                  fontWeight: 700, 
+              <Typography
+                variant="h5"
+                sx={{
+                  fontWeight: 700,
                   color: '#E91E63',
                   display: 'flex',
                   alignItems: 'center',
@@ -629,9 +636,9 @@ const BookingSchedule = ({
           </Box>
 
           {/* Info Alert */}
-          <Box 
-            sx={{ 
-              display: 'flex', 
+          <Box
+            sx={{
+              display: 'flex',
               gap: 1.5,
               p: 2,
               bgcolor: 'info.lighter',
@@ -642,7 +649,7 @@ const BookingSchedule = ({
           >
             <Info sx={{ fontSize: 20, color: 'info.main', flexShrink: 0, mt: 0.2 }} />
             <Typography variant="body2" color="text.secondary" sx={{ lineHeight: 1.6 }}>
-              Sau khi xác nhận, đặt lịch sẽ được gửi đến cosplayer. 
+              Sau khi xác nhận, đặt lịch sẽ được gửi đến cosplayer.
               Bạn sẽ nhận thông báo khi cosplayer phản hồi.
             </Typography>
           </Box>

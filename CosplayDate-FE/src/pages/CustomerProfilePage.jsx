@@ -539,8 +539,6 @@ const CustomerProfilePage = () => {
         >
           <Alert
             onClose={handleCloseSnackbar}
-          <Alert
-            onClose={handleCloseSnackbar}
             severity={snackbar.severity}
             sx={{ borderRadius: "12px" }}
           >
