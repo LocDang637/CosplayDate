@@ -23,7 +23,6 @@ import {
 const ProfileTabs = ({ 
   activeTab, 
   onTabChange, 
-  isOwnProfile = true,
   counts = {},
   customTabs = null // Allow custom tab configuration
 }) => {
@@ -78,7 +77,6 @@ const ProfileTabs = ({
       label: 'Favorites',
       icon: <Favorite />,
       count: counts.favorites,
-      show: isOwnProfile // Only show for own profile
     }
   ];
 

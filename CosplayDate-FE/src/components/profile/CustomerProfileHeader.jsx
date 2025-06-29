@@ -38,7 +38,6 @@ import {
 
 const CustomerProfileHeader = ({ 
   user, 
-  isOwnProfile = false, 
   onEditProfile, 
   onEditAvatar,
   onFollowToggle,
@@ -167,20 +166,19 @@ const CustomerProfileHeader = ({
                   height: 120,
                   border: '4px solid white',
                   boxShadow: '0 8px 24px rgba(233, 30, 99, 0.2)',
-                  cursor: isOwnProfile ? 'pointer' : 'default',
+                  cursor: 'pointer',
                   transition: 'all 0.3s ease',
-                  '&:hover': isOwnProfile ? {
+                  '&:hover':{
                     transform: 'scale(1.05)',
-                  } : {},
+                  },
                 }}
-                onClick={isOwnProfile ? onEditAvatar : undefined}
+                onClick={onEditAvatar}
               >
                 {user.firstName?.[0]}{user.lastName?.[0]}
               </Avatar>
             </Badge>
             
             {/* Camera Overlay for Own Profile */}
-            {isOwnProfile && (
               <Fade in={avatarHovered}>
                 <Box
                   sx={{
@@ -201,7 +199,6 @@ const CustomerProfileHeader = ({
                   <CameraAlt sx={{ color: 'white', fontSize: 32 }} />
                 </Box>
               </Fade>
-            )}
           </Box>
 
           {/* Profile Info */}
@@ -303,7 +300,6 @@ const CustomerProfileHeader = ({
 
           {/* Action Buttons */}
           <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1 }}>
-            {isOwnProfile ? (
               <>
                 <Button
                   variant="contained"
@@ -334,44 +330,10 @@ const CustomerProfileHeader = ({
                   <MoreVert />
                 </IconButton>
               </>
-            ) : (
-              <>
-                <Button
-                  variant={isFollowing ? "outlined" : "contained"}
-                  onClick={onFollowToggle}
-                  sx={{
-                    background: isFollowing ? 'transparent' : 'linear-gradient(45deg, #E91E63, #9C27B0)',
-                    color: isFollowing ? 'primary.main' : 'white',
-                    borderColor: isFollowing ? 'primary.main' : 'transparent',
-                    px: 3,
-                    py: 1,
-                    borderRadius: '12px',
-                    textTransform: 'none',
-                    fontWeight: 600,
-                    minWidth: '100px',
-                    '&:hover': {
-                      background: isFollowing ? 'rgba(233, 30, 99, 0.05)' : 'linear-gradient(45deg, #AD1457, #7B1FA2)',
-                    },
-                  }}
-                >
-                  {isFollowing ? 'Đang theo dõi' : 'Theo dõi'}
-                </Button>
-                <IconButton
-                  onClick={handleMenuOpen}
-                  sx={{
-                    backgroundColor: 'rgba(255,255,255,0.8)',
-                    '&:hover': { backgroundColor: 'rgba(255,255,255,1)' },
-                  }}
-                >
-                  <MoreVert />
-                </IconButton>
-              </>
-            )}
           </Box>
         </Box>
 
         {/* Customer Dashboard Cards */}
-        {isOwnProfile && (
           <Grid container spacing={2}>
             {/* Wallet Balance Card */}
             <Grid item xs={12} sm={6} md={3}>
@@ -501,7 +463,6 @@ const CustomerProfileHeader = ({
               </Card>
             </Grid>
           </Grid>
-        )}
 
         {/* Customer Interests/Preferences */}
         {user.interests && user.interests.length > 0 && (
@@ -548,7 +509,6 @@ const CustomerProfileHeader = ({
           </ListItemIcon>
           <ListItemText primary="Chia sẻ hồ sơ" />
         </MenuItem>
-        {isOwnProfile && (
           <>
           <MenuItem onClick={handleBecomeCosplayer}>
               <ListItemIcon>
@@ -564,8 +524,6 @@ const CustomerProfileHeader = ({
             <ListItemText primary="Cài đặt" />
           </MenuItem>
           </>
-          
-        )}
       </Menu>
     </Paper>
   );

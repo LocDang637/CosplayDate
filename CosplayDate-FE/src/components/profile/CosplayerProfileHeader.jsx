@@ -31,10 +31,9 @@ import {
 import EditCosplayerDialog from './EditCosplayerDialog';
 
 const CosplayerProfileHeader = ({
-  user,  
+  user,
   onProfileUpdate,
   onEditAvatar,
-  isOwnProfile = false
 }) => {
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [avatarHovered, setAvatarHovered] = useState(false);
@@ -97,7 +96,7 @@ const CosplayerProfileHeader = ({
           {/* Top Section with Avatar and Basic Info */}
           <Box sx={{ display: 'flex', gap: 3, flexWrap: 'wrap', alignItems: 'flex-start' }}>
             {/* Avatar Section */}
-            <Box 
+            <Box
               sx={{ position: 'relative' }}
               onMouseEnter={() => setAvatarHovered(true)}
               onMouseLeave={() => setAvatarHovered(false)}
@@ -128,20 +127,20 @@ const CosplayerProfileHeader = ({
                     bgcolor: 'primary.main',
                     boxShadow: '0 8px 24px rgba(0,0,0,0.12)',
                     border: '4px solid white',
-                    cursor: isOwnProfile ? 'pointer' : 'default',
+                    cursor: 'pointer',
                     transition: 'all 0.3s ease',
-                    '&:hover': isOwnProfile ? {
+                    '&:hover': {
                       transform: 'scale(1.05)',
-                    } : {},
+                    },
                   }}
-                  onClick={isOwnProfile ? onEditAvatar : undefined}
+                  onClick={onEditAvatar}
                 >
                   {cosplayer.displayName?.[0] || 'C'}
                 </Avatar>
               </Badge>
 
               {/* Camera Overlay for Own Profile */}
-              {isOwnProfile && avatarHovered && (
+              {avatarHovered && (
                 <Box
                   sx={{
                     position: 'absolute',
@@ -163,21 +162,19 @@ const CosplayerProfileHeader = ({
               )}
 
               {/* Photo Icon - Only show if not own profile */}
-              {!isOwnProfile && (
-                <IconButton
-                  size="small"
-                  sx={{
-                    position: 'absolute',
-                    bottom: 0,
-                    right: 0,
-                    bgcolor: 'white',
-                    boxShadow: 2,
-                    '&:hover': { bgcolor: 'grey.100' }
-                  }}
-                >
-                  <PhotoLibrary sx={{ fontSize: 20 }} />
-                </IconButton>
-              )}
+              <IconButton
+                size="small"
+                sx={{
+                  position: 'absolute',
+                  bottom: 0,
+                  right: 0,
+                  bgcolor: 'white',
+                  boxShadow: 2,
+                  '&:hover': { bgcolor: 'grey.100' }
+                }}
+              >
+                <PhotoLibrary sx={{ fontSize: 20 }} />
+              </IconButton>
             </Box>
 
             {/* Main Info Section */}
