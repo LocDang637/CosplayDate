@@ -256,6 +256,26 @@ export const bookingAPI = {
     }
   },
 
+  getUpcomingBookings: async () => {
+    try {
+      const response = await api.get('/Booking/upcoming');
+      
+      return {
+        success: response.data?.isSuccess || true,
+        data: response.data?.data || response.data,
+        message: response.data?.message || 'Upcoming bookings retrieved successfully'
+      };
+    } catch (error) {
+      console.error('Failed to get upcoming bookings:', error);
+      return {
+        success: false,
+        data: { bookings: [] },
+        message: error.response?.data?.message || 'Failed to load upcoming bookings',
+        errors: error.response?.data?.errors || {}
+      };
+    }
+  },
+
   // Calculate booking price - FIXED to use GET with query parameters
   calculatePrice: async (cosplayerId, startTime, endTime) => {
     try {
