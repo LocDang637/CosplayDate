@@ -768,20 +768,42 @@ namespace CosplayDate.Application.Services.Implementations
         {
             try
             {
-                await _unitOfWork.BeginTransactionAsync();
+                // Check if escrow was already refunded
+                var escrow = await _unitOfWork.EscrowTransactions.GetByIdAsync(escrowId);
+                if (escrow == null)
+                {
+                    return ApiResponse<string>.Error("Escrow not found");
+                }
 
+                if (escrow.Status == "Refunded")
+                {
+                    _logger.LogWarning("Escrow #{EscrowId} was already refunded.", escrowId);
+                    return ApiResponse<string>.Error("Escrow already refunded");
+                }
+
+                // Check if a WalletTransaction with this code already exists
+                var transactionExists = await _unitOfWork.WalletTransactions
+                    .AnyAsync(wt => wt.TransactionCode == transactionCode);
+
+                if (transactionExists)
+                {
+                    _logger.LogWarning("Transaction with code {TransactionCode} already exists", transactionCode);
+                    return ApiResponse<string>.Error("Refund transaction already processed");
+                }
+
+                // Fetch user
                 var user = await _unitOfWork.Users.GetByIdAsync(userId);
                 if (user == null)
                 {
                     return ApiResponse<string>.Error("User not found");
                 }
 
-                // Update user balance
+                // Update user's wallet balance
                 var currentBalance = user.WalletBalance ?? 0;
                 user.WalletBalance = currentBalance + amount;
                 user.UpdatedAt = DateTime.UtcNow;
 
-                // Create transaction record
+                // Create new WalletTransaction
                 var transaction = new WalletTransaction
                 {
                     UserId = userId,
@@ -795,22 +817,24 @@ namespace CosplayDate.Application.Services.Implementations
                     CreatedAt = DateTime.UtcNow
                 };
 
+                // Apply updates
                 _unitOfWork.Users.Update(user);
                 await _unitOfWork.WalletTransactions.AddAsync(transaction);
-                await _unitOfWork.SaveChangesAsync();
-                await _unitOfWork.CommitTransactionAsync();
 
-                _logger.LogInformation("Escrow refund processed: User={UserId}, Amount={Amount}, EscrowId={EscrowId}, NewBalance={NewBalance}",
-                    userId, amount, escrowId, user.WalletBalance);
+                await _unitOfWork.SaveChangesAsync();
+                _unitOfWork.Clear();
+
+                _logger.LogInformation("Refunded escrow #{EscrowId} to user #{UserId} amount {Amount}, new balance: {Balance}",
+                    escrowId, userId, amount, user.WalletBalance);
 
                 return ApiResponse<string>.Success(transaction.TransactionCode, "Escrow refund processed successfully");
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error refunding escrow for user {UserId}, escrow {EscrowId}", userId, escrowId);
-                await _unitOfWork.RollbackTransactionAsync();
-                return ApiResponse<string>.Error("Failed to refund escrow");
+                _logger.LogError(ex, "Error processing escrow refund #{EscrowId} for user #{UserId}", escrowId, userId);
+                return ApiResponse<string>.Error("An error occurred while processing the refund");
             }
         }
+
     }
 }

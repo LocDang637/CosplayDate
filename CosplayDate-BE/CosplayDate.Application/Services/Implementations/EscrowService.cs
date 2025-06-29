@@ -229,8 +229,6 @@ namespace CosplayDate.Application.Services.Implementations
 
         public async Task<bool> RefundEscrowAsync(int escrowId, string reason)
         {
-            //await _unitOfWork.BeginTransactionAsync();
-
             try
             {
                 var escrow = await _unitOfWork.EscrowTransactions.GetByIdAsync(escrowId);
@@ -256,10 +254,16 @@ namespace CosplayDate.Application.Services.Implementations
 
                 if (!refundResult.IsSuccess)
                 {
-
-                    _logger.LogError("Failed to refund escrow {EscrowId}: {Error}", escrowId, refundResult.Message ?? string.Join(", ", refundResult.Errors));
-                    //await _unitOfWork.RollbackTransactionAsync();
-                    return false;
+                    // Nếu lỗi là "đã refund rồi" thì bỏ qua
+                    if (refundResult.Message?.Contains("already processed") == true)
+                    {
+                        _logger.LogWarning("Refund already processed for escrow {EscrowId}. Continuing.", escrowId);
+                    }
+                    else
+                    {
+                        _logger.LogError("Failed to refund escrow {EscrowId}: {Error}", escrowId, refundResult.Message ?? string.Join(", ", refundResult.Errors));
+                        return false;
+                    }
                 }
 
                 // Update escrow status
@@ -274,7 +278,6 @@ namespace CosplayDate.Application.Services.Implementations
                 _unitOfWork.Bookings.Update(booking);
 
                 await _unitOfWork.SaveChangesAsync();
-                //await _unitOfWork.CommitTransactionAsync();
 
                 // Send notifications
                 await _notificationService.SendPaymentNotificationAsync(
@@ -298,11 +301,11 @@ namespace CosplayDate.Application.Services.Implementations
             }
             catch (Exception ex)
             {
-                //await _unitOfWork.RollbackTransactionAsync();
                 _logger.LogError(ex, "Error refunding escrow {EscrowId}", escrowId);
                 throw;
             }
         }
+
 
         public async Task<EscrowTransaction?> GetEscrowByBookingAsync(int bookingId)
         {
