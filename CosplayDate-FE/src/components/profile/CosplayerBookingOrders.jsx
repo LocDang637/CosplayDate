@@ -51,7 +51,7 @@ import { bookingAPI } from '../../services/bookingAPI';
 import { LocalizationProvider, DatePicker, TimePicker } from '@mui/x-date-pickers';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 
-const CosplayerBookingOrders = () => {
+const CosplayerBookingOrders = ({ isOwnProfile }) => {
   const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -92,6 +92,16 @@ const CosplayerBookingOrders = () => {
       specialNotes: ''
     }
   });
+
+  if (!isOwnProfile) {
+    return (
+      <Box sx={{ py: 4, textAlign: 'center' }}>
+        <Typography variant="h6" color="text.secondary">
+          Bạn không có quyền xem thông tin này
+        </Typography>
+      </Box>
+    );
+  }
 
   // Add this function to handle opening edit dialog
   const handleEditBooking = (booking) => {

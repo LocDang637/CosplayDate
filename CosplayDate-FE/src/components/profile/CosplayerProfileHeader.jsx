@@ -6,7 +6,6 @@ import {
   Avatar,
   Button,
   Chip,
-  IconButton,
   Paper,
   Divider,
   Badge,
@@ -27,14 +26,16 @@ import {
   VideoLibrary,
   Favorite,
   CameraAlt,
-  Verified
+  Verified,
+  Event
 } from '@mui/icons-material';
 import EditCosplayerDialog from './EditCosplayerDialog';
 
 const CosplayerProfileHeader = ({
   user,
-  onProfileUpdate,
   onEditAvatar,
+  onProfileUpdate,
+  isOwnProfile
 }) => {
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [avatarHovered, setAvatarHovered] = useState(false);
@@ -150,26 +151,28 @@ const CosplayerProfileHeader = ({
               </Badge>
 
               {/* Camera Overlay for Own Profile */}
-              <Fade in={avatarHovered}>
-                <Box
-                  sx={{
-                    position: 'absolute',
-                    top: 0,
-                    left: 0,
-                    right: 0,
-                    bottom: 0,
-                    borderRadius: '50%',
-                    background: 'rgba(0,0,0,0.5)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    cursor: 'pointer',
-                  }}
-                  onClick={onEditAvatar}
-                >
-                  <CameraAlt sx={{ color: 'white', fontSize: 32 }} />
-                </Box>
-              </Fade>
+              {isOwnProfile && (
+                <Fade in={avatarHovered}>
+                  <Box
+                    sx={{
+                      position: 'absolute',
+                      top: 0,
+                      left: 0,
+                      right: 0,
+                      bottom: 0,
+                      borderRadius: '50%',
+                      background: 'rgba(0,0,0,0.5)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      cursor: 'pointer',
+                    }}
+                    onClick={onEditAvatar}
+                  >
+                    <CameraAlt sx={{ color: 'white', fontSize: 32 }} />
+                  </Box>
+                </Fade>
+              )}
             </Box>
 
             {/* Main Info Section */}
@@ -294,37 +297,69 @@ const CosplayerProfileHeader = ({
 
             {/* Action Buttons */}
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5, minWidth: 200 }}>
+              {isOwnProfile ? (
+                <Button
+                  variant="contained"
+                  startIcon={<Edit />}
+                  onClick={handleEditClick}
+                  sx={{
+                    background: 'linear-gradient(45deg, #E91E63, #9C27B0)',
+                    borderRadius: '12px',
+                    textTransform: 'none',
+                    fontWeight: 600,
+                    px: 3,
+                    py: 1.5,
+                    boxShadow: '0 4px 15px rgba(233, 30, 99, 0.3)',
+                    '&:hover': {
+                      background: 'linear-gradient(45deg, #AD1457, #7B1FA2)',
+                      transform: 'translateY(-2px)',
+                      boxShadow: '0 6px 20px rgba(233, 30, 99, 0.4)',
+                    },
+                    transition: 'all 0.3s ease',
+                  }}
+                >
+                  Chỉnh sửa hồ sơ
+                </Button>
+              ) : (
+                <Button
+                  variant="contained"
+                  startIcon={<Event />}
+                  onClick={() => onBooking(user)}
+                  sx={{
+                    background: 'linear-gradient(45deg, #E91E63, #9C27B0)',
+                    borderRadius: '12px',
+                    textTransform: 'none',
+                    fontWeight: 600,
+                    px: 3,
+                    py: 1.5,
+                    boxShadow: '0 4px 15px rgba(233, 30, 99, 0.3)',
+                    '&:hover': {
+                      background: 'linear-gradient(45deg, #AD1457, #7B1FA2)',
+                      transform: 'translateY(-2px)',
+                      boxShadow: '0 6px 20px rgba(233, 30, 99, 0.4)',
+                    },
+                    transition: 'all 0.3s ease',
+                  }}
+                >
+                  Đặt lịch ngay
+                </Button>
+              )}
               <Button
-                variant="contained"
-                startIcon={<Edit />}
-                onClick={handleEditClick}
-                sx={{
-                  background: 'linear-gradient(45deg, #E91E63, #9C27B0)',
-                  textTransform: 'none',
-                  fontWeight: 600,
-                  borderRadius: '12px',
-                  py: 1.5,
-                  '&:hover': {
-                    background: 'linear-gradient(45deg, #AD1457, #7B1FA2)',
-                  }
-                }}
-              >
-                Chỉnh sửa hồ sơ
-              </Button>
-
-              <Button
-                onClick={handleShare}
-                variant="contained"
+                variant="outlined"
                 startIcon={<Share />}
+                onClick={handleShare}
                 sx={{
-                  background: 'linear-gradient(45deg, #E91E63, #9C27B0)',
+                  borderColor: 'primary.main',
+                  color: 'primary.main',
+                  borderRadius: '12px',
                   textTransform: 'none',
                   fontWeight: 600,
-                  borderRadius: '12px',
+                  px: 3,
                   py: 1.5,
                   '&:hover': {
-                    background: 'linear-gradient(45deg, #AD1457, #7B1FA2)',
-                  }
+                    borderColor: 'primary.main',
+                    backgroundColor: 'rgba(233, 30, 99, 0.05)',
+                  },
                 }}
               >
                 Chia sẻ

@@ -82,7 +82,7 @@ const Header = ({ user = null, onLogout }) => {
     }
 
     // ✅ THE MAIN FIX: Always use user ID (not cosplayer ID) for profile routes
-    const userId = user.id || user.userId;
+    const userId = user.userId;
     const userType = (user.userType || user.role || '').toLowerCase();
 
     console.log('🔍 Header Profile Path Debug:', {

@@ -32,7 +32,7 @@ import {
 } from '@mui/icons-material';
 import { bookingAPI } from '../../services/bookingAPI';
 
-const CosplayerProfileOverview = ({ user }) => {
+const CosplayerProfileOverview = ({ user, isOwnProfile }) => {
   const [upcomingBooking, setUpcomingBooking] = useState(null);
   const [loadingBooking, setLoadingBooking] = useState(true);
 
@@ -41,13 +41,15 @@ const CosplayerProfileOverview = ({ user }) => {
 
   useEffect(() => {
     const fetchUpcomingBooking = async () => {
+      if (!isOwnProfile) {
+        setLoadingBooking(false);
+        return;
+      }
       try {
         setLoadingBooking(true);
         const response = await bookingAPI.getUpcomingBookings();
-
         // Add console.log to debug
         console.log('API Response:', response);
-
         // Fix: Check response.success instead of response.data.isSuccess
         if (response.success && response.data?.bookings && response.data.bookings.length > 0) {
           setUpcomingBooking(response.data.bookings[0]);
@@ -62,9 +64,8 @@ const CosplayerProfileOverview = ({ user }) => {
         setLoadingBooking(false);
       }
     };
-
     fetchUpcomingBooking();
-  }, []);
+  }, [isOwnProfile]);
 
   // ✅ FIXED: Safe tags processing function
   const getTags = () => {

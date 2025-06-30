@@ -77,7 +77,7 @@ const CustomerBookingOrders = () => {
     try {
       setLoading(true);
       setError('');
-      
+
       const params = {
         page,
         pageSize: 20, // Get more results for client-side filtering
@@ -96,7 +96,7 @@ const CustomerBookingOrders = () => {
         // Check if result.data has bookings array directly
         if (Array.isArray(result.data)) {
           bookingsData = result.data;
-        } 
+        }
         // Check if result.data has nested bookings
         else if (result.data.bookings && Array.isArray(result.data.bookings)) {
           bookingsData = result.data.bookings;
@@ -127,7 +127,7 @@ const CustomerBookingOrders = () => {
 
         // Set the data
         setBookings(bookingsData || []);
-        
+
         // Set stats with fallback values
         setStats({
           totalBookings: statsData.totalBookings || statsData.total || bookingsData.length || 0,
@@ -140,7 +140,7 @@ const CustomerBookingOrders = () => {
         // Set pagination
         setTotalPages(paginationData.totalPages || 1);
         setTotalCount(paginationData.totalCount || bookingsData.length || 0);
-        
+
         console.log('Final bookings count:', bookingsData.length);
       } else {
         console.warn('API response structure unexpected:', result);
@@ -193,19 +193,13 @@ const CustomerBookingOrders = () => {
   };
 
   const getPaymentStatusColor = (status) => {
-    switch (status) {
-      case 'Paid': return 'success';
-      case 'Held': return 'info';
-      case 'Refunded': return 'error';
-      case 'Pending': return 'warning';
-      default: return 'default';
-    }
+    return status === 'Completed' ? 'success' : 'warning';
   };
 
   const getPaymentStatusLabel = (status) => {
     const statusMap = {
       Paid: 'Đã thanh toán',
-      Held: 'Đang giữ',
+      Held: 'Đang tạm giữ',
       Refunded: 'Đã hoàn tiền',
       Pending: 'Chờ thanh toán'
     };
@@ -266,7 +260,7 @@ const CustomerBookingOrders = () => {
 
   const BookingCard = ({ booking }) => {
     const [expanded, setExpanded] = useState(false);
-    
+
     // Parse booking date properly with error handling
     let bookingDate;
     try {
@@ -275,14 +269,14 @@ const CustomerBookingOrders = () => {
       console.error('Error parsing booking date:', e);
       bookingDate = new Date();
     }
-    
+
     const daysUntilBooking = differenceInDays(bookingDate, new Date());
 
     const handleToggle = () => {
       setExpanded(!expanded);
     };
 
-    const canCancel = booking.status === 'Pending' || 
+    const canCancel = booking.status === 'Pending' ||
       (booking.status === 'Confirmed' && daysUntilBooking > 1);
 
     return (
@@ -310,7 +304,7 @@ const CustomerBookingOrders = () => {
 
                 {/* Line 2: Date | Time • Location */}
                 <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
-                  {format(bookingDate, 'dd/MM/yyyy', { locale: vi })} | 
+                  {format(bookingDate, 'dd/MM/yyyy', { locale: vi })} |
                   {booking.startTime?.substring(0, 5) || 'N/A'} - {booking.endTime?.substring(0, 5) || 'N/A'} • {booking.location || 'N/A'}
                 </Typography>
 
@@ -323,7 +317,7 @@ const CustomerBookingOrders = () => {
                   />
                   <Typography variant="body2" color="text.secondary">•</Typography>
                   <Chip
-                    label={getPaymentStatusLabel(booking.paymentStatus)}
+                    label={booking.paymentStatus === 'Completed' ? 'Đã thanh toán' : 'Đang tạm giữ'}
                     size="small"
                     color={getPaymentStatusColor(booking.paymentStatus)}
                   />
@@ -353,18 +347,18 @@ const CustomerBookingOrders = () => {
               <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1 }}>
                 Thông tin Cosplayer
               </Typography>
-              <Box 
-                sx={{ 
-                  display: 'flex', 
-                  alignItems: 'center', 
+              <Box
+                sx={{
+                  display: 'flex',
+                  alignItems: 'center',
                   gap: 2,
                   cursor: 'pointer',
                   '&:hover': { opacity: 0.8 }
                 }}
                 onClick={() => navigate(`/profile/${booking.cosplayer?.id}`)}
               >
-                <Avatar 
-                  src={booking.cosplayer?.avatarUrl || booking.cosplayer?.avatar} 
+                <Avatar
+                  src={booking.cosplayer?.avatarUrl || booking.cosplayer?.avatar}
                   sx={{ width: 48, height: 48 }}
                 >
                   {(booking.cosplayer?.displayName || booking.cosplayer?.name || 'N')?.charAt(0)}
@@ -374,10 +368,10 @@ const CustomerBookingOrders = () => {
                     {booking.cosplayer?.displayName || booking.cosplayer?.name || 'N/A'}
                   </Typography>
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                    <Rating 
-                      value={booking.cosplayer?.rating || 0} 
-                      size="small" 
-                      readOnly 
+                    <Rating
+                      value={booking.cosplayer?.rating || 0}
+                      size="small"
+                      readOnly
                     />
                     <Typography variant="body2" color="text.secondary">
                       ({booking.cosplayer?.totalReviews || booking.cosplayer?.reviewCount || 0} đánh giá)
@@ -417,9 +411,9 @@ const CustomerBookingOrders = () => {
                   Thanh toán
                 </Typography>
                 {booking.payments.map((payment, index) => (
-                  <Box key={index} sx={{ 
-                    p: 1.5, 
-                    backgroundColor: 'rgba(233, 30, 99, 0.05)', 
+                  <Box key={index} sx={{
+                    p: 1.5,
+                    backgroundColor: 'rgba(233, 30, 99, 0.05)',
                     borderRadius: '8px',
                     mb: 1
                   }}>
@@ -463,7 +457,7 @@ const CustomerBookingOrders = () => {
                   Đánh giá
                 </Button>
               )}
-              
+
               {canCancel && (
                 <Button
                   variant="outlined"
@@ -624,7 +618,7 @@ const CustomerBookingOrders = () => {
               >
                 <MenuItem value="">Tất cả</MenuItem>
                 <MenuItem value="Paid">Đã thanh toán</MenuItem>
-                <MenuItem value="Held">Đang giữ</MenuItem>
+                <MenuItem value="Held">Đang tạm giữ</MenuItem>
                 <MenuItem value="Refunded">Đã hoàn tiền</MenuItem>
                 <MenuItem value="Pending">Chờ thanh toán</MenuItem>
               </Select>
@@ -718,13 +712,13 @@ const CustomerBookingOrders = () => {
           />
         </DialogContent>
         <DialogActions>
-          <Button 
+          <Button
             onClick={() => setCancelDialog({ open: false, booking: null, reason: '' })}
           >
             Đóng
           </Button>
-          <Button 
-            variant="contained" 
+          <Button
+            variant="contained"
             color="error"
             onClick={handleCancelBooking}
             disabled={!cancelDialog.reason.trim()}

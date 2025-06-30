@@ -32,7 +32,7 @@ import {
 } from '@mui/icons-material';
 import { cosplayerAPI } from '../../services/cosplayerAPI';
 
-const CosplayerServices = ({ cosplayerId }) => {
+const CosplayerServices = ({ cosplayerId, isOwnProfile }) => {
   const [services, setServices] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -204,34 +204,36 @@ const CosplayerServices = ({ cosplayerId }) => {
           boxShadow: '0 4px 20px rgba(0, 0, 0, 0.05)',
         }}
       >
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-          <Typography variant="h6" sx={{ fontWeight: 700, color: 'text.primary' }}>
-            Dịch vụ ({services.length})
-          </Typography>
+        {isOwnProfile && (
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+            <Typography variant="h6" sx={{ fontWeight: 700, color: 'text.primary' }}>
+              Dịch vụ ({services.length})
+            </Typography>
 
 
-          <Button
-            variant="contained"
-            startIcon={<Add />}
-            onClick={handleAddService}
-            sx={{
-              background: 'linear-gradient(45deg, #E91E63, #9C27B0)',
-              borderRadius: '12px',
-              textTransform: 'none',
-              fontWeight: 600,
-              px: 3,
-              py: 1,
-              boxShadow: '0 4px 12px rgba(233, 30, 99, 0.3)',
-              '&:hover': {
-                background: 'linear-gradient(45deg, #D81B60, #8E24AA)',
-                boxShadow: '0 6px 16px rgba(233, 30, 99, 0.4)',
-              }
-            }}
-          >
-            Thêm dịch vụ
-          </Button>
+            <Button
+              variant="contained"
+              startIcon={<Add />}
+              onClick={handleAddService}
+              sx={{
+                background: 'linear-gradient(45deg, #E91E63, #9C27B0)',
+                borderRadius: '12px',
+                textTransform: 'none',
+                fontWeight: 600,
+                px: 3,
+                py: 1,
+                boxShadow: '0 4px 12px rgba(233, 30, 99, 0.3)',
+                '&:hover': {
+                  background: 'linear-gradient(45deg, #D81B60, #8E24AA)',
+                  boxShadow: '0 6px 16px rgba(233, 30, 99, 0.4)',
+                }
+              }}
+            >
+              Thêm dịch vụ
+            </Button>
 
-        </Box>
+          </Box>
+        )}
 
         {services.length > 0 ? (
           <Grid container spacing={3}>
@@ -267,34 +269,34 @@ const CosplayerServices = ({ cosplayerId }) => {
                         {service.serviceName}
                       </Typography>
 
-
-                      <Box sx={{ display: 'flex', gap: 0.5 }}>
-                        <Tooltip title="Chỉnh sửa" arrow>
-                          <IconButton
-                            size="small"
-                            onClick={() => handleEditService(service)}
-                            sx={{
-                              color: '#9C27B0',
-                              '&:hover': { backgroundColor: 'rgba(156, 39, 176, 0.08)' }
-                            }}
-                          >
-                            <Edit fontSize="small" />
-                          </IconButton>
-                        </Tooltip>
-                        <Tooltip title="Xóa" arrow>
-                          <IconButton
-                            size="small"
-                            onClick={() => setDeleteConfirm(service.id)}
-                            sx={{
-                              color: 'error.main',
-                              '&:hover': { backgroundColor: 'rgba(244, 67, 54, 0.08)' }
-                            }}
-                          >
-                            <Delete fontSize="small" />
-                          </IconButton>
-                        </Tooltip>
-                      </Box>
-
+                      {isOwnProfile && (
+                        <Box sx={{ display: 'flex', gap: 0.5 }}>
+                          <Tooltip title="Chỉnh sửa" arrow>
+                            <IconButton
+                              size="small"
+                              onClick={() => handleEditService(service)}
+                              sx={{
+                                color: '#9C27B0',
+                                '&:hover': { backgroundColor: 'rgba(156, 39, 176, 0.08)' }
+                              }}
+                            >
+                              <Edit fontSize="small" />
+                            </IconButton>
+                          </Tooltip>
+                          <Tooltip title="Xóa" arrow>
+                            <IconButton
+                              size="small"
+                              onClick={() => setDeleteConfirm(service.id)}
+                              sx={{
+                                color: 'error.main',
+                                '&:hover': { backgroundColor: 'rgba(244, 67, 54, 0.08)' }
+                              }}
+                            >
+                              <Delete fontSize="small" />
+                            </IconButton>
+                          </Tooltip>
+                        </Box>
+                      )}
                     </Box>
 
                     <Typography
