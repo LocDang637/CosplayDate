@@ -35,7 +35,8 @@ const CosplayerProfileHeader = ({
   user,
   onEditAvatar,
   onProfileUpdate,
-  isOwnProfile
+  isOwnProfile,
+  onEditClick = () => {},
 }) => {
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [avatarHovered, setAvatarHovered] = useState(false);
@@ -319,7 +320,7 @@ const CosplayerProfileHeader = ({
                 <Button
                   variant="contained"
                   startIcon={<Event />}
-                  onClick={handleBookingClick}
+                  onClick={() => onEditClick()}
                   sx={{
                     background: 'linear-gradient(45deg, #E91E63, #9C27B0)',
                     borderRadius: '12px',

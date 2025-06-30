@@ -38,7 +38,8 @@ import {
   Schedule,
   LocationOn,
   Message,
-  Star
+  Star,
+  FilterList
 } from '@mui/icons-material';
 import { format, parseISO, differenceInDays } from 'date-fns';
 import { vi } from 'date-fns/locale';
@@ -193,17 +194,21 @@ const CustomerBookingOrders = () => {
   };
 
   const getPaymentStatusColor = (status) => {
-    return status === 'Completed' ? 'success' : 'warning';
+    switch (status) {
+      case 'Held': return 'warning';
+      case 'Completed': return 'success';
+      case 'Refunded': return 'success';
+      default: return 'default';
+    }
   };
 
   const getPaymentStatusLabel = (status) => {
-    const statusMap = {
-      Paid: 'Đã thanh toán',
-      Held: 'Đang tạm giữ',
-      Refunded: 'Đã hoàn tiền',
-      Pending: 'Chờ thanh toán'
-    };
-    return statusMap[status] || status;
+    switch (status) {
+      case 'Held': return 'Đang tạm giữ';
+      case 'Completed': return 'Đã thanh toán';
+      case 'Refunded': return 'Đã hoàn tiền';
+      default: return status;
+    }
   };
 
   // Client-side filtering and sorting
@@ -317,7 +322,7 @@ const CustomerBookingOrders = () => {
                   />
                   <Typography variant="body2" color="text.secondary">•</Typography>
                   <Chip
-                    label={booking.paymentStatus === 'Completed' ? 'Đã thanh toán' : 'Đang tạm giữ'}
+                    label={getPaymentStatusLabel(booking.paymentStatus)}
                     size="small"
                     color={getPaymentStatusColor(booking.paymentStatus)}
                   />
@@ -530,9 +535,9 @@ const CustomerBookingOrders = () => {
       {/* Stats Summary */}
       <Grid container spacing={2} sx={{ mb: 3 }}>
         <Grid item xs={6} sm={3}>
-          <Paper sx={{ p: 2, textAlign: 'center' }}>
-            <Typography variant="h4" sx={{ fontWeight: 600, color: 'primary.main' }}>
-              {stats.totalBookings || 0}
+          <Paper sx={{ p: 2, textAlign: 'center', borderRadius: '12px' }}>
+            <Typography variant="h4" sx={{ fontWeight: 'bold', color: 'primary.main' }}>
+              {stats.total || 0}
             </Typography>
             <Typography variant="body2" color="text.secondary">
               Tổng đặt lịch
@@ -540,9 +545,9 @@ const CustomerBookingOrders = () => {
           </Paper>
         </Grid>
         <Grid item xs={6} sm={3}>
-          <Paper sx={{ p: 2, textAlign: 'center' }}>
-            <Typography variant="h4" sx={{ fontWeight: 600, color: 'warning.main' }}>
-              {stats.pendingBookings || 0}
+          <Paper sx={{ p: 2, textAlign: 'center', borderRadius: '12px' }}>
+            <Typography variant="h4" sx={{ fontWeight: 'bold', color: 'warning.main' }}>
+              {stats.pending || 0}
             </Typography>
             <Typography variant="body2" color="text.secondary">
               Chờ xác nhận
@@ -550,9 +555,9 @@ const CustomerBookingOrders = () => {
           </Paper>
         </Grid>
         <Grid item xs={6} sm={3}>
-          <Paper sx={{ p: 2, textAlign: 'center' }}>
-            <Typography variant="h4" sx={{ fontWeight: 600, color: 'info.main' }}>
-              {stats.confirmedBookings || 0}
+          <Paper sx={{ p: 2, textAlign: 'center', borderRadius: '12px' }}>
+            <Typography variant="h4" sx={{ fontWeight: 'bold', color: 'info.main' }}>
+              {stats.confirmed || 0}
             </Typography>
             <Typography variant="body2" color="text.secondary">
               Đã xác nhận
@@ -560,9 +565,9 @@ const CustomerBookingOrders = () => {
           </Paper>
         </Grid>
         <Grid item xs={6} sm={3}>
-          <Paper sx={{ p: 2, textAlign: 'center' }}>
-            <Typography variant="h4" sx={{ fontWeight: 600, color: 'success.main' }}>
-              {stats.completedBookings || 0}
+          <Paper sx={{ p: 2, textAlign: 'center', borderRadius: '12px' }}>
+            <Typography variant="h4" sx={{ fontWeight: 'bold', color: 'success.main' }}>
+              {stats.completed || 0}
             </Typography>
             <Typography variant="body2" color="text.secondary">
               Hoàn thành
@@ -572,12 +577,33 @@ const CustomerBookingOrders = () => {
       </Grid>
 
       {/* Filters */}
-      <Paper sx={{ p: 2, mb: 3 }}>
-        <Grid container spacing={2} alignItems="center">
+      <Paper sx={{ p: 2, mb: 3, borderRadius: '12px', border: '1px solid rgba(233, 30, 99, 0.1)' }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
+          <FilterList sx={{ color: 'text.secondary' }} />
+          <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
+            Bộ lọc
+          </Typography>
+          {(searchQuery || filterStatus || filterPaymentStatus) && (
+            <Button
+              size="small"
+              onClick={() => {
+                setSearchQuery('');
+                setFilterStatus('');
+                setFilterPaymentStatus('');
+              }}
+              sx={{ ml: 'auto' }}
+            >
+              Xóa bộ lọc
+            </Button>
+          )}
+        </Box>
+
+        <Grid container spacing={2}>
           <Grid item xs={12} md={4}>
             <TextField
               fullWidth
-              placeholder="Tìm kiếm theo mã, tên cosplayer..."
+              placeholder="Tìm kiếm theo tên, email, mã đặt..."
+              variant="outlined"
               size="small"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
@@ -600,10 +626,26 @@ const CustomerBookingOrders = () => {
                 label="Trạng thái"
               >
                 <MenuItem value="">Tất cả</MenuItem>
-                <MenuItem value="Pending">Chờ xác nhận</MenuItem>
-                <MenuItem value="Confirmed">Đã xác nhận</MenuItem>
-                <MenuItem value="Completed">Hoàn thành</MenuItem>
-                <MenuItem value="Cancelled">Đã hủy</MenuItem>
+                <MenuItem value="Pending">
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <Chip size="small" label="Chờ xác nhận" color="warning" />
+                  </Box>
+                </MenuItem>
+                <MenuItem value="Confirmed">
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <Chip size="small" label="Đã xác nhận" color="info" />
+                  </Box>
+                </MenuItem>
+                <MenuItem value="Completed">
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <Chip size="small" label="Hoàn thành" color="success" />
+                  </Box>
+                </MenuItem>
+                <MenuItem value="Cancelled">
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <Chip size="small" label="Đã hủy" color="error" />
+                  </Box>
+                </MenuItem>
               </Select>
             </FormControl>
           </Grid>
@@ -617,21 +659,32 @@ const CustomerBookingOrders = () => {
                 label="Thanh toán"
               >
                 <MenuItem value="">Tất cả</MenuItem>
-                <MenuItem value="Paid">Đã thanh toán</MenuItem>
-                <MenuItem value="Held">Đang tạm giữ</MenuItem>
-                <MenuItem value="Refunded">Đã hoàn tiền</MenuItem>
-                <MenuItem value="Pending">Chờ thanh toán</MenuItem>
+                <MenuItem value="Completed">
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <Chip size="small" label="Đã thanh toán" color="success" />
+                  </Box>
+                </MenuItem>
+                <MenuItem value="Held">
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <Chip size="small" label="Đang tạm giữ" color="error" />
+                  </Box>
+                </MenuItem>
+                <MenuItem value="Refunded">
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <Chip size="small" label="Đã hoàn tiền" color="success" />
+                  </Box>
+                </MenuItem>
               </Select>
             </FormControl>
           </Grid>
 
           <Grid item xs={6} md={2}>
             <FormControl fullWidth size="small">
-              <InputLabel>Sắp xếp</InputLabel>
+              <InputLabel>Sắp xếp theo</InputLabel>
               <Select
                 value={sortBy}
                 onChange={(e) => setSortBy(e.target.value)}
-                label="Sắp xếp"
+                label="Sắp xếp theo"
               >
                 <MenuItem value="bookingDate">Ngày đặt</MenuItem>
                 <MenuItem value="createdAt">Ngày tạo</MenuItem>
@@ -655,6 +708,38 @@ const CustomerBookingOrders = () => {
             </FormControl>
           </Grid>
         </Grid>
+
+        {/* Active filters display */}
+        {(searchQuery || filterStatus || filterPaymentStatus) && (
+          <Box sx={{ mt: 2, display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
+            <Typography variant="body2" color="text.secondary">
+              Đang lọc:
+            </Typography>
+            {searchQuery && (
+              <Chip
+                size="small"
+                label={`Tìm kiếm: "${searchQuery}"`}
+                onDelete={() => setSearchQuery('')}
+              />
+            )}
+            {filterStatus && (
+              <Chip
+                size="small"
+                label={`Trạng thái: ${getStatusLabel(filterStatus)}`}
+                onDelete={() => setFilterStatus('')}
+                color={getStatusColor(filterStatus)}
+              />
+            )}
+            {filterPaymentStatus && (
+              <Chip
+                size="small"
+                label={`Thanh toán: ${getPaymentStatusLabel(filterPaymentStatus)}`}
+                onDelete={() => setFilterPaymentStatus('')}
+                color={getPaymentStatusColor(filterPaymentStatus)}
+              />
+            )}
+          </Box>
+        )}
       </Paper>
 
       {/* Bookings List */}

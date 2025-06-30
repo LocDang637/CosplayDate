@@ -274,11 +274,25 @@ const CosplayerBookingOrders = ({ isOwnProfile }) => {
       Completed: 'Hoàn thành',
       Cancelled: 'Đã hủy'
     };
-    return statusMap[status] || status; // Fallback to original status if not found
+    return statusMap[status] || status;
   };
 
   const getPaymentStatusColor = (status) => {
-    return status === 'Completed' ? 'success' : 'warning';
+    switch (status) {
+      case 'Held': return 'warning';
+      case 'Completed': return 'success';
+      case 'Refunded': return 'success';
+      default: return 'default';
+    }
+  };
+
+  const getPaymentStatusLabel = (status) => {
+    switch (status) {
+      case 'Held': return 'Đang tạm giữ';
+      case 'Completed': return 'Đã thanh toán';
+      case 'Refunded': return 'Đã hoàn tiền';
+      default: return status;
+    }
   };
 
   const canUpdateStatus = (booking) => {
@@ -447,7 +461,7 @@ const CosplayerBookingOrders = ({ isOwnProfile }) => {
                   />
                   <Typography variant="body2" color="text.secondary">•</Typography>
                   <Chip
-                    label={booking.paymentStatus === 'Completed' ? 'Đã thanh toán' : 'Đang tạm giữ'}
+                    label={getPaymentStatusLabel(booking.paymentStatus)}
                     size="small"
                     color={getPaymentStatusColor(booking.paymentStatus)}
                   />
@@ -772,6 +786,11 @@ const CosplayerBookingOrders = ({ isOwnProfile }) => {
                     <Chip size="small" label="Đang tạm giữ" color="error" />
                   </Box>
                 </MenuItem>
+                <MenuItem value="Refunded">
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <Chip size="small" label="Đã hoàn tiền" color="success" />
+                  </Box>
+                </MenuItem>
               </Select>
             </FormControl>
           </Grid>
@@ -831,7 +850,7 @@ const CosplayerBookingOrders = ({ isOwnProfile }) => {
             {filterPaymentStatus && (
               <Chip
                 size="small"
-                label={`Thanh toán: ${filterPaymentStatus === 'Completed' ? 'Đã thanh toán' : 'Đang tạm giữ'}`}
+                label={`Thanh toán: ${getPaymentStatusLabel(filterPaymentStatus)}`}
                 onDelete={() => setFilterPaymentStatus('')}
                 color={getPaymentStatusColor(filterPaymentStatus)}
               />
