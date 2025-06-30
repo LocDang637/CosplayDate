@@ -89,84 +89,7 @@ namespace CosplayDate.Application.Services.Implementations
                 await _unitOfWork.RollbackTransactionAsync();
                 throw;
             }
-        }
-
-        //public async Task<bool> ReleaseEscrowAsync(int escrowId, int userId)
-        //{
-        //    //await _unitOfWork.BeginTransactionAsync();
-
-        //    try
-        //    {
-        //        var escrow = await _unitOfWork.EscrowTransactions.GetByIdAsync(escrowId);
-        //        if (escrow == null || escrow.Status != "Held")
-        //        {
-        //            _logger.LogWarning("Cannot release escrow {EscrowId} - not found or not held", escrowId);
-        //            return false;
-        //        }
-
-        //        var booking = await _unitOfWork.Bookings.GetByIdAsync(escrow.BookingId);
-        //        if (booking == null)
-        //        {
-        //            _logger.LogError("Booking not found for escrow {EscrowId}", escrowId);
-        //            return false;
-        //        }
-
-        //        // Only customer can release escrow when service is completed
-        //        //if (userId != escrow.CustomerId)
-        //        //{
-        //        //    _logger.LogWarning("User {UserId} not authorized to release escrow {EscrowId}", userId, escrowId);
-        //        //    return false;
-        //        //}
-
-        //        // Transfer money to cosplayer's wallet
-        //        var releaseResult = await _walletService.ReleaseEscrowAsync(
-        //            escrow.CosplayerId,
-        //            escrow.Amount,
-        //            escrow.Id,
-        //            escrow.TransactionCode);
-
-        //        if (!releaseResult.IsSuccess)
-        //        {
-        //            _logger.LogError("Failed to release escrow {EscrowId}: {Error}", escrowId, releaseResult.Message ?? string.Join(", ", releaseResult.Errors));
-        //         //   await _unitOfWork.RollbackTransactionAsync();
-        //            return false;
-        //        }
-
-        //        // Update escrow status
-        //        escrow.Status = "Released";
-        //        escrow.ReleasedAt = DateTime.UtcNow;
-        //        _unitOfWork.EscrowTransactions.Update(escrow);
-
-        //        // Update booking status
-        //        booking.Status = "Completed";
-        //        booking.PaymentStatus = "Completed";
-        //        _unitOfWork.Bookings.Update(booking);
-
-        //        await _unitOfWork.SaveChangesAsync();
-        //        //await _unitOfWork.CommitTransactionAsync();
-        //        _unitOfWork.Clear();
-
-        //        // Send notifications
-        //        await _notificationService.SendPaymentNotificationAsync(
-        //            escrow.CosplayerId,
-        //            "ESCROW_RELEASE",
-        //            escrow.Amount,
-        //            booking.BookingCode,
-        //            true);
-
-        //        _logger.LogInformation("Escrow released: {TransactionCode} for booking {BookingCode}",
-        //            escrow.TransactionCode, booking.BookingCode);
-
-        //        return true;
-        //    }
-        //    catch (Exception ex)
-        //    {
-        //        //await _unitOfWork.RollbackTransactionAsync();
-        //        _logger.LogError(ex, "Error releasing escrow {EscrowId}", escrowId);
-        //        throw;
-        //    }
-        //}
-
+        }    
         public async Task<bool> ReleaseEscrowAsync(int bookingId)
         {
             try
@@ -225,8 +148,6 @@ namespace CosplayDate.Application.Services.Implementations
                 throw;
             }
         }
-
-
         public async Task<bool> RefundEscrowAsync(int escrowId, string reason)
         {
             try
@@ -305,8 +226,6 @@ namespace CosplayDate.Application.Services.Implementations
                 throw;
             }
         }
-
-
         public async Task<EscrowTransaction?> GetEscrowByBookingAsync(int bookingId)
         {
             try

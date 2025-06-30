@@ -666,59 +666,7 @@ namespace CosplayDate.Application.Services.Implementations
                 return ApiResponse<string>.Error("Failed to hold escrow");
             }
         }
-
-        //public async Task<ApiResponse<string>> ReleaseEscrowAsync(int cosplayerId, decimal amount, int escrowId, string transactionCode)
-        //{
-        //    try
-        //    {
-        //        //await _unitOfWork.BeginTransactionAsync();
-
-        //        var cosplayer = await _unitOfWork.Users.GetByIdAsync(cosplayerId);
-        //        if (cosplayer == null)
-        //        {
-        //            return ApiResponse<string>.Error("Cosplayer not found");
-        //        }
-
-        //        // Update cosplayer balance
-        //        var currentBalance = cosplayer.WalletBalance ?? 0;
-        //        cosplayer.WalletBalance = currentBalance + amount;
-        //        cosplayer.UpdatedAt = DateTime.UtcNow;
-        //        _unitOfWork.Users.Update(cosplayer);
-        //        await _unitOfWork.SaveChangesAsync();
-        //        _unitOfWork.Clear();
-        //        // Create transaction record
-        //        var transaction = new WalletTransaction
-        //        {
-        //            UserId = cosplayerId,
-        //            TransactionCode = transactionCode,
-        //            Type = "EscrowRelease",
-        //            Amount = amount,
-        //            Description = $"Release from escrow #{escrowId}",
-        //            ReferenceId = escrowId.ToString(),
-        //            Status = "Completed",
-        //            BalanceAfter = cosplayer.WalletBalance ?? 0,
-        //            CreatedAt = DateTime.UtcNow
-        //        };
-
-
-        //        await _unitOfWork.WalletTransactions.AddAsync(transaction);
-        //        await _unitOfWork.SaveChangesAsync();
-        //        //await _unitOfWork.CommitTransactionAsync();
-
-        //        _logger.LogInformation("Escrow release processed: Cosplayer={CosplayerId}, Amount={Amount}, EscrowId={EscrowId}, NewBalance={NewBalance}",
-        //            cosplayerId, amount, escrowId, cosplayer.WalletBalance);
-
-        //        return ApiResponse<string>.Success(transaction.TransactionCode, "Escrow release processed successfully");
-        //    }
-        //    catch (Exception ex)
-        //    {
-        //        _logger.LogError(ex, "Error releasing escrow for cosplayer {CosplayerId}, escrow {EscrowId}", cosplayerId, escrowId);
-        //        //await _unitOfWork.RollbackTransactionAsync();
-        //        return ApiResponse<string>.Error("Failed to release escrow");
-        //    }
-        //}
-
-
+   
         public async Task<ApiResponse<string>> ReleaseEscrowAsync(int cosplayerId, decimal amount, int escrowId)
         {
             try
