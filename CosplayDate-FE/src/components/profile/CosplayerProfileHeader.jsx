@@ -138,13 +138,8 @@ const CosplayerProfileHeader = ({
                     height: 120,
                     border: '4px solid white',
                     boxShadow: '0 8px 24px rgba(233, 30, 99, 0.2)',
-                    cursor: 'pointer',
                     transition: 'all 0.3s ease',
-                    '&:hover': {
-                      transform: 'scale(1.05)',
-                    },
                   }}
-                  onClick={onEditAvatar}
                 >
                   {cosplayer.displayName?.[0] || 'C'}
                 </Avatar>
@@ -324,7 +319,7 @@ const CosplayerProfileHeader = ({
                 <Button
                   variant="contained"
                   startIcon={<Event />}
-                  onClick={() => onBooking(user)}
+                  onClick={handleBookingClick}
                   sx={{
                     background: 'linear-gradient(45deg, #E91E63, #9C27B0)',
                     borderRadius: '12px',
