@@ -9,14 +9,14 @@ import {
   Alert,
   Button,
   Snackbar,
-  Fab
+  Fab,
+  Menu, MenuItem, ListItemIcon, ListItemText
 } from '@mui/material';
-import { Add } from '@mui/icons-material';
+import { Add, CameraAlt, Delete } from '@mui/icons-material';
 import { ThemeProvider } from '@mui/material/styles';
 import { cosplayTheme } from '../theme/cosplayTheme';
 import { cosplayerAPI, cosplayerMediaAPI } from '../services/cosplayerAPI';
-import { userAPI } from '../services/api'; // Add this import for the user profile API
-
+import { userAPI } from '../services/api';
 import Header from '../components/layout/Header';
 import Footer from '../components/layout/Footer';
 import CosplayerProfileHeader from '../components/profile/CosplayerProfileHeader';
@@ -45,18 +45,14 @@ const CosplayerProfilePage = () => {
   const [showBecomeCosplayer, setShowBecomeCosplayer] = useState(false);
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
   const [userDataLoaded, setUserDataLoaded] = useState(false);
-  const [isOwnProfile, setIsOwnProfile] = useState(false); // ✅ NEW: State for API-based isOwnProfile
+  const [isOwnProfile, setIsOwnProfile] = useState(false);
+  const [anchorEl, setAnchorEl] = useState(null);
 
   // ✅ FIXED: Stable user ID comparison logic
   const getCurrentUserId = useCallback(() => {
     if (!user) return null;
     return user.id || user.userId;
   }, [user?.id, user?.userId]);
-
-  const handleEditProfile = useCallback(() => {
-    console.log('📝 Edit profile clicked');
-    navigate('/profile/edit');
-  }, [navigate]);
 
   const handleBooking = useCallback((targetCosplayer) => {
     console.log('📅 Booking clicked for:', targetCosplayer);
@@ -133,7 +129,18 @@ const CosplayerProfilePage = () => {
     }
   }, []);
 
-  const handleEditAvatar = async () => {
+  // Avatar menu handlers
+  const handleAvatarClick = (event) => {
+    setAnchorEl(event.currentTarget);
+  };
+
+  const handleMenuClose = () => {
+    setAnchorEl(null);
+  };
+
+  const handleAvatarUpload = async () => {
+    handleMenuClose();
+
     const input = document.createElement('input');
     input.type = 'file';
     input.accept = 'image/*';
@@ -147,19 +154,19 @@ const CosplayerProfilePage = () => {
           if (result.success) {
             const newAvatarUrl = result.data.avatarUrl;
 
-            // ✅ FIX: Update profileUser state with both avatar and avatarUrl fields
+            // Update profileUser state
             setProfileUser(prev => ({
               ...prev,
-              avatar: newAvatarUrl,      // ← Add this for CustomerProfileHeader compatibility
-              avatarUrl: newAvatarUrl    // ← Keep this for API compatibility
+              avatar: newAvatarUrl,
+              avatarUrl: newAvatarUrl
             }));
 
-            // ✅ FIX: If it's own profile, also update the user state
+            // If it's own profile, also update the user state
             if (isOwnProfile) {
               const updatedUser = {
                 ...user,
-                avatar: newAvatarUrl,      // ← Add this for header compatibility
-                avatarUrl: newAvatarUrl    // ← Keep this for API compatibility
+                avatar: newAvatarUrl,
+                avatarUrl: newAvatarUrl
               };
               setUser(updatedUser);
               localStorage.setItem('user', JSON.stringify(updatedUser));
@@ -178,6 +185,50 @@ const CosplayerProfilePage = () => {
       }
     };
     input.click();
+  };
+
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+
+  const handleAvatarDelete = () => {
+    handleMenuClose();
+    setDeleteDialogOpen(true);
+  };
+
+  const handleConfirmDelete = async () => {
+    setDeleteDialogOpen(false);
+    try {
+      setLoading(true);
+      const result = await userAPI.deleteAvatar();
+
+      if (result.success) {
+        // Update profileUser state
+        setProfileUser(prev => ({
+          ...prev,
+          avatar: null,
+          avatarUrl: null
+        }));
+
+        // If it's own profile, also update the user state
+        if (isOwnProfile) {
+          const updatedUser = {
+            ...user,
+            avatar: null,
+            avatarUrl: null
+          };
+          setUser(updatedUser);
+          localStorage.setItem('user', JSON.stringify(updatedUser));
+        }
+
+        showSnackbar('Avatar deleted successfully!', 'success');
+      } else {
+        showSnackbar(result.message || 'Failed to delete avatar', 'error');
+      }
+    } catch (error) {
+      console.error('Avatar delete error:', error);
+      showSnackbar('Error deleting avatar', 'error');
+    } finally {
+      setLoading(false);
+    }
   };
 
   // ✅ NEW: Load user profile first to get isOwnProfile value
@@ -599,13 +650,65 @@ const CosplayerProfilePage = () => {
           {/* Profile Header */}
           <CosplayerProfileHeader
             user={profileUser}
-            isOwnProfile={isOwnProfile}
-            onEditProfile={handleEditProfile}
-            onEditAvatar={handleEditAvatar}
-            onBooking={handleBooking}
-            currentUser={user}
+            onEditAvatar={handleAvatarClick}
             onProfileUpdate={handleProfileUpdate}
+            isOwnProfile={isOwnProfile}
+            anchorEl={anchorEl}
+            onMenuClose={handleMenuClose}
+            onAvatarUpload={handleAvatarUpload}
+            onAvatarDelete={handleAvatarDelete}
+            deleteDialogOpen={deleteDialogOpen}
+            onConfirmDelete={handleConfirmDelete}
           />
+
+          {/* Avatar Menu */}
+          {isOwnProfile && (
+            <Menu
+              anchorEl={anchorEl}
+              open={Boolean(anchorEl)}
+              onClose={handleMenuClose}
+              anchorOrigin={{
+                vertical: 'bottom',
+                horizontal: 'center',
+              }}
+              transformOrigin={{
+                vertical: 'top',
+                horizontal: 'center',
+              }}
+              MenuListProps={{
+                'aria-labelledby': 'avatar-menu',
+              }}
+              // Click outside handling
+              ClickAwayListenerProps={{
+                onClickAway: handleMenuClose
+              }}
+              // Backdrop for better visibility
+              slotProps={{
+                backdrop: {
+                  sx: {
+                    backgroundColor: 'transparent',
+                  }
+                }
+              }}
+            >
+              <MenuItem onClick={handleAvatarUpload}>
+                <ListItemIcon>
+                  <CameraAlt fontSize="small" />
+                </ListItemIcon>
+                <ListItemText>
+                  {profileUser?.avatar || profileUser?.avatarUrl ? 'Change Avatar' : 'Upload Avatar'}
+                </ListItemText>
+              </MenuItem>
+              {(profileUser?.avatar || profileUser?.avatarUrl) && (
+                <MenuItem onClick={handleAvatarDelete}>
+                  <ListItemIcon>
+                    <Delete fontSize="small" color="error" />
+                  </ListItemIcon>
+                  <ListItemText>Delete Avatar</ListItemText>
+                </MenuItem>
+              )}
+            </Menu>
+          )}
 
           {/* Navigation Tabs */}
           <ProfileTabs

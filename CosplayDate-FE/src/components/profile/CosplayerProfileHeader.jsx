@@ -10,7 +10,12 @@ import {
   Divider,
   Badge,
   Rating,
-  Fade
+  Fade,
+  Menu, MenuItem, ListItemIcon, ListItemText, Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogContentText,
+  DialogActions,
 } from '@mui/material';
 import {
   Edit,
@@ -27,7 +32,9 @@ import {
   Favorite,
   CameraAlt,
   Verified,
-  Event
+  Event,
+  Delete,
+  Warning,
 } from '@mui/icons-material';
 import EditCosplayerDialog from './EditCosplayerDialog';
 
@@ -36,7 +43,10 @@ const CosplayerProfileHeader = ({
   onEditAvatar,
   onProfileUpdate,
   isOwnProfile,
-  onEditClick = () => {},
+  deleteDialogOpen,
+  onDeleteDialogClose,
+  onConfirmDelete,
+  onEditClick = () => { },
 }) => {
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [avatarHovered, setAvatarHovered] = useState(false);
@@ -57,6 +67,15 @@ const CosplayerProfileHeader = ({
   const handleEditSuccess = (updatedData) => {
     onProfileUpdate?.(updatedData);
     setEditDialogOpen(false);
+  };
+
+  const handleDeleteCancel = () => {
+    onDeleteDialogClose?.();
+  };
+
+  const handleDeleteConfirm = () => {
+    onDeleteDialogClose?.();
+    onConfirmDelete?.();
   };
 
   const formatPrice = (price) => {
@@ -119,7 +138,7 @@ const CosplayerProfileHeader = ({
                 overlap="circular"
                 anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
                 badgeContent={
-                  user.isAvailable && (
+                  cosplayer.isVerified && (
                     <Verified
                       sx={{
                         color: '#4CAF50',
@@ -133,16 +152,21 @@ const CosplayerProfileHeader = ({
                 }
               >
                 <Avatar
-                  src={cosplayer.avatarUrl || cosplayer.avatar || cosplayer.featuredPhotoUrl}
+                  src={cosplayer.avatar || cosplayer.avatarUrl}
                   sx={{
                     width: 120,
                     height: 120,
                     border: '4px solid white',
-                    boxShadow: '0 8px 24px rgba(233, 30, 99, 0.2)',
+                    boxShadow: '0 8px 24px rgba(0,0,0,0.2)',
+                    cursor: isOwnProfile ? 'pointer' : 'default',
                     transition: 'all 0.3s ease',
+                    '&:hover': isOwnProfile ? {
+                      transform: 'scale(1.05)',
+                    } : {},
                   }}
+                  onClick={isOwnProfile ? onEditAvatar : undefined}
                 >
-                  {cosplayer.displayName?.[0] || 'C'}
+                  {cosplayer.firstName?.[0]}{cosplayer.lastName?.[0]}
                 </Avatar>
               </Badge>
 
@@ -162,8 +186,8 @@ const CosplayerProfileHeader = ({
                       alignItems: 'center',
                       justifyContent: 'center',
                       cursor: 'pointer',
+                      pointerEvents: 'none',
                     }}
-                    onClick={onEditAvatar}
                   >
                     <CameraAlt sx={{ color: 'white', fontSize: 32 }} />
                   </Box>
@@ -432,6 +456,54 @@ const CosplayerProfileHeader = ({
             </>
           )}
         </Box>
+
+        {/* Delete Confirmation Dialog */}
+        <Dialog
+          open={deleteDialogOpen}
+          onClose={handleDeleteCancel}
+          aria-labelledby="delete-dialog-title"
+          aria-describedby="delete-dialog-description"
+          PaperProps={{
+            sx: {
+              borderRadius: 2,
+              minWidth: 320
+            }
+          }}
+        >
+          <DialogTitle id="delete-dialog-title" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <Warning color="error" />
+            Delete Avatar
+          </DialogTitle>
+          <DialogContent>
+            <DialogContentText id="delete-dialog-description">
+              Are you sure you want to delete your profile avatar? This action cannot be undone.
+            </DialogContentText>
+          </DialogContent>
+          <DialogActions sx={{ px: 3, pb: 2 }}>
+            <Button
+              onClick={handleDeleteCancel}
+              variant="outlined"
+              sx={{
+                borderColor: '#ccc',
+                color: '#666',
+                '&:hover': {
+                  borderColor: '#999',
+                  backgroundColor: '#f5f5f5'
+                }
+              }}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleDeleteConfirm}
+              variant="contained"
+              color="error"
+              autoFocus
+            >
+              Delete
+            </Button>
+          </DialogActions>
+        </Dialog>
       </Paper>
 
       {/* Edit Dialog */}
