@@ -23,17 +23,16 @@ import {
   LocationOn,
   AttachMoney,
   Schedule,
-  Star,
   Check,
   WorkspacePremium,
   Groups,
   PhotoLibrary,
-  VideoLibrary,
   Favorite,
   CameraAlt,
   Verified,
   Event,
   Warning,
+  PersonAdd, PersonRemove
 } from '@mui/icons-material';
 import EditCosplayerDialog from './EditCosplayerDialog';
 
@@ -45,6 +44,8 @@ const CosplayerProfileHeader = ({
   deleteDialogOpen,
   onDeleteDialogClose,
   onConfirmDelete,
+  onFollowToggle,
+  isFollowing,
   onEditClick = () => { },
 }) => {
   const [editDialogOpen, setEditDialogOpen] = useState(false);
@@ -257,14 +258,6 @@ const CosplayerProfileHeader = ({
                     ({cosplayer.totalReviews} đánh giá)
                   </Typography>
                 </Box>
-
-                {/* Followers */}
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                  <Groups sx={{ fontSize: 18, color: 'text.secondary' }} />
-                  <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-                    {cosplayer.followersCount} người theo dõi
-                  </Typography>
-                </Box>
               </Box>
 
               {/* Info Grid */}
@@ -340,28 +333,57 @@ const CosplayerProfileHeader = ({
                   Chỉnh sửa hồ sơ
                 </Button>
               ) : (
-                <Button
-                  variant="contained"
-                  startIcon={<Event />}
-                  onClick={() => onEditClick()}
-                  sx={{
-                    background: 'linear-gradient(45deg, #E91E63, #9C27B0)',
-                    borderRadius: '12px',
-                    textTransform: 'none',
-                    fontWeight: 600,
-                    px: 3,
-                    py: 1.5,
-                    boxShadow: '0 4px 15px rgba(233, 30, 99, 0.3)',
-                    '&:hover': {
-                      background: 'linear-gradient(45deg, #AD1457, #7B1FA2)',
-                      transform: 'translateY(-2px)',
-                      boxShadow: '0 6px 20px rgba(233, 30, 99, 0.4)',
-                    },
-                    transition: 'all 0.3s ease',
-                  }}
-                >
-                  Đặt lịch ngay
-                </Button>
+                <>
+                  <Button
+                    variant="contained"
+                    onClick={onFollowToggle}
+                    disabled={!user} // Disable if not logged in
+                    startIcon={isFollowing ? <PersonRemove /> : <PersonAdd />}
+                    sx={{
+                      borderRadius: '12px',
+                      textTransform: 'none',
+                      fontWeight: 600,
+                      px: 3,
+                      py: 1.5,
+                      background: isFollowing
+                        ? 'linear-gradient(45deg, #757575, #424242)'
+                        : 'linear-gradient(45deg, #E91E63, #9C27B0)',
+                      boxShadow: '0 4px 20px rgba(233, 30, 99, 0.25)',
+                      '&:hover': {
+                        background: isFollowing
+                          ? 'linear-gradient(45deg, #616161, #212121)'
+                          : 'linear-gradient(45deg, #C2185B, #7B1FA2)',
+                        transform: 'translateY(-2px)',
+                        boxShadow: '0 6px 25px rgba(233, 30, 99, 0.35)',
+                      },
+                      transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                    }}
+                  >
+                    {isFollowing ? 'Bỏ theo dõi' : 'Theo dõi'}
+                  </Button>
+                  <Button
+                    variant="contained"
+                    startIcon={<Event />}
+                    onClick={() => onEditClick()}
+                    sx={{
+                      background: 'linear-gradient(45deg, #E91E63, #9C27B0)',
+                      borderRadius: '12px',
+                      textTransform: 'none',
+                      fontWeight: 600,
+                      px: 3,
+                      py: 1.5,
+                      boxShadow: '0 4px 15px rgba(233, 30, 99, 0.3)',
+                      '&:hover': {
+                        background: 'linear-gradient(45deg, #AD1457, #7B1FA2)',
+                        transform: 'translateY(-2px)',
+                        boxShadow: '0 6px 20px rgba(233, 30, 99, 0.4)',
+                      },
+                      transition: 'all 0.3s ease',
+                    }}
+                  >
+                    Đặt lịch ngay
+                  </Button>
+                </>
               )}
               <Button
                 variant="outlined"
@@ -432,24 +454,21 @@ const CosplayerProfileHeader = ({
                   label="Đơn hoàn thành"
                 />
                 <StatItem
-                  icon={<PhotoLibrary sx={{ color: 'info.main' }} />}
-                  value={cosplayer.stats.totalPhotos}
-                  label="Ảnh"
-                />
-                <StatItem
-                  icon={<VideoLibrary sx={{ color: 'success.main' }} />}
-                  value={cosplayer.stats.totalVideos}
-                  label="Video"
+                  icon={<Groups sx={{ fontSize: 20, color: 'primary.main' }} />}
+                  value={
+                    ((cosplayer.stats?.totalFollowers ?? cosplayer.followersCount) || 0).toLocaleString()
+                  }
+                  label="Người theo dõi"
                 />
                 <StatItem
                   icon={<Favorite sx={{ color: 'error.main' }} />}
-                  value={cosplayer.stats.totalLikes}
+                  value={(cosplayer.stats.totalLikes || 0).toLocaleString()}
                   label="Lượt thích"
                 />
                 <StatItem
-                  icon={<Star sx={{ color: 'warning.main' }} />}
-                  value={`${cosplayer.stats.successRate || 0}%`}
-                  label="Tỉ lệ thành công"
+                  icon={<PhotoLibrary sx={{ fontSize: 20, color: 'primary.main' }} />}
+                  value={(cosplayer.stats.totalPosts || 0).toLocaleString()}
+                  label="Bài viết"
                 />
               </Box>
             </>

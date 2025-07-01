@@ -16,7 +16,7 @@ import { Add, CameraAlt, Delete } from '@mui/icons-material';
 import { ThemeProvider } from '@mui/material/styles';
 import { cosplayTheme } from '../theme/cosplayTheme';
 import { cosplayerAPI, cosplayerMediaAPI } from '../services/cosplayerAPI';
-import { userAPI } from '../services/api';
+import { userAPI, followAPI } from '../services/api';
 import Header from '../components/layout/Header';
 import Footer from '../components/layout/Footer';
 import CosplayerProfileHeader from '../components/profile/CosplayerProfileHeader';
@@ -47,6 +47,71 @@ const CosplayerProfilePage = () => {
   const [userDataLoaded, setUserDataLoaded] = useState(false);
   const [isOwnProfile, setIsOwnProfile] = useState(false);
   const [anchorEl, setAnchorEl] = useState(null);
+  const [isFollowing, setIsFollowing] = useState(false);
+  const [followLoading, setFollowLoading] = useState(false);
+
+  const handleFollowToggle = async () => {
+    if (!user) {
+      navigate('/login');
+      return;
+    }
+
+    if (!profileUser || followLoading) return;
+
+    try {
+      setFollowLoading(true);
+
+      let result;
+      if (isFollowing) {
+        result = await followAPI.unfollowCosplayer(profileUser.id);
+      } else {
+        result = await followAPI.followCosplayer(profileUser.id);
+      }
+
+      if (result.success) {
+        setIsFollowing(!isFollowing);
+
+        // Update follower count using the totalFollowers from the API response
+        if (result.data && result.data.totalFollowers !== undefined) {
+          setProfileUser(prev => ({
+            ...prev,
+            followersCount: result.data.totalFollowers,
+            // Also update stats if it exists
+            stats: prev.stats ? {
+              ...prev.stats,
+              totalFollowers: result.data.totalFollowers
+            } : undefined
+          }));
+        } else {
+          // Fallback to manual increment/decrement if API doesn't return totalFollowers
+          setProfileUser(prev => ({
+            ...prev,
+            followersCount: isFollowing
+              ? Math.max(0, (prev.followersCount || 1) - 1)
+              : (prev.followersCount || 0) + 1,
+            stats: prev.stats ? {
+              ...prev.stats,
+              totalFollowers: isFollowing
+                ? Math.max(0, (prev.stats.totalFollowers || 1) - 1)
+                : (prev.stats.totalFollowers || 0) + 1
+            } : undefined
+          }));
+        }
+
+        showSnackbar(
+          isFollowing ? 'Đã bỏ theo dõi cosplayer' : 'Đã theo dõi cosplayer',
+          'success'
+        );
+      } else {
+        showSnackbar(result.message || 'Có lỗi xảy ra', 'error');
+      }
+    } catch (error) {
+      console.error('Follow toggle error:', error);
+      showSnackbar('Không thể thực hiện thao tác', 'error');
+    } finally {
+      setFollowLoading(false);
+    }
+  };
 
   // ✅ FIXED: Stable user ID comparison logic
   const getCurrentUserId = useCallback(() => {
@@ -247,22 +312,31 @@ const CosplayerProfilePage = () => {
 
         console.log('🔍 Loading user profile for:', targetUserId);
 
-        // ✅ NEW: First get user profile to determine isOwnProfile
+        // First get user profile to determine isOwnProfile
         const userProfileResult = await userAPI.getUserProfile(targetUserId);
 
         console.log('👤 User Profile API Result:', {
           success: userProfileResult.success,
           isOwnProfile: userProfileResult.data?.isOwnProfile,
-          userType: userProfileResult.data?.userType
+          userType: userProfileResult.data?.userType,
+          isFollowing: userProfileResult.data?.isFollowing // Log this
         });
 
         if (userProfileResult.success && userProfileResult.data) {
-          const { isOwnProfile: apiIsOwnProfile, userType } = userProfileResult.data;
+          const { isOwnProfile: apiIsOwnProfile, userType, isFollowing: apiIsFollowing } = userProfileResult.data;
 
-          // ✅ NEW: Set isOwnProfile from API response
+          // Set isOwnProfile from API response
           setIsOwnProfile(apiIsOwnProfile);
 
-          console.log('✅ isOwnProfile set from API:', apiIsOwnProfile);
+          // Set isFollowing from API response (only for non-own profiles)
+          if (!apiIsOwnProfile) {
+            setIsFollowing(apiIsFollowing || false);
+          }
+
+          console.log('✅ States set from API:', {
+            isOwnProfile: apiIsOwnProfile,
+            isFollowing: apiIsFollowing
+          });
 
           // Handle non-cosplayer users
           if (userType !== 'Cosplayer') {
@@ -654,6 +728,8 @@ const CosplayerProfilePage = () => {
             onAvatarDelete={handleAvatarDelete}
             deleteDialogOpen={deleteDialogOpen}
             onConfirmDelete={handleConfirmDelete}
+            onFollowToggle={handleFollowToggle}
+            isFollowing={isFollowing}
           />
 
           {/* Avatar Menu */}
