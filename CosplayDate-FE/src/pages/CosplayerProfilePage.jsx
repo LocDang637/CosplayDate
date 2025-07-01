@@ -54,11 +54,6 @@ const CosplayerProfilePage = () => {
     return user.id || user.userId;
   }, [user?.id, user?.userId]);
 
-  const handleBooking = useCallback((targetCosplayer) => {
-    console.log('📅 Booking clicked for:', targetCosplayer);
-    navigate(`/booking/${targetCosplayer.id}`);
-  }, [navigate]);
-
   const handleProfileUpdate = useCallback((updatedData) => {
     console.log('📝 Profile updated:', updatedData);
 

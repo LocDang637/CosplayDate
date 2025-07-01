@@ -11,7 +11,7 @@ import {
   Badge,
   Rating,
   Fade,
-  Menu, MenuItem, ListItemIcon, ListItemText, Dialog,
+  Dialog,
   DialogTitle,
   DialogContent,
   DialogContentText,
@@ -33,7 +33,6 @@ import {
   CameraAlt,
   Verified,
   Event,
-  Delete,
   Warning,
 } from '@mui/icons-material';
 import EditCosplayerDialog from './EditCosplayerDialog';

@@ -16,7 +16,12 @@ import {
   Badge,
   Card,
   CardContent,
-  Grid
+  Grid,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogContentText,
+  DialogActions,
 } from '@mui/material';
 import {
   Edit,
@@ -32,20 +37,28 @@ import {
   Event,
   Favorite,
   TrendingUp,
-  TheaterComedy
+  TheaterComedy,
+  Warning,
 } from '@mui/icons-material';
 
 
-const CustomerProfileHeader = ({ 
-  user, 
-  onEditProfile, 
+const CustomerProfileHeader = ({
+  user,
+  onEditProfile,
   onEditAvatar,
+  deleteDialogOpen,
+  onDeleteDialogClose,
+  onConfirmDelete,
   walletBalance = 0,
-  membershipTier = 'Bronze'
+  membershipTier = 'Bronze',
+  isOwnProfile,
 }) => {
   const navigate = useNavigate();
   const [anchorEl, setAnchorEl] = useState(null);
   const [avatarHovered, setAvatarHovered] = useState(false);
+
+  if (!user) return null;
+  const customer = user;
 
   const handleMenuOpen = (event) => {
     setAnchorEl(event.currentTarget);
@@ -53,6 +66,15 @@ const CustomerProfileHeader = ({
 
   const handleMenuClose = () => {
     setAnchorEl(null);
+  };
+
+  const handleDeleteCancel = () => {
+    onDeleteDialogClose?.();
+  };
+
+  const handleDeleteConfirm = () => {
+    onDeleteDialogClose?.();
+    onConfirmDelete?.();
   };
 
   const handleShare = () => {
@@ -135,7 +157,7 @@ const CustomerProfileHeader = ({
       <Box sx={{ position: 'relative', zIndex: 1 }}>
         <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 3, mb: 3 }}>
           {/* Avatar Section */}
-          <Box 
+          <Box
             sx={{ position: 'relative' }}
             onMouseEnter={() => setAvatarHovered(true)}
             onMouseLeave={() => setAvatarHovered(false)}
@@ -144,39 +166,40 @@ const CustomerProfileHeader = ({
               overlap="circular"
               anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
               badgeContent={
-                user.isVerified && (
-                  <Verified 
-                    sx={{ 
-                      color: '#4CAF50', 
+                customer.isVerified && (
+                  <Verified
+                    sx={{
+                      color: '#4CAF50',
                       fontSize: 28,
                       backgroundColor: 'white',
                       borderRadius: '50%',
                       p: '2px'
-                    }} 
+                    }}
                   />
                 )
               }
             >
               <Avatar
-                src={user.avatar}
+                src={customer.avatar || customer.avatarUrl}
                 sx={{
                   width: 120,
                   height: 120,
                   border: '4px solid white',
-                  boxShadow: '0 8px 24px rgba(233, 30, 99, 0.2)',
-                  cursor: 'pointer',
+                  boxShadow: '0 8px 24px rgba(0,0,0,0.2)',
+                  cursor: isOwnProfile ? 'pointer' : 'default',
                   transition: 'all 0.3s ease',
-                  '&:hover':{
+                  '&:hover': isOwnProfile ? {
                     transform: 'scale(1.05)',
-                  },
+                  } : {},
                 }}
-                onClick={onEditAvatar}
+                onClick={isOwnProfile ? onEditAvatar : undefined}
               >
-                {user.firstName?.[0]}{user.lastName?.[0]}
+                {customer.firstName?.[0]}{customer.lastName?.[0]}
               </Avatar>
             </Badge>
-            
+
             {/* Camera Overlay for Own Profile */}
+            {isOwnProfile && (
               <Fade in={avatarHovered}>
                 <Box
                   sx={{
@@ -191,12 +214,13 @@ const CustomerProfileHeader = ({
                     alignItems: 'center',
                     justifyContent: 'center',
                     cursor: 'pointer',
+                    pointerEvents: 'none',
                   }}
-                  onClick={onEditAvatar}
                 >
                   <CameraAlt sx={{ color: 'white', fontSize: 32 }} />
                 </Box>
               </Fade>
+            )}
           </Box>
 
           {/* Profile Info */}
@@ -212,7 +236,7 @@ const CustomerProfileHeader = ({
               >
                 {user.firstName} {user.lastName}
               </Typography>
-              
+
               {user.isOnline && (
                 <Chip
                   label="Đang hoạt động"
@@ -249,7 +273,7 @@ const CustomerProfileHeader = ({
                   lượt đặt
                 </Typography>
               </Box>
-              
+
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
                 <Favorite sx={{ color: '#FF6B6B', fontSize: 20 }} />
                 <Typography variant="body1" sx={{ fontWeight: 600 }}>
@@ -298,169 +322,169 @@ const CustomerProfileHeader = ({
 
           {/* Action Buttons */}
           <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1 }}>
-              <>
-                <Button
-                  variant="contained"
-                  startIcon={<Edit />}
-                  onClick={onEditProfile}
-                  sx={{
-                    background: 'linear-gradient(45deg, #E91E63, #9C27B0)',
-                    color: 'white',
-                    px: 3,
-                    py: 1,
-                    borderRadius: '12px',
-                    textTransform: 'none',
-                    fontWeight: 600,
-                    '&:hover': {
-                      background: 'linear-gradient(45deg, #AD1457, #7B1FA2)',
-                    },
-                  }}
-                >
-                  Chỉnh sửa hồ sơ
-                </Button>
-                <IconButton
-                  onClick={handleMenuOpen}
-                  sx={{
-                    backgroundColor: 'rgba(255,255,255,0.8)',
-                    '&:hover': { backgroundColor: 'rgba(255,255,255,1)' },
-                  }}
-                >
-                  <MoreVert />
-                </IconButton>
-              </>
+            <>
+              <Button
+                variant="contained"
+                startIcon={<Edit />}
+                onClick={onEditProfile}
+                sx={{
+                  background: 'linear-gradient(45deg, #E91E63, #9C27B0)',
+                  color: 'white',
+                  px: 3,
+                  py: 1,
+                  borderRadius: '12px',
+                  textTransform: 'none',
+                  fontWeight: 600,
+                  '&:hover': {
+                    background: 'linear-gradient(45deg, #AD1457, #7B1FA2)',
+                  },
+                }}
+              >
+                Chỉnh sửa hồ sơ
+              </Button>
+              <IconButton
+                onClick={handleMenuOpen}
+                sx={{
+                  backgroundColor: 'rgba(255,255,255,0.8)',
+                  '&:hover': { backgroundColor: 'rgba(255,255,255,1)' },
+                }}
+              >
+                <MoreVert />
+              </IconButton>
+            </>
           </Box>
         </Box>
 
         {/* Customer Dashboard Cards */}
-          <Grid container spacing={2}>
-            {/* Wallet Balance Card */}
-            <Grid item xs={12} sm={6} md={3}>
-              <Card
-                sx={{
-                  background: 'linear-gradient(135deg, rgba(76, 175, 80, 0.1) 0%, rgba(76, 175, 80, 0.05) 100%)',
-                  border: '1px solid rgba(76, 175, 80, 0.2)',
-                  borderRadius: '16px',
-                  transition: 'all 0.3s ease',
-                  '&:hover': {
-                    transform: 'translateY(-2px)',
-                    boxShadow: '0 8px 24px rgba(76, 175, 80, 0.15)',
-                  },
-                }}
-              >
-                <CardContent sx={{ textAlign: 'center', py: 2 }}>
-                  <AccountBalanceWallet 
-                    sx={{ 
-                      fontSize: 32, 
-                      color: '#4CAF50', 
-                      mb: 1 
-                    }} 
-                  />
-                  <Typography variant="h6" sx={{ fontWeight: 700, fontSize: '18px' }}>
-                    {formatCurrency(walletBalance)}
-                  </Typography>
-                  <Typography variant="body2" sx={{ color: 'text.secondary', fontSize: '12px' }}>
-                    Số dư ví
-                  </Typography>
-                </CardContent>
-              </Card>
-            </Grid>
-
-            {/* Active Bookings */}
-            <Grid item xs={12} sm={6} md={3}>
-              <Card
-                sx={{
-                  background: 'linear-gradient(135deg, rgba(33, 150, 243, 0.1) 0%, rgba(33, 150, 243, 0.05) 100%)',
-                  border: '1px solid rgba(33, 150, 243, 0.2)',
-                  borderRadius: '16px',
-                  transition: 'all 0.3s ease',
-                  '&:hover': {
-                    transform: 'translateY(-2px)',
-                    boxShadow: '0 8px 24px rgba(33, 150, 243, 0.15)',
-                  },
-                }}
-              >
-                <CardContent sx={{ textAlign: 'center', py: 2 }}>
-                  <Event 
-                    sx={{ 
-                      fontSize: 32, 
-                      color: '#2196F3', 
-                      mb: 1 
-                    }} 
-                  />
-                  <Typography variant="h6" sx={{ fontWeight: 700, fontSize: '18px' }}>
-                    {user.activeBookings || 2}
-                  </Typography>
-                  <Typography variant="body2" sx={{ color: 'text.secondary', fontSize: '12px' }}>
-                    Đặt chỗ đang hoạt động
-                  </Typography>
-                </CardContent>
-              </Card>
-            </Grid>
-
-            {/* Loyalty Points */}
-            <Grid item xs={12} sm={6} md={3}>
-              <Card
-                sx={{
-                  background: 'linear-gradient(135deg, rgba(255, 193, 7, 0.1) 0%, rgba(255, 193, 7, 0.05) 100%)',
-                  border: '1px solid rgba(255, 193, 7, 0.2)',
-                  borderRadius: '16px',
-                  transition: 'all 0.3s ease',
-                  '&:hover': {
-                    transform: 'translateY(-2px)',
-                    boxShadow: '0 8px 24px rgba(255, 193, 7, 0.15)',
-                  },
-                }}
-              >
-                <CardContent sx={{ textAlign: 'center', py: 2 }}>
-                  <LocalOffer 
-                    sx={{ 
-                      fontSize: 32, 
-                      color: '#FFC107', 
-                      mb: 1 
-                    }} 
-                  />
-                  <Typography variant="h6" sx={{ fontWeight: 700, fontSize: '18px' }}>
-                    {user.loyaltyPoints || 1250}
-                  </Typography>
-                  <Typography variant="body2" sx={{ color: 'text.secondary', fontSize: '12px' }}>
-                    Điểm tích lũy
-                  </Typography>
-                </CardContent>
-              </Card>
-            </Grid>
-
-            {/* Member Since */}
-            <Grid item xs={12} sm={6} md={3}>
-              <Card
-                sx={{
-                  background: 'linear-gradient(135deg, rgba(233, 30, 99, 0.1) 0%, rgba(233, 30, 99, 0.05) 100%)',
-                  border: '1px solid rgba(233, 30, 99, 0.2)',
-                  borderRadius: '16px',
-                  transition: 'all 0.3s ease',
-                  '&:hover': {
-                    transform: 'translateY(-2px)',
-                    boxShadow: '0 8px 24px rgba(233, 30, 99, 0.15)',
-                  },
-                }}
-              >
-                <CardContent sx={{ textAlign: 'center', py: 2 }}>
-                  <TrendingUp 
-                    sx={{ 
-                      fontSize: 32, 
-                      color: '#E91E63', 
-                      mb: 1 
-                    }} 
-                  />
-                  <Typography variant="h6" sx={{ fontWeight: 700, fontSize: '18px' }}>
-                    {new Date().getFullYear()}
-                  </Typography>
-                  <Typography variant="body2" sx={{ color: 'text.secondary', fontSize: '12px' }}>
-                    Thành viên từ
-                  </Typography>
-                </CardContent>
-              </Card>
-            </Grid>
+        <Grid container spacing={2}>
+          {/* Wallet Balance Card */}
+          <Grid item xs={12} sm={6} md={3}>
+            <Card
+              sx={{
+                background: 'linear-gradient(135deg, rgba(76, 175, 80, 0.1) 0%, rgba(76, 175, 80, 0.05) 100%)',
+                border: '1px solid rgba(76, 175, 80, 0.2)',
+                borderRadius: '16px',
+                transition: 'all 0.3s ease',
+                '&:hover': {
+                  transform: 'translateY(-2px)',
+                  boxShadow: '0 8px 24px rgba(76, 175, 80, 0.15)',
+                },
+              }}
+            >
+              <CardContent sx={{ textAlign: 'center', py: 2 }}>
+                <AccountBalanceWallet
+                  sx={{
+                    fontSize: 32,
+                    color: '#4CAF50',
+                    mb: 1
+                  }}
+                />
+                <Typography variant="h6" sx={{ fontWeight: 700, fontSize: '18px' }}>
+                  {formatCurrency(walletBalance)}
+                </Typography>
+                <Typography variant="body2" sx={{ color: 'text.secondary', fontSize: '12px' }}>
+                  Số dư ví
+                </Typography>
+              </CardContent>
+            </Card>
           </Grid>
+
+          {/* Active Bookings */}
+          <Grid item xs={12} sm={6} md={3}>
+            <Card
+              sx={{
+                background: 'linear-gradient(135deg, rgba(33, 150, 243, 0.1) 0%, rgba(33, 150, 243, 0.05) 100%)',
+                border: '1px solid rgba(33, 150, 243, 0.2)',
+                borderRadius: '16px',
+                transition: 'all 0.3s ease',
+                '&:hover': {
+                  transform: 'translateY(-2px)',
+                  boxShadow: '0 8px 24px rgba(33, 150, 243, 0.15)',
+                },
+              }}
+            >
+              <CardContent sx={{ textAlign: 'center', py: 2 }}>
+                <Event
+                  sx={{
+                    fontSize: 32,
+                    color: '#2196F3',
+                    mb: 1
+                  }}
+                />
+                <Typography variant="h6" sx={{ fontWeight: 700, fontSize: '18px' }}>
+                  {user.activeBookings || 2}
+                </Typography>
+                <Typography variant="body2" sx={{ color: 'text.secondary', fontSize: '12px' }}>
+                  Đặt chỗ đang hoạt động
+                </Typography>
+              </CardContent>
+            </Card>
+          </Grid>
+
+          {/* Loyalty Points */}
+          <Grid item xs={12} sm={6} md={3}>
+            <Card
+              sx={{
+                background: 'linear-gradient(135deg, rgba(255, 193, 7, 0.1) 0%, rgba(255, 193, 7, 0.05) 100%)',
+                border: '1px solid rgba(255, 193, 7, 0.2)',
+                borderRadius: '16px',
+                transition: 'all 0.3s ease',
+                '&:hover': {
+                  transform: 'translateY(-2px)',
+                  boxShadow: '0 8px 24px rgba(255, 193, 7, 0.15)',
+                },
+              }}
+            >
+              <CardContent sx={{ textAlign: 'center', py: 2 }}>
+                <LocalOffer
+                  sx={{
+                    fontSize: 32,
+                    color: '#FFC107',
+                    mb: 1
+                  }}
+                />
+                <Typography variant="h6" sx={{ fontWeight: 700, fontSize: '18px' }}>
+                  {user.loyaltyPoints || 1250}
+                </Typography>
+                <Typography variant="body2" sx={{ color: 'text.secondary', fontSize: '12px' }}>
+                  Điểm tích lũy
+                </Typography>
+              </CardContent>
+            </Card>
+          </Grid>
+
+          {/* Member Since */}
+          <Grid item xs={12} sm={6} md={3}>
+            <Card
+              sx={{
+                background: 'linear-gradient(135deg, rgba(233, 30, 99, 0.1) 0%, rgba(233, 30, 99, 0.05) 100%)',
+                border: '1px solid rgba(233, 30, 99, 0.2)',
+                borderRadius: '16px',
+                transition: 'all 0.3s ease',
+                '&:hover': {
+                  transform: 'translateY(-2px)',
+                  boxShadow: '0 8px 24px rgba(233, 30, 99, 0.15)',
+                },
+              }}
+            >
+              <CardContent sx={{ textAlign: 'center', py: 2 }}>
+                <TrendingUp
+                  sx={{
+                    fontSize: 32,
+                    color: '#E91E63',
+                    mb: 1
+                  }}
+                />
+                <Typography variant="h6" sx={{ fontWeight: 700, fontSize: '18px' }}>
+                  {new Date().getFullYear()}
+                </Typography>
+                <Typography variant="body2" sx={{ color: 'text.secondary', fontSize: '12px' }}>
+                  Thành viên từ
+                </Typography>
+              </CardContent>
+            </Card>
+          </Grid>
+        </Grid>
 
         {/* Customer Interests/Preferences */}
         {user.interests && user.interests.length > 0 && (
@@ -507,13 +531,13 @@ const CustomerProfileHeader = ({
           </ListItemIcon>
           <ListItemText primary="Chia sẻ hồ sơ" />
         </MenuItem>
-          <>
+        <>
           <MenuItem onClick={handleBecomeCosplayer}>
-              <ListItemIcon>
-                <TheaterComedy fontSize="small" />
-              </ListItemIcon>
-              <ListItemText primary="Trở thành Cosplayer" />
-            </MenuItem>
+            <ListItemIcon>
+              <TheaterComedy fontSize="small" />
+            </ListItemIcon>
+            <ListItemText primary="Trở thành Cosplayer" />
+          </MenuItem>
 
           <MenuItem onClick={() => { handleMenuClose(); /* Handle settings */ }}>
             <ListItemIcon>
@@ -521,8 +545,56 @@ const CustomerProfileHeader = ({
             </ListItemIcon>
             <ListItemText primary="Cài đặt" />
           </MenuItem>
-          </>
+        </>
       </Menu>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog
+        open={deleteDialogOpen}
+        onClose={handleDeleteCancel}
+        aria-labelledby="delete-dialog-title"
+        aria-describedby="delete-dialog-description"
+        PaperProps={{
+          sx: {
+            borderRadius: 2,
+            minWidth: 320
+          }
+        }}
+      >
+        <DialogTitle id="delete-dialog-title" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          <Warning color="error" />
+          Delete Avatar
+        </DialogTitle>
+        <DialogContent>
+          <DialogContentText id="delete-dialog-description">
+            Are you sure you want to delete your profile avatar? This action cannot be undone.
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 2 }}>
+          <Button
+            onClick={handleDeleteCancel}
+            variant="outlined"
+            sx={{
+              borderColor: '#ccc',
+              color: '#666',
+              '&:hover': {
+                borderColor: '#999',
+                backgroundColor: '#f5f5f5'
+              }
+            }}
+          >
+            Cancel
+          </Button>
+          <Button
+            onClick={handleDeleteConfirm}
+            variant="contained"
+            color="error"
+            autoFocus
+          >
+            Delete
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Paper>
   );
 };

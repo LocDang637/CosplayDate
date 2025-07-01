@@ -8,7 +8,9 @@ import {
   Alert,
   Button,
   Snackbar,
+  Menu, MenuItem, ListItemIcon, ListItemText
 } from "@mui/material";
+import { CameraAlt, Delete } from '@mui/icons-material';
 import { ThemeProvider } from "@mui/material/styles";
 import { cosplayTheme } from "../theme/cosplayTheme";
 import {
@@ -40,6 +42,7 @@ const CustomerProfilePage = () => {
   const [error, setError] = useState(null);
   const [isFollowing, setIsFollowing] = useState(false);
   const [editModalOpen, setEditModalOpen] = useState(false);
+  const [anchorEl, setAnchorEl] = useState(null);
   const [snackbar, setSnackbar] = useState({
     open: false,
     message: "",
@@ -193,7 +196,18 @@ const CustomerProfilePage = () => {
     showSnackbar('Profile updated successfully!', 'success');
   };
 
-  const handleEditAvatar = async () => {
+  // Avatar menu handlers
+  const handleAvatarClick = (event) => {
+    setAnchorEl(event.currentTarget);
+  };
+
+  const handleMenuClose = () => {
+    setAnchorEl(null);
+  };
+
+  const handleAvatarUpload = async () => {
+    handleMenuClose();
+
     const input = document.createElement('input');
     input.type = 'file';
     input.accept = 'image/*';
@@ -207,19 +221,19 @@ const CustomerProfilePage = () => {
           if (result.success) {
             const newAvatarUrl = result.data.avatarUrl;
 
-            // ✅ FIX: Update profileUser state with both avatar and avatarUrl fields
+            // Update profileUser state
             setProfileUser(prev => ({
               ...prev,
-              avatar: newAvatarUrl,      // ← Add this for CustomerProfileHeader compatibility
-              avatarUrl: newAvatarUrl    // ← Keep this for API compatibility
+              avatar: newAvatarUrl,
+              avatarUrl: newAvatarUrl
             }));
 
-            // ✅ FIX: If it's own profile, also update the user state
+            // If it's own profile, also update the user state
             if (isOwnProfile) {
               const updatedUser = {
                 ...user,
-                avatar: newAvatarUrl,      // ← Add this for header compatibility
-                avatarUrl: newAvatarUrl    // ← Keep this for API compatibility
+                avatar: newAvatarUrl,
+                avatarUrl: newAvatarUrl
               };
               setUser(updatedUser);
               localStorage.setItem('user', JSON.stringify(updatedUser));
@@ -238,6 +252,50 @@ const CustomerProfilePage = () => {
       }
     };
     input.click();
+  };
+
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+
+  const handleAvatarDelete = () => {
+    handleMenuClose();
+    setDeleteDialogOpen(true);
+  };
+
+  const handleConfirmDelete = async () => {
+    setDeleteDialogOpen(false);
+    try {
+      setLoading(true);
+      const result = await userAPI.deleteAvatar();
+
+      if (result.success) {
+        // Update profileUser state
+        setProfileUser(prev => ({
+          ...prev,
+          avatar: null,
+          avatarUrl: null
+        }));
+
+        // If it's own profile, also update the user state
+        if (isOwnProfile) {
+          const updatedUser = {
+            ...user,
+            avatar: null,
+            avatarUrl: null
+          };
+          setUser(updatedUser);
+          localStorage.setItem('user', JSON.stringify(updatedUser));
+        }
+
+        showSnackbar('Avatar deleted successfully!', 'success');
+      } else {
+        showSnackbar(result.message || 'Failed to delete avatar', 'error');
+      }
+    } catch (error) {
+      console.error('Avatar delete error:', error);
+      showSnackbar('Error deleting avatar', 'error');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleFollowToggle = () => {
@@ -489,12 +547,67 @@ const CustomerProfilePage = () => {
             user={profileUser}
             isOwnProfile={isOwnProfile}
             onEditProfile={handleEditProfile}
-            onEditAvatar={handleEditAvatar}
+            onEditAvatar={handleAvatarClick}
+            anchorEl={anchorEl}
+            onMenuClose={handleMenuClose}
+            onAvatarUpload={handleAvatarUpload}
+            onAvatarDelete={handleAvatarDelete}
+            deleteDialogOpen={deleteDialogOpen}
+            onConfirmDelete={handleConfirmDelete}
             onFollowToggle={handleFollowToggle}
             isFollowing={isFollowing}
             walletBalance={profileUser?.walletBalance}
             membershipTier={profileUser?.membershipTier}
           />
+
+          {/* Avatar Menu */}
+          {isOwnProfile && (
+            <Menu
+              anchorEl={anchorEl}
+              open={Boolean(anchorEl)}
+              onClose={handleMenuClose}
+              anchorOrigin={{
+                vertical: 'bottom',
+                horizontal: 'center',
+              }}
+              transformOrigin={{
+                vertical: 'top',
+                horizontal: 'center',
+              }}
+              MenuListProps={{
+                'aria-labelledby': 'avatar-menu',
+              }}
+              // Click outside handling
+              ClickAwayListenerProps={{
+                onClickAway: handleMenuClose
+              }}
+              // Backdrop for better visibility
+              slotProps={{
+                backdrop: {
+                  sx: {
+                    backgroundColor: 'transparent',
+                  }
+                }
+              }}
+            >
+              <MenuItem onClick={handleAvatarUpload}>
+                <ListItemIcon>
+                  <CameraAlt fontSize="small" />
+                </ListItemIcon>
+                <ListItemText>
+                  {profileUser?.avatar || profileUser?.avatarUrl ? 'Change Avatar' : 'Upload Avatar'}
+                </ListItemText>
+              </MenuItem>
+              {(profileUser?.avatar || profileUser?.avatarUrl) && (
+                <MenuItem onClick={handleAvatarDelete}>
+                  <ListItemIcon>
+                    <Delete fontSize="small" color="error" />
+                  </ListItemIcon>
+                  <ListItemText>Delete Avatar</ListItemText>
+                </MenuItem>
+              )}
+            </Menu>
+          )}
 
           <ProfileTabs
             activeTab={activeTab}
