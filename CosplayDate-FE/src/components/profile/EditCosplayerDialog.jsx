@@ -1,4 +1,4 @@
-// src/components/profile/EditCosplayerDialog.jsx
+// src/components/profile/EditCosplayerDialog.jsx - Updated with User Profile API
 import React, { useState, useEffect } from 'react';
 import {
   Dialog,
@@ -20,16 +20,28 @@ import {
   Alert,
   CircularProgress,
   Autocomplete,
-  Typography
+  Typography,
+  Divider
 } from '@mui/material';
-import { Close } from '@mui/icons-material';
+import { Close, Person, LocationOn, CalendarMonth, Info } from '@mui/icons-material';
 import { cosplayerAPI } from '../../services/cosplayerAPI';
+import { userAPI } from '../../services/api';
 import { debugToken, hasValidCosplayerToken } from '../../utils/tokenUtils';
 
 const EditCosplayerDialog = ({ open, onClose, cosplayer, onUpdateSuccess }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [formData, setFormData] = useState({
+  
+  // Split form data into user profile and cosplayer profile sections
+  const [userFormData, setUserFormData] = useState({
+    firstName: '',
+    lastName: '',
+    location: '',
+    bio: '',
+    dateOfBirth: ''
+  });
+  
+  const [cosplayerFormData, setCosplayerFormData] = useState({
     displayName: '',
     pricePerHour: 0,
     category: '',
@@ -67,7 +79,17 @@ const EditCosplayerDialog = ({ open, onClose, cosplayer, onUpdateSuccess }) => {
   // Initialize form data when cosplayer prop changes
   useEffect(() => {
     if (cosplayer && open) {
-      setFormData({
+      // User profile data
+      setUserFormData({
+        firstName: cosplayer.firstName || '',
+        lastName: cosplayer.lastName || '',
+        location: cosplayer.location || '',
+        bio: cosplayer.bio || '',
+        dateOfBirth: cosplayer.dateOfBirth ? new Date(cosplayer.dateOfBirth).toISOString().split('T')[0] : ''
+      });
+      
+      // Cosplayer profile data
+      setCosplayerFormData({
         displayName: cosplayer.displayName || '',
         pricePerHour: cosplayer.pricePerHour || 0,
         category: cosplayer.category || '',
@@ -81,9 +103,20 @@ const EditCosplayerDialog = ({ open, onClose, cosplayer, onUpdateSuccess }) => {
     }
   }, [cosplayer, open]);
 
-  const handleChange = (field) => (event) => {
+  // Handle user profile field changes
+  const handleUserFieldChange = (field) => (event) => {
     const value = event.target.value;
-    setFormData(prev => ({
+    setUserFormData(prev => ({
+      ...prev,
+      [field]: value
+    }));
+    setError('');
+  };
+
+  // Handle cosplayer profile field changes
+  const handleCosplayerFieldChange = (field) => (event) => {
+    const value = event.target.value;
+    setCosplayerFormData(prev => ({
       ...prev,
       [field]: value
     }));
@@ -91,14 +124,14 @@ const EditCosplayerDialog = ({ open, onClose, cosplayer, onUpdateSuccess }) => {
   };
 
   const handleSpecialtiesChange = (event, newValue) => {
-    setFormData(prev => ({
+    setCosplayerFormData(prev => ({
       ...prev,
       specialties: newValue
     }));
   };
 
   const handleTagsChange = (event, newValue) => {
-    setFormData(prev => ({
+    setCosplayerFormData(prev => ({
       ...prev,
       tags: newValue.join(', ')
     }));
@@ -125,38 +158,66 @@ const EditCosplayerDialog = ({ open, onClose, cosplayer, onUpdateSuccess }) => {
       }
 
       // Validate required fields
-      if (!formData.displayName.trim()) {
+      if (!userFormData.firstName.trim() || !userFormData.lastName.trim()) {
+        setError('Tên và họ không được để trống');
+        return;
+      }
+
+      if (!cosplayerFormData.displayName.trim()) {
         setError('Tên hiển thị không được để trống');
         return;
       }
 
-      if (formData.pricePerHour < 0) {
+      if (cosplayerFormData.pricePerHour < 0) {
         setError('Giá phải lớn hơn hoặc bằng 0');
         return;
       }
 
-      // Prepare data for API
-      const updateData = {
-        displayName: formData.displayName.trim(),
-        pricePerHour: Number(formData.pricePerHour),
-        category: formData.category,
-        gender: formData.gender,
-        characterSpecialty: formData.characterSpecialty.trim(),
-        tags: formData.tags.trim(),
-        isAvailable: formData.isAvailable,
-        specialties: formData.specialties
+      // Update both user profile and cosplayer profile
+      console.log('Updating profiles...');
+
+      // 1. Update user profile first
+      const userUpdateData = {
+        firstName: userFormData.firstName.trim(),
+        lastName: userFormData.lastName.trim(),
+        location: userFormData.location.trim() || null,
+        bio: userFormData.bio.trim() || null,
+        dateOfBirth: userFormData.dateOfBirth || null
       };
 
-      console.log('Updating cosplayer profile:', updateData);
+      const userResult = await userAPI.updateProfile(userUpdateData);
 
-      const result = await cosplayerAPI.updateProfile(updateData);
+      if (!userResult.success) {
+        setError(userResult.message || 'Failed to update user profile');
+        return;
+      }
 
-      if (result.success) {
-        onUpdateSuccess?.(result.data);
+      // 2. Update cosplayer profile
+      const cosplayerUpdateData = {
+        displayName: cosplayerFormData.displayName.trim(),
+        pricePerHour: Number(cosplayerFormData.pricePerHour),
+        category: cosplayerFormData.category,
+        gender: cosplayerFormData.gender,
+        characterSpecialty: cosplayerFormData.characterSpecialty.trim(),
+        tags: cosplayerFormData.tags.trim(),
+        isAvailable: cosplayerFormData.isAvailable,
+        specialties: cosplayerFormData.specialties
+      };
+
+      const cosplayerResult = await cosplayerAPI.updateProfile(cosplayerUpdateData);
+
+      if (cosplayerResult.success) {
+        // Merge both results for the callback
+        const mergedData = {
+          ...userResult.data,
+          ...cosplayerResult.data
+        };
+        
+        onUpdateSuccess?.(mergedData);
         onClose();
       } else {
         // Check if it's an auth error
-        if (result.message?.includes('403') || result.message?.includes('unauthorized')) {
+        if (cosplayerResult.message?.includes('403') || cosplayerResult.message?.includes('unauthorized')) {
           setError('Authentication error. Please log in again.');
           setTimeout(() => {
             localStorage.removeItem('token');
@@ -164,7 +225,7 @@ const EditCosplayerDialog = ({ open, onClose, cosplayer, onUpdateSuccess }) => {
             window.location.href = '/login';
           }, 2000);
         } else {
-          setError(result.message || 'Cập nhật thất bại. Vui lòng thử lại.');
+          setError(cosplayerResult.message || 'Cập nhật thất bại. Vui lòng thử lại.');
         }
       }
     } catch (err) {
@@ -176,8 +237,8 @@ const EditCosplayerDialog = ({ open, onClose, cosplayer, onUpdateSuccess }) => {
   };
 
   const getCurrentTags = () => {
-    if (!formData.tags) return [];
-    return formData.tags.split(',').map(tag => tag.trim()).filter(tag => tag);
+    if (!cosplayerFormData.tags) return [];
+    return cosplayerFormData.tags.split(',').map(tag => tag.trim()).filter(tag => tag);
   };
 
   return (
@@ -198,10 +259,10 @@ const EditCosplayerDialog = ({ open, onClose, cosplayer, onUpdateSuccess }) => {
       }}>
         <Box>
           <Typography variant="h5" sx={{ fontWeight: 600 }}>
-            Chỉnh sửa hồ sơ Cosplayer
+            Chỉnh sửa hồ sơ
           </Typography>
           <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-            Cập nhật thông tin để thu hút nhiều khách hàng hơn
+            Cập nhật thông tin cá nhân và hồ sơ Cosplayer
           </Typography>
         </Box>
         <IconButton onClick={onClose} disabled={loading}>
@@ -217,159 +278,245 @@ const EditCosplayerDialog = ({ open, onClose, cosplayer, onUpdateSuccess }) => {
             </Alert>
           )}
 
-          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2.5 }}>
-            {/* Display Name */}
-            <TextField
-              label="Tên hiển thị"
-              value={formData.displayName}
-              onChange={handleChange('displayName')}
-              fullWidth
-              required
-              disabled={loading}
-              helperText="Tên sẽ được hiển thị trên hồ sơ của bạn"
-            />
-
-            {/* Price and Availability Row */}
-            <Box sx={{ display: 'flex', gap: 2 }}>
-              <TextField
-                label="Giá theo giờ"
-                type="number"
-                value={formData.pricePerHour}
-                onChange={handleChange('pricePerHour')}
-                fullWidth
-                disabled={loading}
-                InputProps={{
-                  startAdornment: <InputAdornment position="start">₫</InputAdornment>,
-                  endAdornment: <InputAdornment position="end">/giờ</InputAdornment>,
-                }}
-                helperText="Để 0 nếu muốn thương lượng"
-              />
-
-              <FormControlLabel
-                control={
-                  <Switch
-                    checked={formData.isAvailable}
-                    onChange={(e) => setFormData(prev => ({ ...prev, isAvailable: e.target.checked }))}
-                    color="primary"
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+            {/* User Profile Section */}
+            <Box>
+              <Typography variant="h6" sx={{ mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
+                <Person /> Thông tin cá nhân
+              </Typography>
+              
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                {/* Name Row */}
+                <Box sx={{ display: 'flex', gap: 2 }}>
+                  <TextField
+                    label="Họ"
+                    value={userFormData.firstName}
+                    onChange={handleUserFieldChange('firstName')}
+                    fullWidth
+                    required
                     disabled={loading}
                   />
-                }
-                label="Sẵn sàng nhận đơn"
-                sx={{ minWidth: 200 }}
-              />
+                  <TextField
+                    label="Tên"
+                    value={userFormData.lastName}
+                    onChange={handleUserFieldChange('lastName')}
+                    fullWidth
+                    required
+                    disabled={loading}
+                  />
+                </Box>
+
+                {/* Location */}
+                <TextField
+                  label="Địa điểm"
+                  value={userFormData.location}
+                  onChange={handleUserFieldChange('location')}
+                  fullWidth
+                  disabled={loading}
+                  InputProps={{
+                    startAdornment: (
+                      <InputAdornment position="start">
+                        <LocationOn />
+                      </InputAdornment>
+                    ),
+                  }}
+                />
+
+                {/* Date of Birth */}
+                <TextField
+                  label="Ngày sinh"
+                  type="date"
+                  value={userFormData.dateOfBirth}
+                  onChange={handleUserFieldChange('dateOfBirth')}
+                  fullWidth
+                  disabled={loading}
+                  InputLabelProps={{
+                    shrink: true,
+                  }}
+                  InputProps={{
+                    startAdornment: (
+                      <InputAdornment position="start">
+                        <CalendarMonth />
+                      </InputAdornment>
+                    ),
+                  }}
+                  helperText="Bạn phải từ 18 tuổi trở lên"
+                />
+
+                {/* Bio */}
+                <TextField
+                  label="Giới thiệu bản thân"
+                  value={userFormData.bio}
+                  onChange={handleUserFieldChange('bio')}
+                  fullWidth
+                  multiline
+                  rows={3}
+                  disabled={loading}
+                  InputProps={{
+                    startAdornment: (
+                      <InputAdornment position="start">
+                        <Info />
+                      </InputAdornment>
+                    ),
+                  }}
+                  helperText={`${userFormData.bio.length}/1000 ký tự`}
+                />
+              </Box>
             </Box>
 
-            {/* Category and Gender Row */}
-            <Box sx={{ display: 'flex', gap: 2 }}>
-              <FormControl fullWidth disabled={loading}>
-                <InputLabel>Thể loại</InputLabel>
-                <Select
-                  value={formData.category}
-                  onChange={handleChange('category')}
-                  label="Thể loại"
-                >
-                  <MenuItem value="">
-                    <em>Chọn thể loại</em>
-                  </MenuItem>
-                  {categories.map(cat => (
-                    <MenuItem key={cat} value={cat}>{cat}</MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
+            <Divider />
 
-              <FormControl fullWidth disabled={loading}>
-                <InputLabel>Giới tính</InputLabel>
-                <Select
-                  value={formData.gender}
-                  onChange={handleChange('gender')}
-                  label="Giới tính"
-                >
-                  <MenuItem value="">
-                    <em>Chọn giới tính</em>
-                  </MenuItem>
-                  {genders.map(gender => (
-                    <MenuItem key={gender} value={gender}>{gender}</MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
+            {/* Cosplayer Profile Section */}
+            <Box>
+              <Typography variant="h6" sx={{ mb: 2 }}>
+                🎭 Thông tin Cosplayer
+              </Typography>
+              
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                {/* Display Name */}
+                <TextField
+                  label="Tên hiển thị"
+                  value={cosplayerFormData.displayName}
+                  onChange={handleCosplayerFieldChange('displayName')}
+                  fullWidth
+                  required
+                  disabled={loading}
+                  helperText="Tên sẽ được hiển thị trên hồ sơ Cosplayer của bạn"
+                />
+
+                {/* Price and Availability Row */}
+                <Box sx={{ display: 'flex', gap: 2 }}>
+                  <TextField
+                    label="Giá theo giờ"
+                    type="number"
+                    value={cosplayerFormData.pricePerHour}
+                    onChange={handleCosplayerFieldChange('pricePerHour')}
+                    sx={{ flex: 1 }}
+                    InputProps={{
+                      endAdornment: <InputAdornment position="end">₫/giờ</InputAdornment>,
+                    }}
+                    disabled={loading}
+                  />
+                  <FormControlLabel
+                    control={
+                      <Switch
+                        checked={cosplayerFormData.isAvailable}
+                        onChange={(e) => setCosplayerFormData(prev => ({ ...prev, isAvailable: e.target.checked }))}
+                        color="primary"
+                        disabled={loading}
+                      />
+                    }
+                    label="Có sẵn"
+                    sx={{ ml: 2 }}
+                  />
+                </Box>
+
+                {/* Category and Gender Row */}
+                <Box sx={{ display: 'flex', gap: 2 }}>
+                  <FormControl fullWidth>
+                    <InputLabel>Thể loại</InputLabel>
+                    <Select
+                      value={cosplayerFormData.category}
+                      onChange={handleCosplayerFieldChange('category')}
+                      label="Thể loại"
+                      disabled={loading}
+                    >
+                      {categories.map(cat => (
+                        <MenuItem key={cat} value={cat}>{cat}</MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
+
+                  <FormControl fullWidth>
+                    <InputLabel>Giới tính</InputLabel>
+                    <Select
+                      value={cosplayerFormData.gender}
+                      onChange={handleCosplayerFieldChange('gender')}
+                      label="Giới tính"
+                      disabled={loading}
+                    >
+                      {genders.map(g => (
+                        <MenuItem key={g} value={g}>{g}</MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
+                </Box>
+
+                {/* Character Specialty */}
+                <TextField
+                  label="Nhân vật chuyên môn"
+                  value={cosplayerFormData.characterSpecialty}
+                  onChange={handleCosplayerFieldChange('characterSpecialty')}
+                  fullWidth
+                  disabled={loading}
+                  helperText="Ví dụ: Nezuko, Gojo Satoru, Yor Forger..."
+                />
+
+                {/* Specialties */}
+                <Autocomplete
+                  multiple
+                  options={availableSpecialties}
+                  value={cosplayerFormData.specialties}
+                  onChange={handleSpecialtiesChange}
+                  disabled={loading}
+                  renderInput={(params) => (
+                    <TextField
+                      {...params}
+                      label="Kỹ năng đặc biệt"
+                      helperText="Chọn các kỹ năng bạn có"
+                    />
+                  )}
+                  renderTags={(value, getTagProps) =>
+                    value.map((option, index) => {
+                      const { key, ...otherProps } = getTagProps({ index });
+                      return (
+                        <Chip
+                          key={key}
+                          label={option}
+                          {...otherProps}
+                          size="small"
+                          color="primary"
+                        />
+                      );
+                    })
+                  }
+                />
+
+                {/* Tags */}
+                <Autocomplete
+                  multiple
+                  freeSolo
+                  options={availableTags}
+                  value={getCurrentTags()}
+                  onChange={handleTagsChange}
+                  disabled={loading}
+                  renderInput={(params) => (
+                    <TextField
+                      {...params}
+                      label="Nhãn/Tags"
+                      helperText="Thêm nhãn để khách hàng dễ tìm thấy bạn"
+                    />
+                  )}
+                  renderTags={(value, getTagProps) =>
+                    value.map((option, index) => {
+                      const { key, ...otherProps } = getTagProps({ index });
+                      return (
+                        <Chip
+                          key={key}
+                          label={option}
+                          {...otherProps}
+                          size="small"
+                          sx={{
+                            bgcolor: 'rgba(233, 30, 99, 0.1)',
+                            color: 'primary.main'
+                          }}
+                        />
+                      );
+                    })
+                  }
+                />
+              </Box>
             </Box>
-
-            {/* Character Specialty */}
-            <TextField
-              label="Chuyên môn nhân vật"
-              value={formData.characterSpecialty}
-              onChange={handleChange('characterSpecialty')}
-              fullWidth
-              disabled={loading}
-              helperText="VD: Nhân vật anime mạnh mẽ, Nhân vật game chiến thuật..."
-            />
-
-            {/* Specialties */}
-            <Autocomplete
-              multiple
-              options={availableSpecialties}
-              value={formData.specialties}
-              onChange={handleSpecialtiesChange}
-              disabled={loading}
-              renderInput={(params) => (
-                <TextField
-                  {...params}
-                  label="Kỹ năng chuyên môn"
-                  helperText="Chọn các kỹ năng bạn có"
-                />
-              )}
-              renderTags={(value, getTagProps) =>
-                value.map((option, index) => {
-                  const { key, ...otherProps } = getTagProps({ index });
-                  return (
-                    <Chip
-                      key={key}
-                      label={option}
-                      {...otherProps}
-                      sx={{
-                        bgcolor: 'primary.main',
-                        color: 'white',
-                        '& .MuiChip-deleteIcon': { color: 'rgba(255,255,255,0.7)' }
-                      }}
-                    />
-                  );
-                })
-              }
-            />
-
-            {/* Tags */}
-            <Autocomplete
-              multiple
-              freeSolo
-              options={availableTags}
-              value={getCurrentTags()}
-              onChange={handleTagsChange}
-              disabled={loading}
-              renderInput={(params) => (
-                <TextField
-                  {...params}
-                  label="Nhãn/Tags"
-                  helperText="Thêm nhãn để khách hàng dễ tìm thấy bạn"
-                />
-              )}
-              renderTags={(value, getTagProps) =>
-                value.map((option, index) => {
-                  const { key, ...otherProps } = getTagProps({ index });
-                  return (
-                    <Chip
-                      key={key}
-                      label={option}
-                      {...otherProps}
-                      size="small"
-                      sx={{
-                        bgcolor: 'rgba(233, 30, 99, 0.1)',
-                        color: 'primary.main'
-                      }}
-                    />
-                  );
-                })
-              }
-            />
           </Box>
         </Box>
       </DialogContent>

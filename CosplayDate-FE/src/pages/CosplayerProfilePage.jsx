@@ -390,17 +390,26 @@ const CosplayerProfilePage = () => {
       });
 
       if (result.success && result.data) {
-        // ✅ Profile exists and loaded successfully
-        setProfileUser(result.data);
+        // ✅ FIX: Ensure isVerified is included in the profile data
+        // Get the user profile data first to get isVerified status
+        const userProfileResult = await userAPI.getUserProfile(targetUserId);
+
+        const profileData = {
+          ...result.data,
+          // Add isVerified from user profile API response
+          isVerified: userProfileResult.data?.isVerified || false
+        };
+
+        setProfileUser(profileData);
 
         // Update local storage for own profile
         if (apiIsOwnProfile) {
-          const updatedUser = { ...user, ...result.data };
+          const updatedUser = { ...user, ...profileData };
           localStorage.setItem('user', JSON.stringify(updatedUser));
           setUser(updatedUser);
         }
 
-        console.log('✅ Cosplayer profile loaded successfully');
+        console.log('✅ Cosplayer profile loaded successfully with isVerified:', profileData.isVerified);
       } else {
         // ✅ Cosplayer profile not found - handle different scenarios
         console.log('❌ Cosplayer profile loading failed:', result.message);

@@ -525,7 +525,7 @@ const CosplayerProfileOverview = ({ user, isOwnProfile }) => {
             }}
           >
             <Typography variant="h6" sx={{ fontWeight: 700, mb: 3, color: 'text.primary' }}>
-              Thông tin liên hệ
+              Thông tin dịch vụ
             </Typography>
 
             <Box sx={{ mb: 2 }}>
