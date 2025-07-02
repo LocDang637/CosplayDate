@@ -461,21 +461,35 @@ export const cosplayerMediaAPI = {
   uploadPhoto: async (photoData) => {
     try {
       const formData = new FormData();
+
+      // Required field - must match backend exactly
       formData.append('File', photoData.file);
+
+      // Optional fields with proper casing and defaults
       formData.append('Title', photoData.title || '');
       formData.append('Description', photoData.description || '');
-      formData.append('Category', photoData.category || '');
-      formData.append('IsPrivate', photoData.isPrivate || false);
+      formData.append('Category', photoData.category || 'Other'); // Default to 'Other' if not provided
+      formData.append('IsPortfolio', photoData.isPortfolio || false);
+      formData.append('DisplayOrder', photoData.displayOrder || 0);
+
+      // Handle tags if provided
+      if (photoData.tags && Array.isArray(photoData.tags)) {
+        photoData.tags.forEach(tag => {
+          formData.append('Tags', tag);
+        });
+      }
 
       const response = await api.post('/cosplayers/photos', formData, {
         headers: { 'Content-Type': 'multipart/form-data' }
       });
+
       return {
         success: true,
         data: response.data.data || response.data,
         message: response.data.message || 'Photo uploaded successfully'
       };
     } catch (error) {
+      console.error('Upload photo error:', error.response?.data);
       return {
         success: false,
         message: error.response?.data?.message || 'Failed to upload photo',

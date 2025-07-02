@@ -18,44 +18,147 @@ import {
   Select,
   MenuItem,
   Switch,
-  FormControlLabel
+  FormControlLabel,
+  Chip,
+  LinearProgress,
+  Fade,
+  Slide,
+  Paper,
+  Stepper,
+  Step,
+  StepLabel,
+  Divider,
+  Card,
+  CardContent
 } from '@mui/material';
 import {
   Close,
   CloudUpload,
   PhotoCamera,
-  Videocam
+  Videocam,
+  Image,
+  VideoFile,
+  CheckCircle,
+  Error as ErrorIcon,
+  Info,
+  Settings,
+  Publish,
+  Lock,
+  Public,
+  Star,
+  Delete,
+  Edit
 } from '@mui/icons-material';
 import { cosplayerMediaAPI } from '../../services/cosplayerAPI';
+
+const Transition = React.forwardRef(function Transition(props, ref) {
+  return <Slide direction="up" ref={ref} {...props} />;
+});
 
 const MediaUploadDialog = ({ 
   open, 
   onClose, 
-  type = 'photo', // 'photo' or 'video'
+  type = 'photo',
   onUploadSuccess 
 }) => {
+  const [activeStep, setActiveStep] = useState(0);
   const [formData, setFormData] = useState({
     title: '',
     description: '',
     category: '',
-    isPrivate: false
+    isPrivate: false,
+    isPortfolio: false
   });
   const [selectedFile, setSelectedFile] = useState(null);
-  const [thumbnailFile, setThumbnailFile] = useState(null); // For videos
+  const [thumbnailFile, setThumbnailFile] = useState(null);
   const [preview, setPreview] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
   const [errors, setErrors] = useState({});
   const [apiError, setApiError] = useState('');
+  const [dragActive, setDragActive] = useState(false);
 
-  const categories = [
-    { value: 'anime', label: 'Anime' },
-    { value: 'game', label: 'Game' },
-    { value: 'movie', label: 'Phim' },
-    { value: 'original', label: 'Nhân vật gốc' },
-    { value: 'event', label: 'Sự kiện' },
-    { value: 'photoshoot', label: 'Chụp ảnh' },
-    { value: 'other', label: 'Khác' }
+  const steps = ['Upload File', 'Add Details', 'Review & Publish'];
+
+  const photoCategories = [
+    { value: 'Cosplay', label: '🎭 Cosplay', color: '#E91E63' },
+    { value: 'Portrait', label: '👤 Portrait', color: '#9C27B0' },
+    { value: 'Action', label: '⚡ Action', color: '#FF5722' },
+    { value: 'Group', label: '👥 Group', color: '#2196F3' },
+    { value: 'Behind the Scenes', label: '🎬 Behind the Scenes', color: '#FF9800' },
+    { value: 'Props', label: '🛡️ Props', color: '#4CAF50' },
+    { value: 'Makeup', label: '💄 Makeup', color: '#E91E63' },
+    { value: 'Work in Progress', label: '🔧 Work in Progress', color: '#FFC107' },
+    { value: 'Convention', label: '🎪 Convention', color: '#9C27B0' },
+    { value: 'Photoshoot', label: '📸 Photoshoot', color: '#00BCD4' },
+    { value: 'Other', label: '📂 Other', color: '#607D8B' }
   ];
+
+  const videoCategories = [
+    { value: 'Performance', label: '🎭 Performance', color: '#E91E63' },
+    { value: 'Tutorial', label: '📚 Tutorial', color: '#4CAF50' },
+    { value: 'Behind the Scenes', label: '🎬 Behind the Scenes', color: '#FF9800' },
+    { value: 'Transformation', label: '✨ Transformation', color: '#9C27B0' },
+    { value: 'Convention', label: '🎪 Convention', color: '#2196F3' },
+    { value: 'Dance', label: '💃 Dance', color: '#E91E63' },
+    { value: 'Skit', label: '🎪 Skit', color: '#FF5722' },
+    { value: 'Voice Acting', label: '🎤 Voice Acting', color: '#00BCD4' },
+    { value: 'Review', label: '⭐ Review', color: '#FFC107' },
+    { value: 'Other', label: '📂 Other', color: '#607D8B' }
+  ];
+
+  const categories = type === 'photo' ? photoCategories : videoCategories;
+
+  const handleClose = () => {
+    if (!loading) {
+      // Reset all state
+      setActiveStep(0);
+      setFormData({
+        title: '',
+        description: '',
+        category: '',
+        isPrivate: false,
+        isPortfolio: false
+      });
+      setSelectedFile(null);
+      setThumbnailFile(null);
+      setPreview(null);
+      setErrors({});
+      setApiError('');
+      setUploadProgress(0);
+      onClose();
+    }
+  };
+
+  const handleNext = () => {
+    if (activeStep === 0 && !selectedFile) {
+      setErrors({ file: 'Please select a file to upload' });
+      return;
+    }
+    if (activeStep === 1 && !validateDetails()) {
+      return;
+    }
+    setActiveStep(prev => prev + 1);
+  };
+
+  const handleBack = () => {
+    setActiveStep(prev => prev - 1);
+  };
+
+  const validateDetails = () => {
+    const newErrors = {};
+    
+    if (!formData.title.trim()) {
+      newErrors.title = 'Title is required';
+    }
+    
+    if (!formData.category) {
+      newErrors.category = 'Please select a category';
+    }
+    
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
 
   const handleInputChange = (field) => (e) => {
     const value = e.target.type === 'checkbox' ? e.target.checked : e.target.value;
@@ -66,31 +169,51 @@ const MediaUploadDialog = ({
     if (apiError) setApiError('');
   };
 
+  const handleDrag = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (e.type === "dragenter" || e.type === "dragover") {
+      setDragActive(true);
+    } else if (e.type === "dragleave") {
+      setDragActive(false);
+    }
+  };
+
+  const handleDrop = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragActive(false);
+    
+    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+      handleFileSelect({ target: { files: [e.dataTransfer.files[0]] } });
+    }
+  };
+
   const handleFileSelect = (e, fileType = 'main') => {
     const file = e.target.files[0];
     if (!file) return;
 
     // Validate file type
     if (type === 'photo' && !file.type.startsWith('image/')) {
-      setErrors(prev => ({ ...prev, file: 'Vui lòng chọn file hình ảnh' }));
+      setErrors(prev => ({ ...prev, file: 'Please select an image file' }));
       return;
     }
     
     if (type === 'video' && fileType === 'main' && !file.type.startsWith('video/')) {
-      setErrors(prev => ({ ...prev, file: 'Vui lòng chọn file video' }));
+      setErrors(prev => ({ ...prev, file: 'Please select a video file' }));
       return;
     }
 
     if (fileType === 'thumbnail' && !file.type.startsWith('image/')) {
-      setErrors(prev => ({ ...prev, thumbnail: 'Vui lòng chọn file hình ảnh cho thumbnail' }));
+      setErrors(prev => ({ ...prev, thumbnail: 'Thumbnail must be an image' }));
       return;
     }
 
     // Validate file size
-    const maxSize = type === 'photo' ? 10 * 1024 * 1024 : 100 * 1024 * 1024; // 10MB for photos, 100MB for videos
+    const maxSize = type === 'photo' ? 10 * 1024 * 1024 : 100 * 1024 * 1024;
     if (file.size > maxSize) {
       const maxSizeText = type === 'photo' ? '10MB' : '100MB';
-      setErrors(prev => ({ ...prev, file: `File không được vượt quá ${maxSizeText}` }));
+      setErrors(prev => ({ ...prev, file: `File size cannot exceed ${maxSizeText}` }));
       return;
     }
 
@@ -113,30 +236,21 @@ const MediaUploadDialog = ({
     setErrors(prev => ({ ...prev, file: '', thumbnail: '' }));
   };
 
-  const validateForm = () => {
-    const newErrors = {};
-    
-    if (!selectedFile) {
-      newErrors.file = 'Vui lòng chọn file';
-    }
-    
-    if (!formData.title.trim()) {
-      newErrors.title = 'Tiêu đề là bắt buộc';
-    }
-    
-    if (!formData.category) {
-      newErrors.category = 'Vui lòng chọn danh mục';
-    }
-    
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
-
   const handleUpload = async () => {
-    if (!validateForm()) return;
-
     setLoading(true);
     setApiError('');
+    setUploadProgress(0);
+    
+    // Simulate upload progress
+    const progressInterval = setInterval(() => {
+      setUploadProgress(prev => {
+        if (prev >= 90) {
+          clearInterval(progressInterval);
+          return 90;
+        }
+        return prev + 10;
+      });
+    }, 300);
     
     try {
       let result;
@@ -147,7 +261,9 @@ const MediaUploadDialog = ({
           title: formData.title.trim(),
           description: formData.description.trim(),
           category: formData.category,
-          isPrivate: formData.isPrivate
+          isPrivate: formData.isPrivate,
+          isPortfolio: formData.isPortfolio,
+          displayOrder: 0
         });
       } else {
         result = await cosplayerMediaAPI.uploadVideo({
@@ -160,249 +276,647 @@ const MediaUploadDialog = ({
         });
       }
 
+      clearInterval(progressInterval);
+      setUploadProgress(100);
+
       if (result.success) {
-        onUploadSuccess?.(result.data);
-        handleClose();
+        setTimeout(() => {
+          onUploadSuccess?.(result.data);
+          handleClose();
+        }, 500);
       } else {
         if (result.errors && Object.keys(result.errors).length > 0) {
           setErrors(result.errors);
         } else {
-          setApiError(result.message || 'Tải lên thất bại');
+          setApiError(result.message || 'Upload failed');
         }
+        setUploadProgress(0);
       }
       
     } catch (error) {
-      setApiError('Lỗi kết nối. Vui lòng thử lại.');
+      clearInterval(progressInterval);
+      setApiError('Connection error. Please try again.');
+      setUploadProgress(0);
     } finally {
       setLoading(false);
     }
   };
 
-  const handleClose = () => {
-    if (!loading) {
-      setFormData({ title: '', description: '', category: '', isPrivate: false });
-      setSelectedFile(null);
-      setThumbnailFile(null);
-      setPreview(null);
-      setErrors({});
-      setApiError('');
-      onClose();
-    }
+  const formatFileSize = (bytes) => {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
   };
 
-  return (
-    <Dialog
-      open={open}
-      onClose={handleClose}
-      maxWidth="md"
-      fullWidth
-      PaperProps={{
-        sx: { borderRadius: '16px' }
-      }}
-    >
-      <DialogTitle sx={{ pb: 1, pr: 6 }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-          {type === 'photo' ? <PhotoCamera sx={{ color: 'primary.main' }} /> : <Videocam sx={{ color: 'primary.main' }} />}
-          <Typography variant="h6" sx={{ fontWeight: 700 }}>
-            {type === 'photo' ? 'Tải lên ảnh' : 'Tải lên video'}
-          </Typography>
-        </Box>
-        <IconButton
-          onClick={handleClose}
-          disabled={loading}
-          sx={{
-            position: 'absolute',
-            right: 8,
-            top: 8,
-            color: 'text.secondary',
-          }}
-        >
-          <Close />
-        </IconButton>
-      </DialogTitle>
-
-      <DialogContent>
-        {apiError && (
-          <Alert 
-            severity="error" 
-            sx={{ mb: 3, borderRadius: '12px' }}
-            onClose={() => setApiError('')}
-          >
-            {apiError}
-          </Alert>
-        )}
-
-        <Grid container spacing={3}>
-          {/* File Upload */}
-          <Grid item xs={12}>
+  const renderStepContent = () => {
+    switch (activeStep) {
+      case 0:
+        return (
+          <Box sx={{ py: 2 }}>
             <Box
+              onDragEnter={handleDrag}
+              onDragLeave={handleDrag}
+              onDragOver={handleDrag}
+              onDrop={handleDrop}
               sx={{
-                border: '2px dashed',
-                borderColor: errors.file ? 'error.main' : 'primary.main',
-                borderRadius: '12px',
+                border: '3px dashed',
+                borderColor: dragActive ? 'primary.main' : errors.file ? 'error.main' : 'grey.300',
+                borderRadius: '20px',
                 p: 4,
+                minHeight: '400px',
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
                 textAlign: 'center',
-                backgroundColor: errors.file ? 'rgba(244, 67, 54, 0.05)' : 'rgba(233, 30, 99, 0.05)',
                 cursor: 'pointer',
                 transition: 'all 0.3s ease',
+                backgroundColor: dragActive ? 'primary.50' : selectedFile ? 'background.default' : 'background.paper',
                 '&:hover': {
-                  backgroundColor: errors.file ? 'rgba(244, 67, 54, 0.1)' : 'rgba(233, 30, 99, 0.1)',
-                },
+                  borderColor: 'primary.main',
+                  backgroundColor: 'primary.50'
+                }
               }}
-              onClick={() => document.getElementById('file-input').click()}
+              onClick={() => !selectedFile && document.getElementById('file-input').click()}
             >
               <input
                 id="file-input"
                 type="file"
                 accept={type === 'photo' ? 'image/*' : 'video/*'}
-                onChange={(e) => handleFileSelect(e, 'main')}
+                onChange={handleFileSelect}
                 style={{ display: 'none' }}
-                disabled={loading}
               />
-              
-              <CloudUpload sx={{ fontSize: 48, color: errors.file ? 'error.main' : 'primary.main', mb: 2 }} />
-              
-              {selectedFile ? (
-                <Typography variant="body1" sx={{ fontWeight: 600, color: 'success.main' }}>
-                  ✓ {selectedFile.name}
-                </Typography>
+
+              {!selectedFile ? (
+                <>
+                  <Box sx={{ 
+                    background: 'linear-gradient(135deg, #E91E63, #9C27B0)',
+                    borderRadius: '50%',
+                    p: 3,
+                    mb: 3
+                  }}>
+                    <CloudUpload sx={{ fontSize: 48, color: 'white' }} />
+                  </Box>
+                  <Typography variant="h5" gutterBottom fontWeight={700} color="text.primary">
+                    {dragActive ? 'Drop your file here!' : `Upload your ${type}`}
+                  </Typography>
+                  <Typography variant="body1" color="text.secondary" sx={{ mb: 2 }}>
+                    Drag and drop or click to browse
+                  </Typography>
+                  <Chip 
+                    label={type === 'photo' 
+                      ? 'JPEG, PNG, WebP • Max 10MB'
+                      : 'MP4, AVI, MOV, WMV, WebM • Max 100MB'
+                    }
+                    sx={{ 
+                      backgroundColor: 'background.paper',
+                      fontWeight: 500,
+                      fontSize: '0.85rem'
+                    }}
+                  />
+                </>
               ) : (
-                <Typography variant="body1" sx={{ color: 'text.secondary' }}>
-                  Nhấp để chọn {type === 'photo' ? 'hình ảnh' : 'video'}
-                </Typography>
-              )}
-              
-              {errors.file && (
-                <Typography variant="body2" sx={{ color: 'error.main', mt: 1 }}>
-                  {errors.file}
-                </Typography>
+                <Box sx={{ width: '100%', textAlign: 'center' }}>
+                  {preview && (
+                    <Box sx={{ mb: 3, position: 'relative', display: 'inline-block' }}>
+                      <img 
+                        src={preview} 
+                        alt="Preview" 
+                        style={{ 
+                          width: '100%',
+                          height: 'auto',
+                          maxHeight: '300px',
+                          maxWidth: '400px',
+                          objectFit: 'contain',
+                          borderRadius: '16px',
+                          boxShadow: '0 8px 32px rgba(0,0,0,0.12)'
+                        }} 
+                      />
+                      <IconButton
+                        sx={{
+                          position: 'absolute',
+                          top: -12,
+                          right: -12,
+                          backgroundColor: 'error.main',
+                          color: 'white',
+                          boxShadow: 3,
+                          '&:hover': {
+                            backgroundColor: 'error.dark',
+                          }
+                        }}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setSelectedFile(null);
+                          setPreview(null);
+                        }}
+                        disabled={loading}
+                      >
+                        <Close fontSize="small" />
+                      </IconButton>
+                    </Box>
+                  )}
+                  
+                  {!preview && (
+                    <Box sx={{ 
+                      background: 'linear-gradient(135deg, #E91E63, #9C27B0)',
+                      borderRadius: '50%',
+                      p: 3,
+                      mb: 3,
+                      display: 'inline-block'
+                    }}>
+                      {type === 'photo' ? 
+                        <Image sx={{ fontSize: 48, color: 'white' }} /> : 
+                        <VideoFile sx={{ fontSize: 48, color: 'white' }} />
+                      }
+                    </Box>
+                  )}
+                  
+                  <Typography variant="h6" fontWeight={600} sx={{ mb: 1 }}>
+                    {selectedFile.name}
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                    {formatFileSize(selectedFile.size)}
+                  </Typography>
+                  
+                  <Button
+                    variant="outlined"
+                    startIcon={<Edit />}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      document.getElementById('file-input').click();
+                    }}
+                    disabled={loading}
+                    sx={{ borderRadius: '12px' }}
+                  >
+                    Change File
+                  </Button>
+                </Box>
               )}
             </Box>
-          </Grid>
+            
+            {errors.file && (
+              <Alert severity="error" sx={{ mt: 2, borderRadius: '12px' }}>
+                {errors.file}
+              </Alert>
+            )}
 
-          {/* Thumbnail for videos */}
-          {type === 'video' && (
-            <Grid item xs={12}>
-              <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 600 }}>
-                Thumbnail (Tùy chọn)
-              </Typography>
-              <Box
-                sx={{
-                  border: '1px solid',
-                  borderColor: 'divider',
-                  borderRadius: '12px',
-                  p: 2,
-                  textAlign: 'center',
-                  cursor: 'pointer',
-                  '&:hover': { backgroundColor: 'rgba(233, 30, 99, 0.05)' },
-                }}
-                onClick={() => document.getElementById('thumbnail-input').click()}
-              >
-                <input
-                  id="thumbnail-input"
-                  type="file"
-                  accept="image/*"
-                  onChange={(e) => handleFileSelect(e, 'thumbnail')}
-                  style={{ display: 'none' }}
+            {/* File info for selected file */}
+            {selectedFile && (
+              <Card sx={{ mt: 3, borderRadius: '16px', border: '1px solid', borderColor: 'divider' }}>
+                <CardContent sx={{ p: 2 }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                    <CheckCircle sx={{ color: 'success.main' }} />
+                    <Box sx={{ flexGrow: 1 }}>
+                      <Typography variant="body2" fontWeight={600}>
+                        File ready for upload
+                      </Typography>
+                      <Typography variant="caption" color="text.secondary">
+                        Continue to add details and publish
+                      </Typography>
+                    </Box>
+                  </Box>
+                </CardContent>
+              </Card>
+            )}
+          </Box>
+        );
+
+      case 1:
+        return (
+          <Box sx={{ py: 2 }}>
+            <Grid container spacing={3}>
+              <Grid item xs={12}>
+                <TextField
+                  fullWidth
+                  label="Title"
+                  value={formData.title}
+                  onChange={handleInputChange('title')}
+                  error={!!errors.title}
+                  helperText={errors.title}
                   disabled={loading}
+                  required
+                  placeholder={`Give your ${type} a catchy title...`}
+                  InputProps={{
+                    sx: { borderRadius: '12px' }
+                  }}
                 />
-                
-                {thumbnailFile ? (
-                  <Typography variant="body2" sx={{ color: 'success.main' }}>
-                    ✓ {thumbnailFile.name}
-                  </Typography>
-                ) : (
-                  <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-                    Chọn thumbnail cho video
+              </Grid>
+
+              {/* Category Selection with Visual Cards */}
+              <Grid item xs={12}>
+                <Typography variant="subtitle1" fontWeight={600} sx={{ mb: 2 }}>
+                  Category <span style={{ color: 'red' }}>*</span>
+                </Typography>
+                <Grid container spacing={2}>
+                  {categories.map(cat => (
+                    <Grid item xs={6} sm={4} md={3} key={cat.value}>
+                      <Card
+                        sx={{
+                          cursor: 'pointer',
+                          border: '2px solid',
+                          borderColor: formData.category === cat.value ? cat.color : 'divider',
+                          borderRadius: '12px',
+                          transition: 'all 0.2s ease',
+                          backgroundColor: formData.category === cat.value ? `${cat.color}15` : 'background.paper',
+                          '&:hover': {
+                            borderColor: cat.color,
+                            backgroundColor: `${cat.color}10`
+                          }
+                        }}
+                        onClick={() => handleInputChange('category')({ target: { value: cat.value } })}
+                      >
+                        <CardContent sx={{ p: 2, textAlign: 'center', '&:last-child': { pb: 2 } }}>
+                          <Typography variant="body2" fontWeight={500}>
+                            {cat.label}
+                          </Typography>
+                        </CardContent>
+                      </Card>
+                    </Grid>
+                  ))}
+                </Grid>
+                {errors.category && (
+                  <Typography variant="caption" color="error" sx={{ mt: 1, display: 'block' }}>
+                    {errors.category}
                   </Typography>
                 )}
-              </Box>
-            </Grid>
-          )}
+              </Grid>
 
-          {/* Preview */}
-          {preview && (
-            <Grid item xs={12}>
-              <Box sx={{ textAlign: 'center' }}>
-                <img
-                  src={preview}
-                  alt="Preview"
-                  style={{
-                    maxWidth: '100%',
-                    maxHeight: '200px',
-                    borderRadius: '8px',
-                    objectFit: 'contain'
+              <Grid item xs={12}>
+                <TextField
+                  fullWidth
+                  label="Description"
+                  value={formData.description}
+                  onChange={handleInputChange('description')}
+                  multiline
+                  rows={4}
+                  disabled={loading}
+                  placeholder={`Tell people about your ${type}...`}
+                  InputProps={{
+                    sx: { borderRadius: '12px' }
+                  }}
+                />
+              </Grid>
+
+              {/* Video Thumbnail */}
+              {type === 'video' && (
+                <Grid item xs={12}>
+                  <Paper 
+                    elevation={0} 
+                    sx={{ 
+                      p: 3, 
+                      borderRadius: '16px',
+                      border: '2px dashed',
+                      borderColor: 'divider',
+                      textAlign: 'center'
+                    }}
+                  >
+                    <Typography variant="subtitle1" fontWeight={600} sx={{ mb: 2 }}>
+                      Video Thumbnail (Optional)
+                    </Typography>
+                    {!thumbnailFile ? (
+                      <Button
+                        variant="outlined"
+                        startIcon={<PhotoCamera />}
+                        onClick={() => document.getElementById('thumbnail-input').click()}
+                        disabled={loading}
+                        sx={{ borderRadius: '12px' }}
+                      >
+                        Choose Thumbnail Image
+                      </Button>
+                    ) : (
+                      <Box>
+                        <Typography variant="body2" sx={{ mb: 1 }}>
+                          {thumbnailFile.name}
+                        </Typography>
+                        <Button
+                          variant="text"
+                          size="small"
+                          onClick={() => setThumbnailFile(null)}
+                          disabled={loading}
+                        >
+                          Remove
+                        </Button>
+                      </Box>
+                    )}
+                    <input
+                      id="thumbnail-input"
+                      type="file"
+                      accept="image/*"
+                      onChange={(e) => handleFileSelect(e, 'thumbnail')}
+                      style={{ display: 'none' }}
+                    />
+                  </Paper>
+                </Grid>
+              )}
+            </Grid>
+          </Box>
+        );
+
+      case 2:
+        return (
+          <Box sx={{ py: 2 }}>
+            {/* Upload Progress */}
+            {loading && (
+              <Box sx={{ mb: 4 }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                  <Typography variant="h6" sx={{ flexGrow: 1 }}>
+                    Uploading your {type}...
+                  </Typography>
+                  <Typography variant="h6" color="primary" fontWeight={700}>
+                    {uploadProgress}%
+                  </Typography>
+                </Box>
+                <LinearProgress 
+                  variant="determinate" 
+                  value={uploadProgress} 
+                  sx={{ 
+                    height: 12, 
+                    borderRadius: 6,
+                    backgroundColor: 'action.hover',
+                    '& .MuiLinearProgress-bar': {
+                      borderRadius: 6,
+                      background: 'linear-gradient(45deg, #E91E63, #9C27B0)'
+                    }
                   }}
                 />
               </Box>
+            )}
+
+            {/* Review Content */}
+            <Typography variant="h6" fontWeight={600} sx={{ mb: 3 }}>
+              Review Your {type === 'photo' ? 'Photo' : 'Video'}
+            </Typography>
+
+            <Grid container spacing={3}>
+              {/* File Preview */}
+              <Grid item xs={12} md={5}>
+                <Card sx={{ borderRadius: '16px', overflow: 'hidden' }}>
+                  {preview ? (
+                    <img 
+                      src={preview} 
+                      alt="Preview" 
+                      style={{ 
+                        width: '100%',
+                        height: '300px',
+                        objectFit: 'cover'
+                      }} 
+                    />
+                  ) : (
+                    <Box sx={{ 
+                      height: '300px', 
+                      display: 'flex', 
+                      alignItems: 'center', 
+                      justifyContent: 'center',
+                      backgroundColor: 'background.default'
+                    }}>
+                      {type === 'photo' ? 
+                        <Image sx={{ fontSize: 64, color: 'text.secondary' }} /> : 
+                        <VideoFile sx={{ fontSize: 64, color: 'text.secondary' }} />
+                      }
+                    </Box>
+                  )}
+                </Card>
+              </Grid>
+
+              {/* Details */}
+              <Grid item xs={12} md={7}>
+                <Box sx={{ pl: { md: 2 } }}>
+                  <Typography variant="h5" fontWeight={700} sx={{ mb: 2 }}>
+                    {formData.title}
+                  </Typography>
+                  
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
+                    <Chip 
+                      label={categories.find(c => c.value === formData.category)?.label || formData.category}
+                      sx={{ 
+                        backgroundColor: categories.find(c => c.value === formData.category)?.color + '20',
+                        color: categories.find(c => c.value === formData.category)?.color,
+                        fontWeight: 600
+                      }}
+                    />
+                    {formData.isPrivate && (
+                      <Chip 
+                        icon={<Lock />}
+                        label="Private" 
+                        size="small"
+                        variant="outlined"
+                      />
+                    )}
+                    {formData.isPortfolio && (
+                      <Chip 
+                        icon={<Star />}
+                        label="Portfolio" 
+                        size="small"
+                        color="primary"
+                      />
+                    )}
+                  </Box>
+
+                  {formData.description && (
+                    <Typography variant="body1" color="text.secondary" sx={{ mb: 2 }}>
+                      {formData.description}
+                    </Typography>
+                  )}
+
+                  <Divider sx={{ my: 2 }} />
+
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                    {formData.isPrivate ? (
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <Lock sx={{ color: 'text.secondary' }} />
+                        <Typography variant="body2" color="text.secondary">
+                          Only you can see this
+                        </Typography>
+                      </Box>
+                    ) : (
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <Public sx={{ color: 'success.main' }} />
+                        <Typography variant="body2" color="success.main">
+                          Public - Everyone can see this
+                        </Typography>
+                      </Box>
+                    )}
+                  </Box>
+                </Box>
+              </Grid>
             </Grid>
-          )}
 
-          {/* Title */}
-          <Grid item xs={12}>
-            <TextField
-              fullWidth
-              label="Tiêu đề"
-              value={formData.title}
-              onChange={handleInputChange('title')}
-              error={!!errors.title}
-              helperText={errors.title}
-              disabled={loading}
-              sx={{
-                '& .MuiOutlinedInput-root': {
-                  borderRadius: '12px',
-                }
-              }}
-            />
-          </Grid>
+            <Box sx={{ mt: 3 }}>
+              <Typography variant="caption" color="text.secondary">
+                File: {selectedFile?.name} ({formatFileSize(selectedFile?.size || 0)})
+                {thumbnailFile && ` • Thumbnail: ${thumbnailFile.name}`}
+              </Typography>
+            </Box>
+          </Box>
+        );
 
-          {/* Description */}
-          <Grid item xs={12}>
-            <TextField
-              fullWidth
-              label="Mô tả"
-              multiline
-              rows={3}
-              value={formData.description}
-              onChange={handleInputChange('description')}
-              error={!!errors.description}
-              helperText={errors.description}
-              disabled={loading}
-              sx={{
-                '& .MuiOutlinedInput-root': {
-                  borderRadius: '12px',
-                }
-              }}
-            />
-          </Grid>
+      default:
+        return null;
+    }
+  };
 
-          {/* Category */}
-          <Grid item xs={12} sm={6}>
-            <FormControl fullWidth error={!!errors.category}>
-              <InputLabel>Danh mục</InputLabel>
-              <Select
-                value={formData.category}
-                onChange={handleInputChange('category')}
-                label="Danh mục"
-                disabled={loading}
-                sx={{ borderRadius: '12px' }}
-              >
-                {categories.map((category) => (
-                  <MenuItem key={category.value} value={category.value}>
-                    {category.label}
-                  </MenuItem>
-                ))}
-              </Select>
-              {errors.category && (
-                <Typography variant="caption" sx={{ color: 'error.main', ml: 2, mt: 0.5 }}>
-                  {errors.category}
-                </Typography>
-              )}
-            </FormControl>
-          </Grid>
+  return (
+    <Dialog 
+      open={open} 
+      onClose={handleClose}
+      maxWidth="lg"
+      fullWidth
+      TransitionComponent={Transition}
+      PaperProps={{
+        sx: {
+          borderRadius: '20px',
+          overflow: 'visible',
+          minHeight: '600px'
+        }
+      }}
+    >
+      <DialogTitle sx={{ 
+        pb: 2,
+        px: 4,
+        pt: 3,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        borderBottom: '1px solid',
+        borderColor: 'divider'
+      }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+          <Box sx={{ 
+            background: 'linear-gradient(135deg, #E91E63, #9C27B0)',
+            borderRadius: '12px',
+            p: 1,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center'
+          }}>
+            {type === 'photo' ? (
+              <PhotoCamera sx={{ color: 'white', fontSize: 24 }} />
+            ) : (
+              <Videocam sx={{ color: 'white', fontSize: 24 }} />
+            )}
+          </Box>
+          <Box>
+            <Typography variant="h5" fontWeight={700}>
+              Upload {type === 'photo' ? 'Photo' : 'Video'}
+            </Typography>
+            <Typography variant="body2" color="text.secondary">
+              Share your amazing {type} with the community
+            </Typography>
+          </Box>
+        </Box>
+        <IconButton onClick={handleClose} disabled={loading}>
+          <Close />
+        </IconButton>
+      </DialogTitle>
 
-          {/* Privacy */}
-          <Grid item xs={12} sm={6}>
+      {/* Stepper */}
+      <Box sx={{ px: 4, pt: 3 }}>
+        <Stepper activeStep={activeStep} alternativeLabel>
+          {steps.map((label) => (
+            <Step key={label}>
+              <StepLabel>{label}</StepLabel>
+            </Step>
+          ))}
+        </Stepper>
+      </Box>
+
+      <DialogContent sx={{ px: 4, pt: 2 }}>
+        {apiError && (
+          <Fade in>
+            <Alert 
+              severity="error" 
+              sx={{ mb: 3, borderRadius: '12px' }}
+              icon={<ErrorIcon />}
+            >
+              {apiError}
+            </Alert>
+          </Fade>
+        )}
+
+        {renderStepContent()}
+      </DialogContent>
+
+      <DialogActions sx={{ 
+        px: 4, 
+        py: 3,
+        borderTop: '1px solid',
+        borderColor: 'divider',
+        gap: 2
+      }}>
+        <Button 
+          onClick={handleClose} 
+          disabled={loading}
+          sx={{ borderRadius: '12px', px: 3 }}
+        >
+          Cancel
+        </Button>
+        
+        <Box sx={{ flexGrow: 1 }} />
+        
+        {activeStep > 0 && (
+          <Button
+            onClick={handleBack}
+            disabled={loading}
+            sx={{ borderRadius: '12px', px: 3 }}
+          >
+            Back
+          </Button>
+        )}
+        
+        {activeStep < steps.length - 1 ? (
+          <Button
+            variant="contained"
+            onClick={handleNext}
+            disabled={loading}
+            sx={{
+              borderRadius: '12px',
+              px: 4,
+              background: 'linear-gradient(45deg, #E91E63, #9C27B0)',
+              '&:hover': {
+                background: 'linear-gradient(45deg, #AD1457, #7B1FA2)',
+              }
+            }}
+          >
+            Next
+          </Button>
+        ) : (
+          <Button
+            variant="contained"
+            onClick={handleUpload}
+            disabled={loading || !selectedFile}
+            startIcon={loading ? <CircularProgress size={20} color="inherit" /> : <Publish />}
+            sx={{
+              borderRadius: '12px',
+              px: 4,
+              background: loading ? undefined : 'linear-gradient(45deg, #E91E63, #9C27B0)',
+              '&:hover': {
+                background: loading ? undefined : 'linear-gradient(45deg, #AD1457, #7B1FA2)',
+              }
+            }}
+          >
+            {loading ? 'Publishing...' : `Publish ${type === 'photo' ? 'Photo' : 'Video'}`}
+          </Button>
+        )}
+
+        {/* Privacy Settings Toggle */}
+        <Box sx={{ 
+          position: 'absolute', 
+          bottom: '100%', 
+          right: 24, 
+          mb: 2,
+          display: activeStep === 2 ? 'block' : 'none'
+        }}>
+          <Card sx={{ 
+            p: 2, 
+            borderRadius: '12px',
+            minWidth: '250px',
+            boxShadow: 3
+          }}>
+            <Typography variant="subtitle2" fontWeight={600} sx={{ mb: 1 }}>
+              Quick Settings
+            </Typography>
             <FormControlLabel
               control={
                 <Switch
@@ -410,58 +924,39 @@ const MediaUploadDialog = ({
                   onChange={handleInputChange('isPrivate')}
                   disabled={loading}
                   color="primary"
+                  size="small"
                 />
               }
-              label="Riêng tư"
-              sx={{ mt: 2 }}
+              label={
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <Lock fontSize="small" />
+                  <Typography variant="body2">Private</Typography>
+                </Box>
+              }
+              sx={{ mb: type === 'photo' ? 1 : 0, width: '100%' }}
             />
-          </Grid>
-        </Grid>
-      </DialogContent>
-
-      <DialogActions sx={{ p: 3, pt: 1 }}>
-        <Button 
-          onClick={handleClose}
-          disabled={loading}
-          sx={{ 
-            borderRadius: '12px',
-            textTransform: 'none'
-          }}
-        >
-          Hủy
-        </Button>
-        <Button
-          variant="contained"
-          onClick={handleUpload}
-          disabled={loading || !selectedFile}
-          sx={{
-            background: 'linear-gradient(45deg, #E91E63, #9C27B0)',
-            borderRadius: '12px',
-            px: 3,
-            textTransform: 'none',
-            position: 'relative',
-            '&:hover': {
-              background: 'linear-gradient(45deg, #AD1457, #7B1FA2)',
-            },
-          }}
-        >
-          {loading && (
-            <CircularProgress
-              size={20}
-              sx={{
-                color: 'white',
-                position: 'absolute',
-                left: '50%',
-                top: '50%',
-                marginLeft: '-10px',
-                marginTop: '-10px',
-              }}
-            />
-          )}
-          <span style={{ opacity: loading ? 0 : 1 }}>
-            {loading ? 'Đang tải lên...' : 'Tải lên'}
-          </span>
-        </Button>
+            {type === 'photo' && (
+              <FormControlLabel
+                control={
+                  <Switch
+                    checked={formData.isPortfolio}
+                    onChange={handleInputChange('isPortfolio')}
+                    disabled={loading}
+                    color="primary"
+                    size="small"
+                  />
+                }
+                label={
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <Star fontSize="small" />
+                    <Typography variant="body2">Add to Portfolio</Typography>
+                  </Box>
+                }
+                sx={{ width: '100%' }}
+              />
+            )}
+          </Card>
+        </Box>
       </DialogActions>
     </Dialog>
   );

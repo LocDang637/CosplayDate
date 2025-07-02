@@ -9,10 +9,9 @@ import {
   Alert,
   Button,
   Snackbar,
-  Fab,
   Menu, MenuItem, ListItemIcon, ListItemText
 } from '@mui/material';
-import { Add, CameraAlt, Delete } from '@mui/icons-material';
+import { CameraAlt, Delete } from '@mui/icons-material';
 import { ThemeProvider } from '@mui/material/styles';
 import { cosplayTheme } from '../theme/cosplayTheme';
 import { cosplayerAPI, cosplayerMediaAPI } from '../services/cosplayerAPI';
@@ -442,27 +441,28 @@ const CosplayerProfilePage = () => {
 
   // ✅ FIXED: Load media when profile user changes or tab changes
   useEffect(() => {
-    if (profileUser?.id && (activeTab === 'gallery' || activeTab === 'videos')) {
+    if (profileUser?.id && activeTab === 'gallery') {
       loadMedia();
     }
   }, [profileUser?.id, activeTab]);
 
   // Media loading function
   const loadMedia = async () => {
-    if (!profileUser?.id || (activeTab !== 'gallery' && activeTab !== 'videos')) return;
+    if (!profileUser?.id || activeTab !== 'gallery') return;
 
     setMediaLoading(true);
     try {
-      if (activeTab === 'gallery') {
-        const photosResult = await cosplayerMediaAPI.getPhotos(profileUser.id);
-        if (photosResult.success) {
-          setPhotos(photosResult.data.photos || []);
-        }
-      } else if (activeTab === 'videos') {
-        const videosResult = await cosplayerMediaAPI.getVideos(profileUser.id);
-        if (videosResult.success) {
-          setVideos(videosResult.data.videos || []);
-        }
+      // Load both photos and videos together
+      const [photosResult, videosResult] = await Promise.all([
+        cosplayerMediaAPI.getPhotos(profileUser.id),
+        cosplayerMediaAPI.getVideos(profileUser.id)
+      ]);
+
+      if (photosResult.success) {
+        setPhotos(photosResult.data.photos || []);
+      }
+      if (videosResult.success) {
+        setVideos(videosResult.data.videos || []);
       }
     } catch (err) {
       console.error('📷 Media loading error:', err);
@@ -532,16 +532,9 @@ const CosplayerProfilePage = () => {
     },
     {
       id: 'gallery',
-      label: 'Thư viện ảnh',
+      label: 'Thư viện',
       icon: 'PhotoLibrary',
-      count: photos.length,
-      show: true
-    },
-    {
-      id: 'videos',
-      label: 'Video',
-      icon: 'VideoLibrary',
-      count: videos.length,
+      count: photos.length + videos.length,
       show: true
     }
   ];
@@ -572,11 +565,12 @@ const CosplayerProfilePage = () => {
       case 'gallery':
         return (
           <ProfileGallery
-            photos={photos}
+            photos={photos || []}
+            videos={videos || []}
+            cosplayerId={profileUser?.id}
             isOwnProfile={isOwnProfile}
-            onAddPhoto={() => setUploadDialog({ open: true, type: 'photo' })}
             loading={mediaLoading}
-            type="cosplayer"
+            onMediaUpdate={loadMedia}
           />
         );
       case 'videos':
@@ -803,29 +797,6 @@ const CosplayerProfilePage = () => {
             {renderTabContent()}
           </Box>
         </Container>
-
-        {/* Floating Add Button for Media Tabs */}
-        {isOwnProfile && (activeTab === 'gallery' || activeTab === 'videos') && (
-          <Fab
-            color="primary"
-            sx={{
-              position: 'fixed',
-              bottom: 24,
-              right: 24,
-              background: 'linear-gradient(45deg, #E91E63, #9C27B0)',
-              '&:hover': {
-                background: 'linear-gradient(45deg, #AD1457, #7B1FA2)',
-              },
-            }}
-            onClick={() => setUploadDialog({
-              open: true,
-              type: activeTab === 'gallery' ? 'photo' : 'video'
-            })}
-          >
-            <Add />
-          </Fab>
-        )}
-
         <Footer />
 
         {/* Media Upload Dialog */}
