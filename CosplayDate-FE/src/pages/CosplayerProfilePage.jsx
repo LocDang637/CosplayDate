@@ -447,7 +447,7 @@ const CosplayerProfilePage = () => {
   }, [profileUser?.id, activeTab]);
 
   // Media loading function
-  const loadMedia = async () => {
+  const loadMedia = useCallback(async () => {
     if (!profileUser?.id || (activeTab !== 'gallery' && activeTab !== 'videos')) return;
 
     console.log('📷 Loading media for profile:', profileUser.id, 'activeTab:', activeTab);
@@ -468,7 +468,13 @@ const CosplayerProfilePage = () => {
           url: photo.photoUrl || photo.url,
           likesCount: photo.likesCount || 0,
           category: photo.category || 'Other',
-          isLiked: photo.isLiked || false
+          isLiked: photo.isLiked || false,
+          // Ensure these fields exist with proper defaults
+          title: photo.title || '',
+          description: photo.description || '',
+          tags: Array.isArray(photo.tags) ? photo.tags : [],
+          isPortfolio: Boolean(photo.isPortfolio),
+          displayOrder: Number(photo.displayOrder) || 0
         }));
         console.log('📸 Mapped photos:', mappedPhotos);
         setPhotos(mappedPhotos);
@@ -497,12 +503,12 @@ const CosplayerProfilePage = () => {
     } finally {
       setMediaLoading(false);
     }
-  };
+  }, [profileUser?.id, activeTab]);
 
   const handleMediaUpdate = useCallback(() => {
     // Reload media when ProfileGallery notifies of changes
     loadMedia();
-  }, [profileUser?.id, activeTab]);
+  }, [loadMedia]);
 
   // Event handlers
   const handleLogout = useCallback(() => {
@@ -519,18 +525,15 @@ const CosplayerProfilePage = () => {
   }, []);
 
   const handleUploadSuccess = useCallback((uploadedMedia) => {
-    const mappedMedia = {
-      ...uploadedMedia,
-      url: uploadedMedia.photoUrl || uploadedMedia.videoUrl || uploadedMedia.url
-    };
-
-    if (uploadDialog.type === 'photo') {
-      setPhotos(prev => [mappedMedia, ...prev]);
-    } else {
-      setVideos(prev => [mappedMedia, ...prev]);
-    }
+    console.log('📤 Upload success - received media:', uploadedMedia);
+    
+    // Show success message immediately
     showSnackbar(`${uploadDialog.type === 'photo' ? 'Ảnh' : 'Video'} đã được tải lên thành công!`, 'success');
-  }, [uploadDialog.type]);
+    
+    // Reload media to get complete data structure from server
+    // This ensures all fields (description, tags, etc.) are properly loaded
+    loadMedia();
+  }, [uploadDialog.type, loadMedia]);
 
   const handleBecomeCosplayerSuccess = useCallback((updatedUser, cosplayerData) => {
     console.log('🎭 Successfully became cosplayer:', cosplayerData);

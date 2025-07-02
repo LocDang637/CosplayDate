@@ -23,23 +23,18 @@ import {
   Badge,
   alpha,
   Tooltip,
-  Menu,
-  MenuItem,
   Alert,
   FormControl,
   InputLabel,
   Select,
-  Switch,
-  FormControlLabel,
-  Autocomplete,
-  CircularProgress
+  CircularProgress,
+  MenuItem,
+  Autocomplete
 } from '@mui/material';
 import {
   Fullscreen,
   Close,
   Add,
-  Favorite,
-  FavoriteBorder,
   Search,
   GridView,
   ViewList,
@@ -48,7 +43,6 @@ import {
   ArrowForward,
   Edit,
   Delete,
-  MoreVert,
   Save
 } from '@mui/icons-material';
 import { cosplayerMediaAPI } from '../../services/cosplayerAPI';
@@ -67,10 +61,10 @@ const ProfileGallery = ({
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [mediaType, setMediaType] = useState('photos');
-  const [likedMedia, setLikedMedia] = useState(new Set());
-  const [menuAnchor, setMenuAnchor] = useState(null);
   const [selectedMediaForMenu, setSelectedMediaForMenu] = useState(null);
   const [editDialog, setEditDialog] = useState(false);
+  const [deleteDialog, setDeleteDialog] = useState(false);
+  const [deleteLoading, setDeleteLoading] = useState(false);
   const [editLoading, setEditLoading] = useState(false);
   const [error, setError] = useState(null);
   const [editFormData, setEditFormData] = useState({
@@ -87,22 +81,13 @@ const ProfileGallery = ({
   ]);
   const [availableTags] = useState([]);
 
-  console.log('CardMediaGallery received:', {
+  console.log('📷 CardMediaGallery received:', {
     photosCount: photos.length,
     videosCount: videos.length,
-    photos: photos.slice(0, 2) // Log first 2 for debugging
+    photos: photos.slice(0, 2), // Log first 2 for debugging
+    samplePhoto: photos[0], // Log structure of first photo
+    samplePhotoKeys: photos[0] ? Object.keys(photos[0]) : []
   });
-
-  // Set up liked media from photos
-  useEffect(() => {
-    const liked = new Set();
-    photos.forEach(photo => {
-      if (photo.isLiked) {
-        liked.add(photo.id);
-      }
-    });
-    setLikedMedia(liked);
-  }, [photos]);
 
   // Categories for filtering
   const categories = [
@@ -110,7 +95,12 @@ const ProfileGallery = ({
     { id: 'Cosplay', label: 'Cosplay', count: photos.filter(p => p.category === 'Cosplay').length },
     { id: 'Portrait', label: 'Chân dung', count: photos.filter(p => p.category === 'Portrait').length },
     { id: 'Action', label: 'Hành động', count: photos.filter(p => p.category === 'Action').length },
+    { id: 'Group', label: 'Nhóm', count: photos.filter(p => p.category === 'Group').length },
+    { id: 'Behind the Scenes', label: 'Hậu trường', count: photos.filter(p => p.category === 'Behind the Scenes').length },
     { id: 'Props', label: 'Đạo cụ', count: photos.filter(p => p.category === 'Props').length },
+    { id: 'Makeup', label: 'Trang điểm', count: photos.filter(p => p.category === 'Makeup').length },
+    { id: 'Work in Progress', label: 'Đang thực hiện', count: photos.filter(p => p.category === 'Work in Progress').length },
+    { id: 'Convention', label: 'Sự kiện', count: photos.filter(p => p.category === 'Convention').length },
     { id: 'Photoshoot', label: 'Chụp ảnh', count: photos.filter(p => p.category === 'Photoshoot').length },
     { id: 'Other', label: 'Khác', count: photos.filter(p => p.category === 'Other').length },
   ];
@@ -153,62 +143,18 @@ const ProfileGallery = ({
     }
   };
 
-  const handleLike = async (mediaId) => {
-    if (mediaType !== 'photos') return;
-
-    try {
-      console.log('Toggling like for photo:', mediaId);
-
-      const result = await cosplayerMediaAPI.togglePhotoLike(mediaId);
-      if (result.success) {
-        // Toggle like state optimistically
-        const newLikedMedia = new Set(likedMedia);
-        if (newLikedMedia.has(mediaId)) {
-          newLikedMedia.delete(mediaId);
-        } else {
-          newLikedMedia.add(mediaId);
-        }
-        setLikedMedia(newLikedMedia);
-
-        // Notify parent to refresh if needed
-        if (onMediaUpdate) {
-          onMediaUpdate();
-        }
-
-        console.log('✅ Like toggled successfully');
-      } else {
-        console.error('❌ Failed to toggle like:', result.message);
-        setError(result.message || 'Không thể thích/bỏ thích ảnh');
-      }
-    } catch (err) {
-      console.error('❌ Error toggling like:', err);
-      setError('Có lỗi xảy ra khi thích/bỏ thích ảnh');
-    }
-  };
-
-  const handleMenuOpen = (event, media) => {
-    event.stopPropagation();
-    setMenuAnchor(event.currentTarget);
-    setSelectedMediaForMenu(media);
-  };
-
-  const handleMenuClose = () => {
-    setMenuAnchor(null);
-    setSelectedMediaForMenu(null);
-  };
-
   const handleEditMedia = (media) => {
+    console.log('📝 Edit media called with:', media);
     setSelectedMediaForMenu(media);
     setEditFormData({
       title: media.title || '',
       description: media.description || '',
       category: media.category || 'Other',
-      isPortfolio: media.isPortfolio || false,
-      displayOrder: media.displayOrder || 0,
-      tags: media.tags || []
+      isPortfolio: Boolean(media.isPortfolio),
+      displayOrder: Number(media.displayOrder) || 0,
+      tags: Array.isArray(media.tags) ? media.tags : []
     });
     setEditDialog(true);
-    setMenuAnchor(null);
   };
 
   const handleEditSave = async () => {
@@ -218,9 +164,36 @@ const ProfileGallery = ({
       setEditLoading(true);
       setError(null);
 
-      console.log('Updating photo with data:', editFormData);
+      console.log('💾 Saving media with:', {
+        selectedMedia: selectedMediaForMenu,
+        mediaId: selectedMediaForMenu.id,
+        editFormData
+      });
 
-      const result = await cosplayerMediaAPI.updatePhoto(selectedMediaForMenu.id, editFormData);
+      // Ensure all fields have valid values
+      const requestData = {
+        title: editFormData.title?.trim() || '',
+        description: editFormData.description?.trim() || '',
+        category: editFormData.category || 'Other',
+        isPortfolio: Boolean(editFormData.isPortfolio),
+        displayOrder: Number(editFormData.displayOrder) || 0,
+        tags: Array.isArray(editFormData.tags) ? editFormData.tags : []
+      };
+
+      console.log('📤 Updating photo with data:', requestData);
+      console.log('🆔 Selected media object:', selectedMediaForMenu);
+
+      // Check for ID in different possible field names
+      const photoId = selectedMediaForMenu.id || selectedMediaForMenu.photoId || selectedMediaForMenu.mediaId;
+      console.log('🆔 Photo ID found:', photoId);
+
+      if (!photoId) {
+        console.error('❌ No photo ID found in any expected field:', selectedMediaForMenu);
+        setError('Không tìm thấy ID của ảnh');
+        return;
+      }
+
+      const result = await cosplayerMediaAPI.updatePhoto(photoId, requestData);
 
       if (result.success) {
         setEditDialog(false);
@@ -245,11 +218,23 @@ const ProfileGallery = ({
     }
   };
 
-  const handleDeleteMedia = async (mediaId) => {
-    if (!window.confirm('Bạn có chắc chắn muốn xóa ảnh này?')) return;
+  const handleDeleteMedia = async () => {
+    if (!selectedMediaForMenu) return;
 
     try {
-      console.log('Deleting photo with ID:', mediaId);
+      setDeleteLoading(true);
+      setError(null);
+
+      // Check for ID in different possible field names
+      const mediaId = selectedMediaForMenu.id || selectedMediaForMenu.photoId || selectedMediaForMenu.videoId || selectedMediaForMenu.mediaId;
+      console.log('🗑️ Deleting media with ID:', mediaId);
+      console.log('🗑️ Selected media object:', selectedMediaForMenu);
+
+      if (!mediaId) {
+        console.error('❌ No media ID found:', selectedMediaForMenu);
+        setError('Không tìm thấy ID của media');
+        return;
+      }
 
       let result;
       if (mediaType === 'photos') {
@@ -259,7 +244,7 @@ const ProfileGallery = ({
       }
 
       if (result.success) {
-        setMenuAnchor(null);
+        setDeleteDialog(false);
         setSelectedMediaForMenu(null);
         setError(null);
 
@@ -276,12 +261,17 @@ const ProfileGallery = ({
     } catch (err) {
       console.error('❌ Error deleting media:', err);
       setError('Có lỗi xảy ra khi xóa media');
+    } finally {
+      setDeleteLoading(false);
     }
   };
 
+  const handleDeleteClick = (photo) => {
+    setSelectedMediaForMenu(photo);
+    setDeleteDialog(true);
+  };
+
   const MediaCard = ({ photo, index }) => {
-    const isLiked = likedMedia.has(photo.id);
-    
     return (
       <Card 
         sx={{ 
@@ -306,15 +296,15 @@ const ProfileGallery = ({
         <CardMedia
           component="img"
           height="250"
-          image={photo.url}
+          image={photo.photoUrl || photo.url}
           alt={photo.title || `Photo ${index + 1}`}
           sx={{
             objectFit: 'cover',
             backgroundColor: 'grey.100'
           }}
-          onLoad={() => console.log('✅ CardMedia loaded:', photo.url)}
+          onLoad={() => console.log('✅ CardMedia loaded:', photo.photoUrl || photo.url)}
           onError={(e) => {
-            console.error('❌ CardMedia failed:', photo.url);
+            console.error('❌ CardMedia failed:', photo.photoUrl || photo.url);
             e.target.style.backgroundColor = '#f5f5f5';
           }}
         />
@@ -353,41 +343,44 @@ const ProfileGallery = ({
             )}
             
             <Box sx={{ display: 'flex', gap: 0.5 }}>
-              {mediaType === 'photos' && (
-                <IconButton
-                  size="small"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleLike(photo.id);
-                  }}
-                  sx={{
-                    backgroundColor: 'rgba(255,255,255,0.9)',
-                    color: isLiked ? '#E91E63' : 'grey.600',
-                    '&:hover': { 
-                      backgroundColor: 'white',
-                      transform: 'scale(1.1)'
-                    }
-                  }}
-                >
-                  {isLiked ? <Favorite /> : <FavoriteBorder />}
-                </IconButton>
-              )}
-              
               {isOwnProfile && (
-                <IconButton
-                  size="small"
-                  onClick={(e) => handleMenuOpen(e, photo)}
-                  sx={{
-                    backgroundColor: 'rgba(255,255,255,0.9)',
-                    color: 'grey.700',
-                    '&:hover': { 
-                      backgroundColor: 'white',
-                      transform: 'scale(1.1)'
-                    }
-                  }}
-                >
-                  <MoreVert />
-                </IconButton>
+                <>
+                  <IconButton
+                    size="small"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleEditMedia(photo);
+                    }}
+                    sx={{
+                      backgroundColor: 'rgba(255,255,255,0.9)',
+                      color: 'primary.main',
+                      '&:hover': { 
+                        backgroundColor: 'white',
+                        transform: 'scale(1.1)'
+                      }
+                    }}
+                  >
+                    <Edit />
+                  </IconButton>
+                  
+                  <IconButton
+                    size="small"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleDeleteClick(photo);
+                    }}
+                    sx={{
+                      backgroundColor: 'rgba(255,255,255,0.9)',
+                      color: 'error.main',
+                      '&:hover': { 
+                        backgroundColor: 'white',
+                        transform: 'scale(1.1)'
+                      }
+                    }}
+                  >
+                    <Delete />
+                  </IconButton>
+                </>
               )}
               
               <IconButton
@@ -424,20 +417,6 @@ const ProfileGallery = ({
               >
                 {photo.title}
               </Typography>
-            )}
-            {photo.likesCount !== undefined && (
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                <Favorite sx={{ fontSize: 16, color: '#E91E63' }} />
-                <Typography
-                  variant="caption"
-                  sx={{
-                    color: 'white',
-                    textShadow: '2px 2px 4px rgba(0,0,0,0.8)'
-                  }}
-                >
-                  {photo.likesCount} lượt thích
-                </Typography>
-              </Box>
             )}
           </Box>
         </Box>
@@ -873,7 +852,7 @@ const ProfileGallery = ({
               {/* Image */}
               <CardMedia
                 component="img"
-                image={selectedImage.url}
+                image={selectedImage.photoUrl || selectedImage.url}
                 alt={selectedImage.title}
                 sx={{
                   width: '100%',
@@ -908,62 +887,12 @@ const ProfileGallery = ({
                       {selectedImage.description}
                     </Typography>
                   )}
-                  {mediaType === 'photos' && selectedImage.likesCount !== undefined && (
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 2 }}>
-                      <Favorite sx={{ fontSize: 20 }} />
-                      <Typography variant="body2">
-                        {selectedImage.likesCount} lượt thích
-                      </Typography>
-                    </Box>
-                  )}
                 </Box>
               )}
             </>
           )}
         </DialogContent>
       </Dialog>
-
-      {/* Context Menu */}
-      <Menu
-        anchorEl={menuAnchor}
-        open={Boolean(menuAnchor)}
-        onClose={handleMenuClose}
-        PaperProps={{
-          sx: {
-            borderRadius: '12px',
-            mt: 1,
-            '& .MuiMenuItem-root': {
-              px: 2,
-              py: 1.5,
-              borderRadius: '8px',
-              mx: 1,
-              my: 0.5,
-              '&:hover': {
-                backgroundColor: alpha('#E91E63', 0.08),
-              }
-            }
-          }
-        }}
-      >
-        <MenuItem onClick={() => handleEditMedia(selectedMediaForMenu)}>
-          <Edit sx={{ mr: 1.5, fontSize: 20 }} />
-          Chỉnh sửa
-        </MenuItem>
-        <MenuItem
-          onClick={() => {
-            handleDeleteMedia(selectedMediaForMenu?.id);
-          }}
-          sx={{
-            color: 'error.main',
-            '&:hover': {
-              backgroundColor: alpha('#f44336', 0.08),
-            }
-          }}
-        >
-          <Delete sx={{ mr: 1.5, fontSize: 20 }} />
-          Xóa
-        </MenuItem>
-      </Menu>
 
       {/* Edit Photo Dialog */}
       <Dialog
@@ -1038,61 +967,58 @@ const ProfileGallery = ({
             {/* Tags */}
             <Autocomplete
               multiple
-              options={availableTags}
-              value={editFormData.tags}
-              onChange={(e, newValue) => setEditFormData({ ...editFormData, tags: newValue })}
               freeSolo
-              renderInput={(params) => (
-                <TextField
-                  {...params}
-                  label="Tags"
-                  placeholder="Thêm tags..."
-                  sx={{
-                    '& .MuiOutlinedInput-root': {
-                      borderRadius: '12px',
-                    }
-                  }}
-                />
-              )}
+              options={[]}
+              value={Array.isArray(editFormData.tags) ? editFormData.tags : []}
+              onChange={(event, newValue) => {
+                // Filter out empty strings and trim whitespace
+                const cleanTags = newValue
+                  .map(tag => typeof tag === 'string' ? tag.trim() : tag)
+                  .filter(tag => tag && tag.length > 0);
+                setEditFormData({ ...editFormData, tags: cleanTags });
+              }}
+              onInputChange={(event, newInputValue, reason) => {
+                // Handle comma-separated input
+                if (reason === 'input' && newInputValue.includes(',')) {
+                  const tags = newInputValue.split(',').map(tag => tag.trim()).filter(tag => tag);
+                  if (tags.length > 0) {
+                    const currentTags = Array.isArray(editFormData.tags) ? editFormData.tags : [];
+                    const newTags = [...new Set([...currentTags, ...tags])]; // Remove duplicates
+                    setEditFormData({ ...editFormData, tags: newTags });
+                  }
+                }
+              }}
               renderTags={(value, getTagProps) =>
                 value.map((option, index) => (
                   <Chip
                     variant="outlined"
+                    color="primary"
+                    size="small"
                     label={option}
                     {...getTagProps({ index })}
-                    sx={{ borderRadius: '8px' }}
                     key={index}
                   />
                 ))
               }
-            />
-
-            {/* Portfolio and Display Order */}
-            <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
-              <FormControlLabel
-                control={
-                  <Switch
-                    checked={editFormData.isPortfolio}
-                    onChange={(e) => setEditFormData({ ...editFormData, isPortfolio: e.target.checked })}
-                    color="primary"
-                  />
+              renderInput={(params) => (
+                <TextField
+                  {...params}
+                  label="Tags"
+                  placeholder={editFormData.tags && editFormData.tags.length > 0 ? "Thêm thẻ..." : "anime, manga, tên nhân vật, series"}
+                  helperText="Nhập và nhấn Enter để thêm thẻ, hoặc phân cách bằng dấu phẩy"
+                  variant="outlined"
+                  InputProps={{
+                    ...params.InputProps,
+                    sx: { borderRadius: '12px' }
+                  }}
+                />
+              )}
+              sx={{
+                '& .MuiOutlinedInput-root': {
+                  borderRadius: '12px'
                 }
-                label="Thêm vào Portfolio"
-              />
-
-              <TextField
-                label="Thứ tự hiển thị"
-                type="number"
-                value={editFormData.displayOrder}
-                onChange={(e) => setEditFormData({ ...editFormData, displayOrder: parseInt(e.target.value) || 0 })}
-                sx={{
-                  width: 150,
-                  '& .MuiOutlinedInput-root': {
-                    borderRadius: '12px',
-                  }
-                }}
-              />
-            </Box>
+              }}
+            />
           </Stack>
         </DialogContent>
 
@@ -1123,6 +1049,103 @@ const ProfileGallery = ({
             }}
           >
             {editLoading ? 'Đang lưu...' : 'Lưu thay đổi'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog
+        open={deleteDialog}
+        onClose={() => !deleteLoading && setDeleteDialog(false)}
+        maxWidth="sm"
+        fullWidth
+        PaperProps={{
+          sx: {
+            borderRadius: '20px',
+          }
+        }}
+      >
+        <DialogTitle sx={{
+          pb: 1,
+          borderBottom: '1px solid',
+          borderColor: 'divider'
+        }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <Delete sx={{ color: 'error.main' }} />
+            <Typography variant="h6">Xác nhận xóa</Typography>
+          </Box>
+        </DialogTitle>
+
+        <DialogContent sx={{ pt: 3 }}>
+          <Typography variant="body1" sx={{ mb: 2 }}>
+            Bạn có chắc chắn muốn xóa {mediaType === 'photos' ? 'ảnh' : 'video'} này không?
+          </Typography>
+          
+          {selectedMediaForMenu && (
+            <Box sx={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              gap: 2, 
+              p: 2, 
+              borderRadius: '12px', 
+              backgroundColor: 'grey.50',
+              border: '1px solid',
+              borderColor: 'divider'
+            }}>
+              <Box
+                component="img"
+                src={selectedMediaForMenu.photoUrl || selectedMediaForMenu.url}
+                alt={selectedMediaForMenu.title}
+                sx={{
+                  width: 60,
+                  height: 60,
+                  borderRadius: '8px',
+                  objectFit: 'cover'
+                }}
+              />
+              <Box>
+                <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                  {selectedMediaForMenu.title || 'Không có tiêu đề'}
+                </Typography>
+                <Typography variant="caption" color="text.secondary">
+                  {selectedMediaForMenu.category || 'Không có danh mục'}
+                </Typography>
+              </Box>
+            </Box>
+          )}
+
+          <Typography variant="body2" color="error.main" sx={{ mt: 2, fontWeight: 500 }}>
+            ⚠️ Hành động này không thể hoàn tác!
+          </Typography>
+        </DialogContent>
+
+        <DialogActions sx={{ p: 3, pt: 2 }}>
+          <Button
+            onClick={() => setDeleteDialog(false)}
+            disabled={deleteLoading}
+            sx={{
+              borderRadius: '12px',
+              textTransform: 'none',
+            }}
+          >
+            Hủy
+          </Button>
+          <Button
+            variant="contained"
+            color="error"
+            onClick={handleDeleteMedia}
+            disabled={deleteLoading}
+            startIcon={deleteLoading ? <CircularProgress size={20} color="inherit" /> : <Delete />}
+            sx={{
+              borderRadius: '12px',
+              textTransform: 'none',
+              px: 3,
+              '&:hover': {
+                backgroundColor: 'error.dark',
+              }
+            }}
+          >
+            {deleteLoading ? 'Đang xóa...' : 'Xóa'}
           </Button>
         </DialogActions>
       </Dialog>

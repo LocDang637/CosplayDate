@@ -29,7 +29,8 @@ import {
   StepLabel,
   Divider,
   Card,
-  CardContent
+  CardContent,
+  Autocomplete
 } from '@mui/material';
 import {
   Close,
@@ -66,8 +67,8 @@ const MediaUploadDialog = ({
     title: '',
     description: '',
     category: '',
-    isPrivate: false,
-    isPortfolio: false
+    isPortfolio: false,
+    tags: []
   });
   const [selectedFile, setSelectedFile] = useState(null);
   const [thumbnailFile, setThumbnailFile] = useState(null);
@@ -117,8 +118,8 @@ const MediaUploadDialog = ({
         title: '',
         description: '',
         category: '',
-        isPrivate: false,
-        isPortfolio: false
+        isPortfolio: false,
+        tags: []
       });
       setSelectedFile(null);
       setThumbnailFile(null);
@@ -261,9 +262,9 @@ const MediaUploadDialog = ({
           title: formData.title.trim(),
           description: formData.description.trim(),
           category: formData.category,
-          isPrivate: formData.isPrivate,
           isPortfolio: formData.isPortfolio,
-          displayOrder: 0
+          displayOrder: 0,
+          tags: formData.tags || []
         });
       } else {
         result = await cosplayerMediaAPI.uploadVideo({
@@ -271,8 +272,7 @@ const MediaUploadDialog = ({
           thumbnailFile: thumbnailFile,
           title: formData.title.trim(),
           description: formData.description.trim(),
-          category: formData.category,
-          isPrivate: formData.isPrivate
+          category: formData.category
         });
       }
 
@@ -559,6 +559,67 @@ const MediaUploadDialog = ({
                 />
               </Grid>
 
+              {/* Tags Input for Photos */}
+              {type === 'photo' && (
+                <Grid item xs={12}>
+                  <Autocomplete
+                    multiple
+                    freeSolo
+                    options={[]}
+                    value={Array.isArray(formData.tags) ? formData.tags : []}
+                    onChange={(event, newValue) => {
+                      // Filter out empty strings and trim whitespace
+                      const cleanTags = newValue
+                        .map(tag => typeof tag === 'string' ? tag.trim() : tag)
+                        .filter(tag => tag && tag.length > 0);
+                      setFormData(prev => ({ ...prev, tags: cleanTags }));
+                    }}
+                    onInputChange={(event, newInputValue, reason) => {
+                      // Handle comma-separated input
+                      if (reason === 'input' && newInputValue.includes(',')) {
+                        const tags = newInputValue.split(',').map(tag => tag.trim()).filter(tag => tag);
+                        if (tags.length > 0) {
+                          const currentTags = Array.isArray(formData.tags) ? formData.tags : [];
+                          const newTags = [...new Set([...currentTags, ...tags])]; // Remove duplicates
+                          setFormData(prev => ({ ...prev, tags: newTags }));
+                        }
+                      }
+                    }}
+                    disabled={loading}
+                    renderTags={(value, getTagProps) =>
+                      value.map((option, index) => (
+                        <Chip
+                          variant="outlined"
+                          color="primary"
+                          size="small"
+                          label={option}
+                          {...getTagProps({ index })}
+                          key={index}
+                          disabled={loading}
+                        />
+                      ))
+                    }
+                    renderInput={(params) => (
+                      <TextField
+                        {...params}
+                        label="Tags"
+                        placeholder={formData.tags && formData.tags.length > 0 ? "Add more tags..." : "e.g., anime, manga, character name"}
+                        helperText="Type and press Enter to add tags, or separate with commas"
+                        InputProps={{
+                          ...params.InputProps,
+                          sx: { borderRadius: '12px' }
+                        }}
+                      />
+                    )}
+                    sx={{
+                      '& .MuiOutlinedInput-root': {
+                        borderRadius: '12px'
+                      }
+                    }}
+                  />
+                </Grid>
+              )}
+
               {/* Video Thumbnail */}
               {type === 'video' && (
                 <Grid item xs={12}>
@@ -687,7 +748,7 @@ const MediaUploadDialog = ({
                     {formData.title}
                   </Typography>
                   
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2, flexWrap: 'wrap' }}>
                     <Chip 
                       label={categories.find(c => c.value === formData.category)?.label || formData.category}
                       sx={{ 
@@ -696,14 +757,6 @@ const MediaUploadDialog = ({
                         fontWeight: 600
                       }}
                     />
-                    {formData.isPrivate && (
-                      <Chip 
-                        icon={<Lock />}
-                        label="Private" 
-                        size="small"
-                        variant="outlined"
-                      />
-                    )}
                     {formData.isPortfolio && (
                       <Chip 
                         icon={<Star />}
@@ -712,6 +765,15 @@ const MediaUploadDialog = ({
                         color="primary"
                       />
                     )}
+                    {formData.tags && formData.tags.length > 0 && formData.tags.map((tag, index) => (
+                      <Chip 
+                        key={index}
+                        label={tag}
+                        size="small"
+                        variant="outlined"
+                        color="primary"
+                      />
+                    ))}
                   </Box>
 
                   {formData.description && (
@@ -721,24 +783,6 @@ const MediaUploadDialog = ({
                   )}
 
                   <Divider sx={{ my: 2 }} />
-
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                    {formData.isPrivate ? (
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                        <Lock sx={{ color: 'text.secondary' }} />
-                        <Typography variant="body2" color="text.secondary">
-                          Only you can see this
-                        </Typography>
-                      </Box>
-                    ) : (
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                        <Public sx={{ color: 'success.main' }} />
-                        <Typography variant="body2" color="success.main">
-                          Public - Everyone can see this
-                        </Typography>
-                      </Box>
-                    )}
-                  </Box>
                 </Box>
               </Grid>
             </Grid>
@@ -917,24 +961,6 @@ const MediaUploadDialog = ({
             <Typography variant="subtitle2" fontWeight={600} sx={{ mb: 1 }}>
               Quick Settings
             </Typography>
-            <FormControlLabel
-              control={
-                <Switch
-                  checked={formData.isPrivate}
-                  onChange={handleInputChange('isPrivate')}
-                  disabled={loading}
-                  color="primary"
-                  size="small"
-                />
-              }
-              label={
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                  <Lock fontSize="small" />
-                  <Typography variant="body2">Private</Typography>
-                </Box>
-              }
-              sx={{ mb: type === 'photo' ? 1 : 0, width: '100%' }}
-            />
             {type === 'photo' && (
               <FormControlLabel
                 control={
