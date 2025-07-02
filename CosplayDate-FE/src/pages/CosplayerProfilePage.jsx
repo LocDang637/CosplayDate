@@ -441,35 +441,68 @@ const CosplayerProfilePage = () => {
 
   // ✅ FIXED: Load media when profile user changes or tab changes
   useEffect(() => {
-    if (profileUser?.id && activeTab === 'gallery') {
+    if (profileUser?.id && (activeTab === 'gallery' || activeTab === 'videos')) {
       loadMedia();
     }
   }, [profileUser?.id, activeTab]);
 
   // Media loading function
   const loadMedia = async () => {
-    if (!profileUser?.id || activeTab !== 'gallery') return;
+    if (!profileUser?.id || (activeTab !== 'gallery' && activeTab !== 'videos')) return;
 
+    console.log('📷 Loading media for profile:', profileUser.id, 'activeTab:', activeTab);
     setMediaLoading(true);
     try {
-      // Load both photos and videos together
       const [photosResult, videosResult] = await Promise.all([
         cosplayerMediaAPI.getPhotos(profileUser.id),
         cosplayerMediaAPI.getVideos(profileUser.id)
       ]);
 
-      if (photosResult.success) {
-        setPhotos(photosResult.data.photos || []);
+      console.log('📊 Photos API result:', photosResult);
+      console.log('📊 Videos API result:', videosResult);
+
+      if (photosResult.success && photosResult.data) {
+        // Map photoUrl to url for ProfileGallery
+        const mappedPhotos = (photosResult.data.photos || []).map(photo => ({
+          ...photo,
+          url: photo.photoUrl || photo.url,
+          likesCount: photo.likesCount || 0,
+          category: photo.category || 'Other',
+          isLiked: photo.isLiked || false
+        }));
+        console.log('📸 Mapped photos:', mappedPhotos);
+        setPhotos(mappedPhotos);
+      } else {
+        console.log('❌ Photos loading failed:', photosResult);
+        setPhotos([]);
       }
-      if (videosResult.success) {
-        setVideos(videosResult.data.videos || []);
+
+      if (videosResult.success && videosResult.data) {
+        // Map videoUrl to url for ProfileGallery
+        const mappedVideos = (videosResult.data.videos || []).map(video => ({
+          ...video,
+          url: video.videoUrl || video.url,
+          category: video.category || 'Other'
+        }));
+        console.log('🎥 Mapped videos:', mappedVideos);
+        setVideos(mappedVideos);
+      } else {
+        console.log('❌ Videos loading failed:', videosResult);
+        setVideos([]);
       }
     } catch (err) {
       console.error('📷 Media loading error:', err);
+      setPhotos([]);
+      setVideos([]);
     } finally {
       setMediaLoading(false);
     }
   };
+
+  const handleMediaUpdate = useCallback(() => {
+    // Reload media when ProfileGallery notifies of changes
+    loadMedia();
+  }, [profileUser?.id, activeTab]);
 
   // Event handlers
   const handleLogout = useCallback(() => {
@@ -486,10 +519,15 @@ const CosplayerProfilePage = () => {
   }, []);
 
   const handleUploadSuccess = useCallback((uploadedMedia) => {
+    const mappedMedia = {
+      ...uploadedMedia,
+      url: uploadedMedia.photoUrl || uploadedMedia.videoUrl || uploadedMedia.url
+    };
+
     if (uploadDialog.type === 'photo') {
-      setPhotos(prev => [uploadedMedia, ...prev]);
+      setPhotos(prev => [mappedMedia, ...prev]);
     } else {
-      setVideos(prev => [uploadedMedia, ...prev]);
+      setVideos(prev => [mappedMedia, ...prev]);
     }
     showSnackbar(`${uploadDialog.type === 'photo' ? 'Ảnh' : 'Video'} đã được tải lên thành công!`, 'success');
   }, [uploadDialog.type]);
@@ -565,12 +603,12 @@ const CosplayerProfilePage = () => {
       case 'gallery':
         return (
           <ProfileGallery
-            photos={photos || []}
-            videos={videos || []}
-            cosplayerId={profileUser?.id}
+            photos={photos}
+            videos={videos}
             isOwnProfile={isOwnProfile}
             loading={mediaLoading}
-            onMediaUpdate={loadMedia}
+            onMediaUpdate={handleMediaUpdate}
+            onAddPhoto={() => setUploadDialog({ open: true, type: 'photo' })}
           />
         );
       case 'videos':

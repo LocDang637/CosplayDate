@@ -53,7 +53,7 @@ import {
 } from '@mui/icons-material';
 import { cosplayerMediaAPI } from '../../services/cosplayerAPI';
 
-const ProfileGallery = ({
+const CardMediaGallery = ({
   photos = [],
   videos = [],
   isOwnProfile = false,
@@ -1130,4 +1130,4 @@ const ProfileGallery = ({
   );
 };
 
-export default ProfileGallery;
+export default CardMediaGallery;
