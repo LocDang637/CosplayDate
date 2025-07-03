@@ -17,6 +17,8 @@ import BecomeCosplayerPage from "../pages/BecomeCosplayerPage";
 import BookingPage from "../pages/BookingPage";
 import MyBookingsPage from "../pages/MyBookingsPage";
 import PaymentRedirectHandler from "../components/wallet/PaymentRedirectHandler";
+import AdminProtectedRoute from "../components/AdminProtectedRoute";
+import AdminDashboardPage from "../pages/AdminDashboardPage";
 function AppRoutes() {
   return (
     <Routes>
@@ -109,6 +111,16 @@ function AppRoutes() {
           <ProtectedRoute>
             <MyBookingsPage />
           </ProtectedRoute>
+        }
+      />
+
+      {/* Admin Routes */}
+      <Route
+        path="/admin/dashboard"
+        element={
+          <AdminProtectedRoute>
+            <AdminDashboardPage />
+          </AdminProtectedRoute>
         }
       />
     </Routes>
