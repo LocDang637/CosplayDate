@@ -43,7 +43,8 @@ import {
   ArrowForward,
   Edit,
   Delete,
-  Save
+  Save,
+  PlayArrow
 } from '@mui/icons-material';
 import { cosplayerMediaAPI } from '../../services/cosplayerAPI';
 
@@ -53,7 +54,8 @@ const ProfileGallery = ({
   isOwnProfile = false,
   loading = false,
   onMediaUpdate,
-  onAddPhoto
+  onAddPhoto,
+  onAddMedia // New callback that includes media type
 }) => {
   const [selectedImage, setSelectedImage] = useState(null);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
@@ -73,11 +75,16 @@ const ProfileGallery = ({
     category: '',
     isPortfolio: false,
     displayOrder: 0,
-    tags: []
+    tags: [],
+    duration: 0
   });
   const [availableCategories] = useState([
     'Cosplay', 'Portrait', 'Action', 'Group', 'Behind the Scenes',
     'Props', 'Makeup', 'Work in Progress', 'Convention', 'Photoshoot', 'Other'
+  ]);
+  const [videoCategories] = useState([
+    'Performance', 'Tutorial', 'Behind the Scenes', 'Transformation',
+    'Convention', 'Dance', 'Skit', 'Voice Acting', 'Review', 'Other'
   ]);
   const [availableTags] = useState([]);
 
@@ -152,7 +159,8 @@ const ProfileGallery = ({
       category: media.category || 'Other',
       isPortfolio: Boolean(media.isPortfolio),
       displayOrder: Number(media.displayOrder) || 0,
-      tags: Array.isArray(media.tags) ? media.tags : []
+      tags: Array.isArray(media.tags) ? media.tags : [],
+      duration: Number(media.duration) || 0 // Add duration for videos
     });
     setEditDialog(true);
   };
@@ -167,33 +175,48 @@ const ProfileGallery = ({
       console.log('💾 Saving media with:', {
         selectedMedia: selectedMediaForMenu,
         mediaId: selectedMediaForMenu.id,
-        editFormData
+        editFormData,
+        isVideo: selectedMediaForMenu.isVideo
       });
 
-      // Ensure all fields have valid values
-      const requestData = {
-        title: editFormData.title?.trim() || '',
-        description: editFormData.description?.trim() || '',
-        category: editFormData.category || 'Other',
-        isPortfolio: Boolean(editFormData.isPortfolio),
-        displayOrder: Number(editFormData.displayOrder) || 0,
-        tags: Array.isArray(editFormData.tags) ? editFormData.tags : []
-      };
-
-      console.log('📤 Updating photo with data:', requestData);
-      console.log('🆔 Selected media object:', selectedMediaForMenu);
-
       // Check for ID in different possible field names
-      const photoId = selectedMediaForMenu.id || selectedMediaForMenu.photoId || selectedMediaForMenu.mediaId;
-      console.log('🆔 Photo ID found:', photoId);
+      const mediaId = selectedMediaForMenu.id || selectedMediaForMenu.photoId || selectedMediaForMenu.videoId || selectedMediaForMenu.mediaId;
+      console.log('🆔 Media ID found:', mediaId);
 
-      if (!photoId) {
-        console.error('❌ No photo ID found in any expected field:', selectedMediaForMenu);
-        setError('Không tìm thấy ID của ảnh');
+      if (!mediaId) {
+        console.error('❌ No media ID found in any expected field:', selectedMediaForMenu);
+        setError('Không tìm thấy ID của media');
         return;
       }
 
-      const result = await cosplayerMediaAPI.updatePhoto(photoId, requestData);
+      let result;
+      
+      if (selectedMediaForMenu.isVideo) {
+        // Update video
+        const requestData = {
+          title: editFormData.title?.trim() || '',
+          description: editFormData.description?.trim() || '',
+          category: editFormData.category || 'Other',
+          duration: Number(editFormData.duration) || 0,
+          displayOrder: Number(editFormData.displayOrder) || 0
+        };
+
+        console.log('📤 Updating video with data:', requestData);
+        result = await cosplayerMediaAPI.updateVideo(mediaId, requestData);
+      } else {
+        // Update photo
+        const requestData = {
+          title: editFormData.title?.trim() || '',
+          description: editFormData.description?.trim() || '',
+          category: editFormData.category || 'Other',
+          isPortfolio: Boolean(editFormData.isPortfolio),
+          displayOrder: Number(editFormData.displayOrder) || 0,
+          tags: Array.isArray(editFormData.tags) ? editFormData.tags : []
+        };
+
+        console.log('📤 Updating photo with data:', requestData);
+        result = await cosplayerMediaAPI.updatePhoto(mediaId, requestData);
+      }
 
       if (result.success) {
         setEditDialog(false);
@@ -205,14 +228,14 @@ const ProfileGallery = ({
           onMediaUpdate();
         }
 
-        console.log('✅ Photo updated successfully');
+        console.log(`✅ ${selectedMediaForMenu.isVideo ? 'Video' : 'Photo'} updated successfully`);
       } else {
-        setError(result.message || 'Không thể cập nhật ảnh');
-        console.error('❌ Failed to update photo:', result.message);
+        setError(result.message || `Không thể cập nhật ${selectedMediaForMenu.isVideo ? 'video' : 'ảnh'}`);
+        console.error(`❌ Failed to update ${selectedMediaForMenu.isVideo ? 'video' : 'photo'}:`, result.message);
       }
     } catch (err) {
-      console.error('❌ Error updating photo:', err);
-      setError('Có lỗi xảy ra khi cập nhật ảnh');
+      console.error(`❌ Error updating ${selectedMediaForMenu.isVideo ? 'video' : 'photo'}:`, err);
+      setError(`Có lỗi xảy ra khi cập nhật ${selectedMediaForMenu.isVideo ? 'video' : 'ảnh'}`);
     } finally {
       setEditLoading(false);
     }
@@ -297,10 +320,11 @@ const ProfileGallery = ({
           component="img"
           height="250"
           image={photo.photoUrl || photo.url}
-          alt={photo.title || `Photo ${index + 1}`}
+          alt={photo.title || `${photo.isVideo ? 'Video' : 'Photo'} ${index + 1}`}
           sx={{
             objectFit: 'cover',
-            backgroundColor: 'grey.100'
+            backgroundColor: 'grey.100',
+            position: 'relative'
           }}
           onLoad={() => console.log('✅ CardMedia loaded:', photo.photoUrl || photo.url)}
           onError={(e) => {
@@ -308,6 +332,48 @@ const ProfileGallery = ({
             e.target.style.backgroundColor = '#f5f5f5';
           }}
         />
+        
+        {/* Video Play Icon Overlay */}
+        {photo.isVideo && (
+          <Box
+            sx={{
+              position: 'absolute',
+              top: '50%',
+              left: '50%',
+              transform: 'translate(-50%, -50%)',
+              backgroundColor: 'rgba(0,0,0,0.7)',
+              borderRadius: '50%',
+              width: 64,
+              height: 64,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              zIndex: 1,
+              backdropFilter: 'blur(10px)',
+            }}
+          >
+            <PlayArrow sx={{ fontSize: 32, color: 'white' }} />
+          </Box>
+        )}
+
+        {/* Video Duration Badge */}
+        {photo.isVideo && photo.duration > 0 && (
+          <Chip
+            label={`${Math.floor(photo.duration / 60)}:${(photo.duration % 60).toString().padStart(2, '0')}`}
+            size="small"
+            sx={{
+              position: 'absolute',
+              bottom: 12,
+              right: 12,
+              backgroundColor: 'rgba(0,0,0,0.8)',
+              color: 'white',
+              fontSize: '11px',
+              height: '24px',
+              fontWeight: 600,
+              backdropFilter: 'blur(10px)',
+            }}
+          />
+        )}
         
         {/* Enhanced Overlay */}
         <Box
@@ -585,11 +651,17 @@ const ProfileGallery = ({
             </ToggleButtonGroup>
 
             {/* Add Media Button */}
-            {isOwnProfile && onAddPhoto && (
+            {isOwnProfile && (onAddPhoto || onAddMedia) && (
               <Button
                 variant="contained"
                 startIcon={<Add />}
-                onClick={onAddPhoto}
+                onClick={() => {
+                  if (onAddMedia) {
+                    onAddMedia(mediaType === 'photos' ? 'photo' : 'video');
+                  } else if (onAddPhoto) {
+                    onAddPhoto();
+                  }
+                }}
                 sx={{
                   background: 'linear-gradient(135deg, #E91E63 0%, #C2185B 100%)',
                   borderRadius: '12px',
@@ -742,11 +814,17 @@ const ProfileGallery = ({
               : `Bắt đầu xây dựng bộ sưu tập ${mediaType === 'photos' ? 'ảnh' : 'video'} của bạn ngay hôm nay!`
             }
           </Typography>
-          {isOwnProfile && onAddPhoto && (
+          {isOwnProfile && (onAddPhoto || onAddMedia) && (
             <Button
               variant="contained"
               startIcon={<Add />}
-              onClick={onAddPhoto}
+              onClick={() => {
+                if (onAddMedia) {
+                  onAddMedia(mediaType === 'photos' ? 'photo' : 'video');
+                } else if (onAddPhoto) {
+                  onAddPhoto();
+                }
+              }}
               sx={{
                 background: 'linear-gradient(135deg, #E91E63 0%, #C2185B 100%)',
                 borderRadius: '12px',
@@ -849,22 +927,40 @@ const ProfileGallery = ({
                 </IconButton>
               )}
 
-              {/* Image */}
-              <CardMedia
-                component="img"
-                image={selectedImage.photoUrl || selectedImage.url}
-                alt={selectedImage.title}
-                sx={{
-                  width: '100%',
-                  height: 'auto',
-                  maxHeight: '80vh',
-                  objectFit: 'contain',
-                  borderRadius: '12px'
-                }}
-              />
+              {/* Media Content - Image or Video */}
+              {selectedImage.isVideo ? (
+                <Box
+                  component="video"
+                  controls
+                  autoPlay
+                  sx={{
+                    width: '100%',
+                    height: 'auto',
+                    maxHeight: '80vh',
+                    borderRadius: '12px',
+                    backgroundColor: 'black'
+                  }}
+                >
+                  <source src={selectedImage.videoUrl || selectedImage.url} type="video/mp4" />
+                  Your browser does not support the video tag.
+                </Box>
+              ) : (
+                <CardMedia
+                  component="img"
+                  image={selectedImage.photoUrl || selectedImage.url}
+                  alt={selectedImage.title}
+                  sx={{
+                    width: '100%',
+                    height: 'auto',
+                    maxHeight: '80vh',
+                    objectFit: 'contain',
+                    borderRadius: '12px'
+                  }}
+                />
+              )}
 
-              {/* Image info */}
-              {(selectedImage.title || selectedImage.description) && (
+              {/* Media info */}
+              {(selectedImage.title || selectedImage.description || selectedImage.isVideo) && (
                 <Box
                   sx={{
                     position: 'absolute',
@@ -883,9 +979,28 @@ const ProfileGallery = ({
                     </Typography>
                   )}
                   {selectedImage.description && (
-                    <Typography variant="body1" sx={{ opacity: 0.9, lineHeight: 1.6 }}>
+                    <Typography variant="body1" sx={{ opacity: 0.9, lineHeight: 1.6, mb: selectedImage.isVideo ? 2 : 0 }}>
                       {selectedImage.description}
                     </Typography>
+                  )}
+                  {selectedImage.isVideo && (
+                    <Box sx={{ display: 'flex', gap: 3, alignItems: 'center' }}>
+                      {selectedImage.duration > 0 && (
+                        <Typography variant="body2" sx={{ opacity: 0.8 }}>
+                          Duration: {Math.floor(selectedImage.duration / 60)}:{(selectedImage.duration % 60).toString().padStart(2, '0')}
+                        </Typography>
+                      )}
+                      {selectedImage.viewCount !== undefined && (
+                        <Typography variant="body2" sx={{ opacity: 0.8 }}>
+                          Views: {selectedImage.viewCount.toLocaleString()}
+                        </Typography>
+                      )}
+                      {selectedImage.likesCount !== undefined && (
+                        <Typography variant="body2" sx={{ opacity: 0.8 }}>
+                          Likes: {selectedImage.likesCount.toLocaleString()}
+                        </Typography>
+                      )}
+                    </Box>
                   )}
                 </Box>
               )}
@@ -894,7 +1009,7 @@ const ProfileGallery = ({
         </DialogContent>
       </Dialog>
 
-      {/* Edit Photo Dialog */}
+      {/* Edit Media Dialog */}
       <Dialog
         open={editDialog}
         onClose={() => setEditDialog(false)}
@@ -913,7 +1028,9 @@ const ProfileGallery = ({
         }}>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
             <Edit />
-            <Typography variant="h6">Chỉnh sửa thông tin ảnh</Typography>
+            <Typography variant="h6">
+              Chỉnh sửa thông tin {selectedMediaForMenu?.isVideo ? 'video' : 'ảnh'}
+            </Typography>
           </Box>
         </DialogTitle>
 
@@ -958,67 +1075,125 @@ const ProfileGallery = ({
                 label="Danh mục"
                 sx={{ borderRadius: '12px' }}
               >
-                {availableCategories.map((cat) => (
+                {(selectedMediaForMenu?.isVideo ? videoCategories : availableCategories).map((cat) => (
                   <MenuItem key={cat} value={cat}>{cat}</MenuItem>
                 ))}
               </Select>
             </FormControl>
 
-            {/* Tags */}
-            <Autocomplete
-              multiple
-              freeSolo
-              options={[]}
-              value={Array.isArray(editFormData.tags) ? editFormData.tags : []}
-              onChange={(event, newValue) => {
-                // Filter out empty strings and trim whitespace
-                const cleanTags = newValue
-                  .map(tag => typeof tag === 'string' ? tag.trim() : tag)
-                  .filter(tag => tag && tag.length > 0);
-                setEditFormData({ ...editFormData, tags: cleanTags });
-              }}
-              onInputChange={(event, newInputValue, reason) => {
-                // Handle comma-separated input
-                if (reason === 'input' && newInputValue.includes(',')) {
-                  const tags = newInputValue.split(',').map(tag => tag.trim()).filter(tag => tag);
-                  if (tags.length > 0) {
-                    const currentTags = Array.isArray(editFormData.tags) ? editFormData.tags : [];
-                    const newTags = [...new Set([...currentTags, ...tags])]; // Remove duplicates
-                    setEditFormData({ ...editFormData, tags: newTags });
+            {/* Tags - Only for photos */}
+            {!selectedMediaForMenu?.isVideo && (
+              <Autocomplete
+                multiple
+                freeSolo
+                options={[]}
+                value={Array.isArray(editFormData.tags) ? editFormData.tags : []}
+                onChange={(event, newValue) => {
+                  // Filter out empty strings and trim whitespace
+                  const cleanTags = newValue
+                    .map(tag => typeof tag === 'string' ? tag.trim() : tag)
+                    .filter(tag => tag && tag.length > 0);
+                  setEditFormData({ ...editFormData, tags: cleanTags });
+                }}
+                onInputChange={(event, newInputValue, reason) => {
+                  // Handle comma-separated input
+                  if (reason === 'input' && newInputValue.includes(',')) {
+                    const tags = newInputValue.split(',').map(tag => tag.trim()).filter(tag => tag);
+                    if (tags.length > 0) {
+                      const currentTags = Array.isArray(editFormData.tags) ? editFormData.tags : [];
+                      const newTags = [...new Set([...currentTags, ...tags])]; // Remove duplicates
+                      setEditFormData({ ...editFormData, tags: newTags });
+                    }
                   }
+                }}
+                renderTags={(value, getTagProps) =>
+                  value.map((option, index) => (
+                    <Chip
+                      variant="outlined"
+                      color="primary"
+                      size="small"
+                      label={option}
+                      {...getTagProps({ index })}
+                      key={index}
+                    />
+                  ))
                 }
-              }}
-              renderTags={(value, getTagProps) =>
-                value.map((option, index) => (
-                  <Chip
+                renderInput={(params) => (
+                  <TextField
+                    {...params}
+                    label="Tags"
+                    placeholder={editFormData.tags && editFormData.tags.length > 0 ? "Thêm thẻ..." : "anime, manga, tên nhân vật, series"}
+                    helperText="Nhập và nhấn Enter để thêm thẻ, hoặc phân cách bằng dấu phẩy"
                     variant="outlined"
-                    color="primary"
-                    size="small"
-                    label={option}
-                    {...getTagProps({ index })}
-                    key={index}
+                    InputProps={{
+                      ...params.InputProps,
+                      sx: { borderRadius: '12px' }
+                    }}
                   />
-                ))
-              }
-              renderInput={(params) => (
+                )}
+                sx={{
+                  '& .MuiOutlinedInput-root': {
+                    borderRadius: '12px'
+                  }
+                }}
+              />
+            )}
+
+            {/* Video-specific fields */}
+            {selectedMediaForMenu?.isVideo && (
+              <>
+                {/* Duration - Read only for videos */}
                 <TextField
-                  {...params}
-                  label="Tags"
-                  placeholder={editFormData.tags && editFormData.tags.length > 0 ? "Thêm thẻ..." : "anime, manga, tên nhân vật, series"}
-                  helperText="Nhập và nhấn Enter để thêm thẻ, hoặc phân cách bằng dấu phẩy"
+                  fullWidth
+                  label="Thời lượng (giây)"
+                  value={editFormData.duration}
+                  disabled
+                  helperText={`${Math.floor(editFormData.duration / 60)}m ${editFormData.duration % 60}s`}
                   variant="outlined"
-                  InputProps={{
-                    ...params.InputProps,
-                    sx: { borderRadius: '12px' }
+                  sx={{
+                    '& .MuiOutlinedInput-root': {
+                      borderRadius: '12px',
+                    }
                   }}
                 />
-              )}
-              sx={{
-                '& .MuiOutlinedInput-root': {
-                  borderRadius: '12px'
-                }
-              }}
-            />
+
+                {/* Display Order */}
+                <TextField
+                  fullWidth
+                  label="Thứ tự hiển thị"
+                  type="number"
+                  value={editFormData.displayOrder}
+                  onChange={(e) => setEditFormData({ ...editFormData, displayOrder: Number(e.target.value) })}
+                  inputProps={{ min: 0, max: 999 }}
+                  helperText="Thứ tự trong thư viện video (0 = đầu tiên)"
+                  variant="outlined"
+                  sx={{
+                    '& .MuiOutlinedInput-root': {
+                      borderRadius: '12px',
+                    }
+                  }}
+                />
+              </>
+            )}
+
+            {/* Display Order for photos */}
+            {!selectedMediaForMenu?.isVideo && (
+              <TextField
+                fullWidth
+                label="Thứ tự hiển thị"
+                type="number"
+                value={editFormData.displayOrder}
+                onChange={(e) => setEditFormData({ ...editFormData, displayOrder: Number(e.target.value) })}
+                inputProps={{ min: 0, max: 999 }}
+                helperText="Thứ tự trong thư viện ảnh (0 = đầu tiên)"
+                variant="outlined"
+                sx={{
+                  '& .MuiOutlinedInput-root': {
+                    borderRadius: '12px',
+                  }
+                }}
+              />
+            )}
           </Stack>
         </DialogContent>
 

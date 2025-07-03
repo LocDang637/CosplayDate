@@ -68,7 +68,9 @@ const MediaUploadDialog = ({
     description: '',
     category: '',
     isPortfolio: false,
-    tags: []
+    tags: [],
+    duration: 0,
+    displayOrder: 0
   });
   const [selectedFile, setSelectedFile] = useState(null);
   const [thumbnailFile, setThumbnailFile] = useState(null);
@@ -119,7 +121,9 @@ const MediaUploadDialog = ({
         description: '',
         category: '',
         isPortfolio: false,
-        tags: []
+        tags: [],
+        duration: 0,
+        displayOrder: 0
       });
       setSelectedFile(null);
       setThumbnailFile(null);
@@ -228,6 +232,18 @@ const MediaUploadDialog = ({
         const reader = new FileReader();
         reader.onload = (e) => setPreview(e.target.result);
         reader.readAsDataURL(file);
+      } else if (file.type.startsWith('video/')) {
+        // Get video duration
+        const video = document.createElement('video');
+        video.preload = 'metadata';
+        video.onloadedmetadata = () => {
+          window.URL.revokeObjectURL(video.src);
+          const duration = Math.round(video.duration);
+          setFormData(prev => ({ ...prev, duration }));
+          console.log('Video duration detected:', duration, 'seconds');
+        };
+        video.src = URL.createObjectURL(file);
+        setPreview(null);
       } else {
         setPreview(null);
       }
@@ -272,7 +288,9 @@ const MediaUploadDialog = ({
           thumbnailFile: thumbnailFile,
           title: formData.title.trim(),
           description: formData.description.trim(),
-          category: formData.category
+          category: formData.category,
+          duration: formData.duration,
+          displayOrder: formData.displayOrder || 0
         });
       }
 
@@ -622,54 +640,89 @@ const MediaUploadDialog = ({
 
               {/* Video Thumbnail */}
               {type === 'video' && (
-                <Grid item xs={12}>
-                  <Paper 
-                    elevation={0} 
-                    sx={{ 
-                      p: 3, 
-                      borderRadius: '16px',
-                      border: '2px dashed',
-                      borderColor: 'divider',
-                      textAlign: 'center'
-                    }}
-                  >
-                    <Typography variant="subtitle1" fontWeight={600} sx={{ mb: 2 }}>
-                      Video Thumbnail (Optional)
-                    </Typography>
-                    {!thumbnailFile ? (
-                      <Button
-                        variant="outlined"
-                        startIcon={<PhotoCamera />}
-                        onClick={() => document.getElementById('thumbnail-input').click()}
-                        disabled={loading}
-                        sx={{ borderRadius: '12px' }}
-                      >
-                        Choose Thumbnail Image
-                      </Button>
-                    ) : (
-                      <Box>
-                        <Typography variant="body2" sx={{ mb: 1 }}>
-                          {thumbnailFile.name}
-                        </Typography>
+                <>
+                  <Grid item xs={12}>
+                    <Paper 
+                      elevation={0} 
+                      sx={{ 
+                        p: 3, 
+                        borderRadius: '16px',
+                        border: '2px dashed',
+                        borderColor: 'divider',
+                        textAlign: 'center'
+                      }}
+                    >
+                      <Typography variant="subtitle1" fontWeight={600} sx={{ mb: 2 }}>
+                        Video Thumbnail (Optional)
+                      </Typography>
+                      {!thumbnailFile ? (
                         <Button
-                          variant="text"
-                          size="small"
-                          onClick={() => setThumbnailFile(null)}
+                          variant="outlined"
+                          startIcon={<PhotoCamera />}
+                          onClick={() => document.getElementById('thumbnail-input').click()}
                           disabled={loading}
+                          sx={{ borderRadius: '12px' }}
                         >
-                          Remove
+                          Choose Thumbnail Image
                         </Button>
-                      </Box>
-                    )}
-                    <input
-                      id="thumbnail-input"
-                      type="file"
-                      accept="image/*"
-                      onChange={(e) => handleFileSelect(e, 'thumbnail')}
-                      style={{ display: 'none' }}
+                      ) : (
+                        <Box>
+                          <Typography variant="body2" sx={{ mb: 1 }}>
+                            {thumbnailFile.name}
+                          </Typography>
+                          <Button
+                            variant="text"
+                            size="small"
+                            onClick={() => setThumbnailFile(null)}
+                            disabled={loading}
+                          >
+                            Remove
+                          </Button>
+                        </Box>
+                      )}
+                      <input
+                        id="thumbnail-input"
+                        type="file"
+                        accept="image/*"
+                        onChange={(e) => handleFileSelect(e, 'thumbnail')}
+                        style={{ display: 'none' }}
+                      />
+                    </Paper>
+                  </Grid>
+
+                  {/* Video Duration Display */}
+                  {formData.duration > 0 && (
+                    <Grid item xs={12} sm={6}>
+                      <TextField
+                        fullWidth
+                        label="Duration (seconds)"
+                        value={formData.duration}
+                        disabled
+                        helperText={`Auto-detected: ${Math.floor(formData.duration / 60)}m ${formData.duration % 60}s`}
+                        InputProps={{
+                          sx: { borderRadius: '12px' }
+                        }}
+                      />
+                    </Grid>
+                  )}
+
+                  {/* Display Order */}
+                  <Grid item xs={12} sm={6}>
+                    <TextField
+                      fullWidth
+                      label="Display Order"
+                      type="number"
+                      value={formData.displayOrder}
+                      onChange={handleInputChange('displayOrder')}
+                      disabled={loading}
+                      helperText="Order in video gallery (0 = first)"
+                      InputProps={{
+                        inputProps: { min: 0, max: 999 },
+                        sx: { borderRadius: '12px' }
+                      }}
                     />
-                  </Paper>
-                </Grid>
+                  </Grid>
+                </>
               )}
             </Grid>
           </Box>
@@ -724,6 +777,29 @@ const MediaUploadDialog = ({
                         objectFit: 'cover'
                       }} 
                     />
+                  ) : type === 'video' && selectedFile ? (
+                    <Box sx={{ 
+                      height: '300px', 
+                      display: 'flex', 
+                      flexDirection: 'column',
+                      alignItems: 'center', 
+                      justifyContent: 'center',
+                      backgroundColor: 'background.default',
+                      p: 2
+                    }}>
+                      <VideoFile sx={{ fontSize: 64, color: 'text.secondary', mb: 2 }} />
+                      <Typography variant="h6" color="text.secondary" sx={{ mb: 1 }}>
+                        Video Ready for Upload
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary" align="center">
+                        {selectedFile.name}
+                      </Typography>
+                      {formData.duration > 0 && (
+                        <Typography variant="body2" color="primary" sx={{ mt: 1, fontWeight: 600 }}>
+                          Duration: {Math.floor(formData.duration / 60)}:{(formData.duration % 60).toString().padStart(2, '0')}
+                        </Typography>
+                      )}
+                    </Box>
                   ) : (
                     <Box sx={{ 
                       height: '300px', 
@@ -790,6 +866,7 @@ const MediaUploadDialog = ({
             <Box sx={{ mt: 3 }}>
               <Typography variant="caption" color="text.secondary">
                 File: {selectedFile?.name} ({formatFileSize(selectedFile?.size || 0)})
+                {type === 'video' && formData.duration > 0 && ` • Duration: ${Math.floor(formData.duration / 60)}m ${formData.duration % 60}s`}
                 {thumbnailFile && ` • Thumbnail: ${thumbnailFile.name}`}
               </Typography>
             </Box>

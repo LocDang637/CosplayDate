@@ -488,7 +488,17 @@ const CosplayerProfilePage = () => {
         const mappedVideos = (videosResult.data.videos || []).map(video => ({
           ...video,
           url: video.videoUrl || video.url,
-          category: video.category || 'Other'
+          photoUrl: video.thumbnailUrl, // Use thumbnailUrl as photoUrl for display
+          category: video.category || 'Other',
+          isVideo: true, // Flag to identify this as a video
+          // Ensure these fields exist with proper defaults
+          title: video.title || '',
+          description: video.description || '',
+          duration: Number(video.duration) || 0,
+          viewCount: Number(video.viewCount) || 0,
+          likesCount: Number(video.likesCount) || 0,
+          displayOrder: Number(video.displayOrder) || 0,
+          createdAt: video.createdAt
         }));
         console.log('🎥 Mapped videos:', mappedVideos);
         setVideos(mappedVideos);
@@ -611,7 +621,7 @@ const CosplayerProfilePage = () => {
             isOwnProfile={isOwnProfile}
             loading={mediaLoading}
             onMediaUpdate={handleMediaUpdate}
-            onAddPhoto={() => setUploadDialog({ open: true, type: 'photo' })}
+            onAddMedia={(mediaType) => setUploadDialog({ open: true, type: mediaType })}
           />
         );
       case 'videos':

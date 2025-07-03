@@ -565,7 +565,8 @@ export const cosplayerMediaAPI = {
       formData.append('Title', videoData.title || '');
       formData.append('Description', videoData.description || '');
       formData.append('Category', videoData.category || '');
-      formData.append('IsPrivate', videoData.isPrivate || false);
+      formData.append('Duration', videoData.duration || 0);
+      formData.append('DisplayOrder', videoData.displayOrder || 0);
 
       const response = await api.post('/cosplayers/videos', formData, {
         headers: { 'Content-Type': 'multipart/form-data' }
