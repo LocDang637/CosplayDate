@@ -488,7 +488,7 @@ const CosplayerProfilePage = () => {
         const mappedVideos = (videosResult.data.videos || []).map(video => ({
           ...video,
           url: video.videoUrl || video.url,
-          photoUrl: video.thumbnailUrl, // Use thumbnailUrl as photoUrl for display
+          photoUrl: video.thumbnailUrl || null, // Keep as null if no thumbnail
           category: video.category || 'Other',
           isVideo: true, // Flag to identify this as a video
           // Ensure these fields exist with proper defaults

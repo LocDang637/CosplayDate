@@ -80,34 +80,38 @@ const MediaUploadDialog = ({
   const [errors, setErrors] = useState({});
   const [apiError, setApiError] = useState('');
   const [dragActive, setDragActive] = useState(false);
+  const [uploadSuccess, setUploadSuccess] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
 
-  const steps = ['Upload File', 'Add Details', 'Review & Publish'];
+  const steps = ['Tải Lên File', 'Thêm Chi Tiết', 'Xem Lại & Đăng'];
 
+  // Photo categories (matching backend)
   const photoCategories = [
     { value: 'Cosplay', label: '🎭 Cosplay', color: '#E91E63' },
-    { value: 'Portrait', label: '👤 Portrait', color: '#9C27B0' },
-    { value: 'Action', label: '⚡ Action', color: '#FF5722' },
-    { value: 'Group', label: '👥 Group', color: '#2196F3' },
-    { value: 'Behind the Scenes', label: '🎬 Behind the Scenes', color: '#FF9800' },
-    { value: 'Props', label: '🛡️ Props', color: '#4CAF50' },
-    { value: 'Makeup', label: '💄 Makeup', color: '#E91E63' },
-    { value: 'Work in Progress', label: '🔧 Work in Progress', color: '#FFC107' },
-    { value: 'Convention', label: '🎪 Convention', color: '#9C27B0' },
-    { value: 'Photoshoot', label: '📸 Photoshoot', color: '#00BCD4' },
-    { value: 'Other', label: '📂 Other', color: '#607D8B' }
+    { value: 'Portrait', label: '👤 Chân dung', color: '#9C27B0' },
+    { value: 'Action', label: '⚡ Hành động', color: '#FF5722' },
+    { value: 'Group', label: '👥 Nhóm', color: '#2196F3' },
+    { value: 'Behind the Scenes', label: '🎬 Hậu trường', color: '#FF9800' },
+    { value: 'Props', label: '🛡️ Phụ kiện', color: '#4CAF50' },
+    { value: 'Makeup', label: '💄 Trang điểm', color: '#E91E63' },
+    { value: 'Work in Progress', label: '🔧 Đang thực hiện', color: '#FFC107' },
+    { value: 'Convention', label: '🎪 Hội chợ', color: '#9C27B0' },
+    { value: 'Photoshoot', label: '📸 Chụp hình', color: '#00BCD4' },
+    { value: 'Other', label: '📂 Khác', color: '#607D8B' }
   ];
 
+  // Video categories (matching backend)
   const videoCategories = [
-    { value: 'Performance', label: '🎭 Performance', color: '#E91E63' },
-    { value: 'Tutorial', label: '📚 Tutorial', color: '#4CAF50' },
-    { value: 'Behind the Scenes', label: '🎬 Behind the Scenes', color: '#FF9800' },
-    { value: 'Transformation', label: '✨ Transformation', color: '#9C27B0' },
-    { value: 'Convention', label: '🎪 Convention', color: '#2196F3' },
-    { value: 'Dance', label: '💃 Dance', color: '#E91E63' },
-    { value: 'Skit', label: '🎪 Skit', color: '#FF5722' },
-    { value: 'Voice Acting', label: '🎤 Voice Acting', color: '#00BCD4' },
-    { value: 'Review', label: '⭐ Review', color: '#FFC107' },
-    { value: 'Other', label: '📂 Other', color: '#607D8B' }
+    { value: 'Performance', label: '🎭 Biểu diễn', color: '#E91E63' },
+    { value: 'Tutorial', label: '📚 Hướng dẫn', color: '#4CAF50' },
+    { value: 'Behind the Scenes', label: '🎬 Hậu trường', color: '#FF9800' },
+    { value: 'Transformation', label: '✨ Biến hóa', color: '#9C27B0' },
+    { value: 'Convention', label: '🎪 Hội chợ', color: '#2196F3' },
+    { value: 'Dance', label: '💃 Nhảy múa', color: '#E91E63' },
+    { value: 'Skit', label: '🎪 Tiểu phẩm', color: '#FF5722' },
+    { value: 'Voice Acting', label: '🎤 Lồng tiếng', color: '#00BCD4' },
+    { value: 'Review', label: '⭐ Đánh giá', color: '#FFC107' },
+    { value: 'Other', label: '📂 Khác', color: '#607D8B' }
   ];
 
   const categories = type === 'photo' ? photoCategories : videoCategories;
@@ -131,13 +135,15 @@ const MediaUploadDialog = ({
       setErrors({});
       setApiError('');
       setUploadProgress(0);
+      setUploadSuccess(false);
+      setIsUploading(false);
       onClose();
     }
   };
 
   const handleNext = () => {
     if (activeStep === 0 && !selectedFile) {
-      setErrors({ file: 'Please select a file to upload' });
+      setErrors({ file: 'Vui lòng chọn một file để tải lên' });
       return;
     }
     if (activeStep === 1 && !validateDetails()) {
@@ -154,11 +160,11 @@ const MediaUploadDialog = ({
     const newErrors = {};
     
     if (!formData.title.trim()) {
-      newErrors.title = 'Title is required';
+      newErrors.title = 'Tiêu đề là bắt buộc';
     }
     
     if (!formData.category) {
-      newErrors.category = 'Please select a category';
+      newErrors.category = 'Vui lòng chọn danh mục';
     }
     
     setErrors(newErrors);
@@ -200,17 +206,17 @@ const MediaUploadDialog = ({
 
     // Validate file type
     if (type === 'photo' && !file.type.startsWith('image/')) {
-      setErrors(prev => ({ ...prev, file: 'Please select an image file' }));
+      setErrors(prev => ({ ...prev, file: 'Vui lòng chọn file hình ảnh' }));
       return;
     }
     
     if (type === 'video' && fileType === 'main' && !file.type.startsWith('video/')) {
-      setErrors(prev => ({ ...prev, file: 'Please select a video file' }));
+      setErrors(prev => ({ ...prev, file: 'Vui lòng chọn file video' }));
       return;
     }
 
     if (fileType === 'thumbnail' && !file.type.startsWith('image/')) {
-      setErrors(prev => ({ ...prev, thumbnail: 'Thumbnail must be an image' }));
+      setErrors(prev => ({ ...prev, thumbnail: 'Ảnh thu nhỏ phải là file hình ảnh' }));
       return;
     }
 
@@ -218,7 +224,7 @@ const MediaUploadDialog = ({
     const maxSize = type === 'photo' ? 10 * 1024 * 1024 : 100 * 1024 * 1024;
     if (file.size > maxSize) {
       const maxSizeText = type === 'photo' ? '10MB' : '100MB';
-      setErrors(prev => ({ ...prev, file: `File size cannot exceed ${maxSizeText}` }));
+      setErrors(prev => ({ ...prev, file: `Kích thước file không được vượt quá ${maxSizeText}` }));
       return;
     }
 
@@ -254,9 +260,25 @@ const MediaUploadDialog = ({
   };
 
   const handleUpload = async () => {
+    // Prevent multiple uploads with user feedback
+    if (loading || isUploading) {
+      setApiError('Đang tải lên. Vui lòng đợi...');
+      return;
+    }
+    
+    if (uploadSuccess) {
+      setApiError('File này đã được tải lên thành công.');
+      return;
+    }
+
     setLoading(true);
+    setIsUploading(true);
     setApiError('');
     setUploadProgress(0);
+    
+    // Create a unique upload identifier to prevent duplicates
+    const uploadId = Date.now() + '-' + Math.random().toString(36).substr(2, 9);
+    console.log('Starting upload with ID:', uploadId);
     
     // Simulate upload progress
     const progressInterval = setInterval(() => {
@@ -290,14 +312,17 @@ const MediaUploadDialog = ({
           description: formData.description.trim(),
           category: formData.category,
           duration: formData.duration,
-          displayOrder: formData.displayOrder || 0
+          displayOrder: 0 // Auto-assign displayOrder
         });
       }
+
+      console.log('Upload completed for ID:', uploadId, 'Result:', result);
 
       clearInterval(progressInterval);
       setUploadProgress(100);
 
       if (result.success) {
+        setUploadSuccess(true);
         setTimeout(() => {
           onUploadSuccess?.(result.data);
           handleClose();
@@ -306,17 +331,19 @@ const MediaUploadDialog = ({
         if (result.errors && Object.keys(result.errors).length > 0) {
           setErrors(result.errors);
         } else {
-          setApiError(result.message || 'Upload failed');
+          setApiError(result.message || 'Tải lên thất bại');
         }
         setUploadProgress(0);
       }
       
     } catch (error) {
+      console.error('Upload error for ID:', uploadId, error);
       clearInterval(progressInterval);
-      setApiError('Connection error. Please try again.');
+      setApiError('Lỗi kết nối. Vui lòng thử lại.');
       setUploadProgress(0);
     } finally {
       setLoading(false);
+      setIsUploading(false);
     }
   };
 
@@ -378,15 +405,15 @@ const MediaUploadDialog = ({
                     <CloudUpload sx={{ fontSize: 48, color: 'white' }} />
                   </Box>
                   <Typography variant="h5" gutterBottom fontWeight={700} color="text.primary">
-                    {dragActive ? 'Drop your file here!' : `Upload your ${type}`}
+                    {dragActive ? 'Thả file vào đây!' : `Tải lên ${type === 'photo' ? 'ảnh' : 'video'} của bạn`}
                   </Typography>
                   <Typography variant="body1" color="text.secondary" sx={{ mb: 2 }}>
-                    Drag and drop or click to browse
+                    Kéo và thả hoặc nhấp để chọn file
                   </Typography>
                   <Chip 
                     label={type === 'photo' 
-                      ? 'JPEG, PNG, WebP • Max 10MB'
-                      : 'MP4, AVI, MOV, WMV, WebM • Max 100MB'
+                      ? 'JPEG, PNG, WebP • Tối đa 10MB'
+                      : 'MP4, AVI, MOV, WMV, WebM • Tối đa 100MB'
                     }
                     sx={{ 
                       backgroundColor: 'background.paper',
@@ -468,7 +495,7 @@ const MediaUploadDialog = ({
                     disabled={loading}
                     sx={{ borderRadius: '12px' }}
                   >
-                    Change File
+                    Thay Đổi File
                   </Button>
                 </Box>
               )}
@@ -488,10 +515,10 @@ const MediaUploadDialog = ({
                     <CheckCircle sx={{ color: 'success.main' }} />
                     <Box sx={{ flexGrow: 1 }}>
                       <Typography variant="body2" fontWeight={600}>
-                        File ready for upload
+                        File sẵn sàng để tải lên
                       </Typography>
                       <Typography variant="caption" color="text.secondary">
-                        Continue to add details and publish
+                        Tiếp tục để thêm chi tiết và đăng
                       </Typography>
                     </Box>
                   </Box>
@@ -508,14 +535,14 @@ const MediaUploadDialog = ({
               <Grid item xs={12}>
                 <TextField
                   fullWidth
-                  label="Title"
+                  label="Tiêu đề"
                   value={formData.title}
                   onChange={handleInputChange('title')}
                   error={!!errors.title}
                   helperText={errors.title}
-                  disabled={loading}
+                  disabled={loading || isUploading}
                   required
-                  placeholder={`Give your ${type} a catchy title...`}
+                  placeholder={`Đặt tiêu đề hấp dẫn cho ${type === 'photo' ? 'ảnh' : 'video'} của bạn...`}
                   InputProps={{
                     sx: { borderRadius: '12px' }
                   }}
@@ -525,25 +552,26 @@ const MediaUploadDialog = ({
               {/* Category Selection with Visual Cards */}
               <Grid item xs={12}>
                 <Typography variant="subtitle1" fontWeight={600} sx={{ mb: 2 }}>
-                  Category <span style={{ color: 'red' }}>*</span>
+                  Danh mục <span style={{ color: 'red' }}>*</span>
                 </Typography>
                 <Grid container spacing={2}>
                   {categories.map(cat => (
                     <Grid item xs={6} sm={4} md={3} key={cat.value}>
                       <Card
                         sx={{
-                          cursor: 'pointer',
+                          cursor: (loading || isUploading) ? 'not-allowed' : 'pointer',
                           border: '2px solid',
                           borderColor: formData.category === cat.value ? cat.color : 'divider',
                           borderRadius: '12px',
                           transition: 'all 0.2s ease',
                           backgroundColor: formData.category === cat.value ? `${cat.color}15` : 'background.paper',
-                          '&:hover': {
+                          opacity: (loading || isUploading) ? 0.6 : 1,
+                          '&:hover': (loading || isUploading) ? {} : {
                             borderColor: cat.color,
                             backgroundColor: `${cat.color}10`
                           }
                         }}
-                        onClick={() => handleInputChange('category')({ target: { value: cat.value } })}
+                        onClick={() => !loading && !isUploading && handleInputChange('category')({ target: { value: cat.value } })}
                       >
                         <CardContent sx={{ p: 2, textAlign: 'center', '&:last-child': { pb: 2 } }}>
                           <Typography variant="body2" fontWeight={500}>
@@ -564,13 +592,13 @@ const MediaUploadDialog = ({
               <Grid item xs={12}>
                 <TextField
                   fullWidth
-                  label="Description"
+                  label="Mô tả"
                   value={formData.description}
                   onChange={handleInputChange('description')}
                   multiline
                   rows={4}
-                  disabled={loading}
-                  placeholder={`Tell people about your ${type}...`}
+                  disabled={loading || isUploading}
+                  placeholder={`Kể cho mọi người về ${type === 'photo' ? 'ảnh' : 'video'} của bạn...`}
                   InputProps={{
                     sx: { borderRadius: '12px' }
                   }}
@@ -620,9 +648,9 @@ const MediaUploadDialog = ({
                     renderInput={(params) => (
                       <TextField
                         {...params}
-                        label="Tags"
-                        placeholder={formData.tags && formData.tags.length > 0 ? "Add more tags..." : "e.g., anime, manga, character name"}
-                        helperText="Type and press Enter to add tags, or separate with commas"
+                        label="Thẻ"
+                        placeholder={formData.tags && formData.tags.length > 0 ? "Thêm thẻ khác..." : "ví dụ: anime, manga, tên nhân vật"}
+                        helperText="Gõ và nhấn Enter để thêm thẻ, hoặc phân cách bằng dấu phẩy"
                         InputProps={{
                           ...params.InputProps,
                           sx: { borderRadius: '12px' }
@@ -653,7 +681,7 @@ const MediaUploadDialog = ({
                       }}
                     >
                       <Typography variant="subtitle1" fontWeight={600} sx={{ mb: 2 }}>
-                        Video Thumbnail (Optional)
+                        Ảnh Thumbnail Video (Tùy chọn)
                       </Typography>
                       {!thumbnailFile ? (
                         <Button
@@ -663,7 +691,7 @@ const MediaUploadDialog = ({
                           disabled={loading}
                           sx={{ borderRadius: '12px' }}
                         >
-                          Choose Thumbnail Image
+                          Chọn Ảnh Thumbnail
                         </Button>
                       ) : (
                         <Box>
@@ -676,7 +704,7 @@ const MediaUploadDialog = ({
                             onClick={() => setThumbnailFile(null)}
                             disabled={loading}
                           >
-                            Remove
+                            Xóa
                           </Button>
                         </Box>
                       )}
@@ -695,33 +723,16 @@ const MediaUploadDialog = ({
                     <Grid item xs={12} sm={6}>
                       <TextField
                         fullWidth
-                        label="Duration (seconds)"
+                        label="Thời lượng (giây)"
                         value={formData.duration}
                         disabled
-                        helperText={`Auto-detected: ${Math.floor(formData.duration / 60)}m ${formData.duration % 60}s`}
+                        helperText={`Tự động phát hiện: ${Math.floor(formData.duration / 60)}p ${formData.duration % 60}s`}
                         InputProps={{
                           sx: { borderRadius: '12px' }
                         }}
                       />
                     </Grid>
                   )}
-
-                  {/* Display Order */}
-                  <Grid item xs={12} sm={6}>
-                    <TextField
-                      fullWidth
-                      label="Display Order"
-                      type="number"
-                      value={formData.displayOrder}
-                      onChange={handleInputChange('displayOrder')}
-                      disabled={loading}
-                      helperText="Order in video gallery (0 = first)"
-                      InputProps={{
-                        inputProps: { min: 0, max: 999 },
-                        sx: { borderRadius: '12px' }
-                      }}
-                    />
-                  </Grid>
                 </>
               )}
             </Grid>
@@ -732,13 +743,13 @@ const MediaUploadDialog = ({
         return (
           <Box sx={{ py: 2 }}>
             {/* Upload Progress */}
-            {loading && (
+            {(loading || uploadSuccess) && (
               <Box sx={{ mb: 4 }}>
                 <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
                   <Typography variant="h6" sx={{ flexGrow: 1 }}>
-                    Uploading your {type}...
+                    {uploadSuccess ? `${type === 'photo' ? 'Ảnh' : 'Video'} đã được tải lên thành công!` : `Đang tải lên ${type === 'photo' ? 'ảnh' : 'video'} của bạn...`}
                   </Typography>
-                  <Typography variant="h6" color="primary" fontWeight={700}>
+                  <Typography variant="h6" color={uploadSuccess ? 'success.main' : 'primary'} fontWeight={700}>
                     {uploadProgress}%
                   </Typography>
                 </Box>
@@ -751,16 +762,26 @@ const MediaUploadDialog = ({
                     backgroundColor: 'action.hover',
                     '& .MuiLinearProgress-bar': {
                       borderRadius: 6,
-                      background: 'linear-gradient(45deg, #E91E63, #9C27B0)'
+                      background: uploadSuccess ? 
+                        'linear-gradient(45deg, #4CAF50, #2E7D32)' :
+                        'linear-gradient(45deg, #E91E63, #9C27B0)'
                     }
                   }}
                 />
+                {uploadSuccess && (
+                  <Box sx={{ display: 'flex', alignItems: 'center', mt: 2, color: 'success.main' }}>
+                    <CheckCircle sx={{ mr: 1 }} />
+                    <Typography variant="body2">
+                      {type === 'photo' ? 'Ảnh' : 'Video'} của bạn đã được đăng thành công và sẽ xuất hiện trong thư viện sớm.
+                    </Typography>
+                  </Box>
+                )}
               </Box>
             )}
 
             {/* Review Content */}
             <Typography variant="h6" fontWeight={600} sx={{ mb: 3 }}>
-              Review Your {type === 'photo' ? 'Photo' : 'Video'}
+              Xem Lại {type === 'photo' ? 'Ảnh' : 'Video'} Của Bạn
             </Typography>
 
             <Grid container spacing={3}>
@@ -789,14 +810,14 @@ const MediaUploadDialog = ({
                     }}>
                       <VideoFile sx={{ fontSize: 64, color: 'text.secondary', mb: 2 }} />
                       <Typography variant="h6" color="text.secondary" sx={{ mb: 1 }}>
-                        Video Ready for Upload
+                        Video Sẵn Sàng Để Tải Lên
                       </Typography>
                       <Typography variant="body2" color="text.secondary" align="center">
                         {selectedFile.name}
                       </Typography>
                       {formData.duration > 0 && (
                         <Typography variant="body2" color="primary" sx={{ mt: 1, fontWeight: 600 }}>
-                          Duration: {Math.floor(formData.duration / 60)}:{(formData.duration % 60).toString().padStart(2, '0')}
+                          Thời lượng: {Math.floor(formData.duration / 60)}:{(formData.duration % 60).toString().padStart(2, '0')}
                         </Typography>
                       )}
                     </Box>
@@ -836,7 +857,7 @@ const MediaUploadDialog = ({
                     {formData.isPortfolio && (
                       <Chip 
                         icon={<Star />}
-                        label="Portfolio" 
+                        label="Tuyển chọn" 
                         size="small"
                         color="primary"
                       />
@@ -866,7 +887,7 @@ const MediaUploadDialog = ({
             <Box sx={{ mt: 3 }}>
               <Typography variant="caption" color="text.secondary">
                 File: {selectedFile?.name} ({formatFileSize(selectedFile?.size || 0)})
-                {type === 'video' && formData.duration > 0 && ` • Duration: ${Math.floor(formData.duration / 60)}m ${formData.duration % 60}s`}
+                {type === 'video' && formData.duration > 0 && ` • Thời lượng: ${Math.floor(formData.duration / 60)}p ${formData.duration % 60}s`}
                 {thumbnailFile && ` • Thumbnail: ${thumbnailFile.name}`}
               </Typography>
             </Box>
@@ -920,10 +941,10 @@ const MediaUploadDialog = ({
           </Box>
           <Box>
             <Typography variant="h5" fontWeight={700}>
-              Upload {type === 'photo' ? 'Photo' : 'Video'}
+              Tải Lên {type === 'photo' ? 'Ảnh' : 'Video'}
             </Typography>
             <Typography variant="body2" color="text.secondary">
-              Share your amazing {type} with the community
+              Chia sẻ {type === 'photo' ? 'ảnh' : 'video'} tuyệt vời của bạn với cộng đồng
             </Typography>
           </Box>
         </Box>
@@ -968,10 +989,10 @@ const MediaUploadDialog = ({
       }}>
         <Button 
           onClick={handleClose} 
-          disabled={loading}
+          disabled={loading || isUploading}
           sx={{ borderRadius: '12px', px: 3 }}
         >
-          Cancel
+          Hủy
         </Button>
         
         <Box sx={{ flexGrow: 1 }} />
@@ -979,10 +1000,10 @@ const MediaUploadDialog = ({
         {activeStep > 0 && (
           <Button
             onClick={handleBack}
-            disabled={loading}
+            disabled={loading || isUploading}
             sx={{ borderRadius: '12px', px: 3 }}
           >
-            Back
+            Quay Lại
           </Button>
         )}
         
@@ -990,7 +1011,7 @@ const MediaUploadDialog = ({
           <Button
             variant="contained"
             onClick={handleNext}
-            disabled={loading}
+            disabled={loading || isUploading}
             sx={{
               borderRadius: '12px',
               px: 4,
@@ -1000,24 +1021,36 @@ const MediaUploadDialog = ({
               }
             }}
           >
-            Next
+            Tiếp Theo
           </Button>
         ) : (
           <Button
             variant="contained"
             onClick={handleUpload}
-            disabled={loading || !selectedFile}
-            startIcon={loading ? <CircularProgress size={20} color="inherit" /> : <Publish />}
+            disabled={loading || isUploading || uploadSuccess || !selectedFile}
+            startIcon={
+              loading || isUploading ? 
+                <CircularProgress size={20} color="inherit" /> : 
+                uploadSuccess ? 
+                  <CheckCircle /> : 
+                  <Publish />
+            }
             sx={{
               borderRadius: '12px',
               px: 4,
-              background: loading ? undefined : 'linear-gradient(45deg, #E91E63, #9C27B0)',
+              background: (loading || isUploading) ? undefined : 
+                        uploadSuccess ? 'linear-gradient(45deg, #4CAF50, #2E7D32)' :
+                        'linear-gradient(45deg, #E91E63, #9C27B0)',
               '&:hover': {
-                background: loading ? undefined : 'linear-gradient(45deg, #AD1457, #7B1FA2)',
+                background: (loading || isUploading) ? undefined : 
+                          uploadSuccess ? 'linear-gradient(45deg, #388E3C, #1B5E20)' :
+                          'linear-gradient(45deg, #AD1457, #7B1FA2)',
               }
             }}
           >
-            {loading ? 'Publishing...' : `Publish ${type === 'photo' ? 'Photo' : 'Video'}`}
+            {loading || isUploading ? 'Đang đăng...' : 
+             uploadSuccess ? 'Đã đăng thành công!' :
+             `Đăng ${type === 'photo' ? 'Ảnh' : 'Video'}`}
           </Button>
         )}
 
@@ -1036,7 +1069,7 @@ const MediaUploadDialog = ({
             boxShadow: 3
           }}>
             <Typography variant="subtitle2" fontWeight={600} sx={{ mb: 1 }}>
-              Quick Settings
+              Cài Đặt Nhanh
             </Typography>
             {type === 'photo' && (
               <FormControlLabel
@@ -1044,7 +1077,7 @@ const MediaUploadDialog = ({
                   <Switch
                     checked={formData.isPortfolio}
                     onChange={handleInputChange('isPortfolio')}
-                    disabled={loading}
+                    disabled={loading || isUploading}
                     color="primary"
                     size="small"
                   />
@@ -1052,7 +1085,7 @@ const MediaUploadDialog = ({
                 label={
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                     <Star fontSize="small" />
-                    <Typography variant="body2">Add to Portfolio</Typography>
+                    <Typography variant="body2">Thêm vào Tuyển chọn</Typography>
                   </Box>
                 }
                 sx={{ width: '100%' }}

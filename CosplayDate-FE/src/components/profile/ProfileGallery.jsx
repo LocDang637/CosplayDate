@@ -44,7 +44,8 @@ import {
   Edit,
   Delete,
   Save,
-  PlayArrow
+  PlayArrow,
+  VideoFile
 } from '@mui/icons-material';
 import { cosplayerMediaAPI } from '../../services/cosplayerAPI';
 
@@ -74,14 +75,17 @@ const ProfileGallery = ({
     description: '',
     category: '',
     isPortfolio: false,
-    displayOrder: 0,
     tags: [],
     duration: 0
   });
-  const [availableCategories] = useState([
+  
+  // Photo categories (matching backend)
+  const [photoCategories] = useState([
     'Cosplay', 'Portrait', 'Action', 'Group', 'Behind the Scenes',
     'Props', 'Makeup', 'Work in Progress', 'Convention', 'Photoshoot', 'Other'
   ]);
+  
+  // Video categories (matching backend)
   const [videoCategories] = useState([
     'Performance', 'Tutorial', 'Behind the Scenes', 'Transformation',
     'Convention', 'Dance', 'Skit', 'Voice Acting', 'Review', 'Other'
@@ -96,21 +100,62 @@ const ProfileGallery = ({
     samplePhotoKeys: photos[0] ? Object.keys(photos[0]) : []
   });
 
-  // Categories for filtering
-  const categories = [
-    { id: 'all', label: 'Tất cả', count: photos.length + videos.length },
-    { id: 'Cosplay', label: 'Cosplay', count: photos.filter(p => p.category === 'Cosplay').length },
-    { id: 'Portrait', label: 'Chân dung', count: photos.filter(p => p.category === 'Portrait').length },
-    { id: 'Action', label: 'Hành động', count: photos.filter(p => p.category === 'Action').length },
-    { id: 'Group', label: 'Nhóm', count: photos.filter(p => p.category === 'Group').length },
-    { id: 'Behind the Scenes', label: 'Hậu trường', count: photos.filter(p => p.category === 'Behind the Scenes').length },
-    { id: 'Props', label: 'Đạo cụ', count: photos.filter(p => p.category === 'Props').length },
-    { id: 'Makeup', label: 'Trang điểm', count: photos.filter(p => p.category === 'Makeup').length },
-    { id: 'Work in Progress', label: 'Đang thực hiện', count: photos.filter(p => p.category === 'Work in Progress').length },
-    { id: 'Convention', label: 'Sự kiện', count: photos.filter(p => p.category === 'Convention').length },
-    { id: 'Photoshoot', label: 'Chụp ảnh', count: photos.filter(p => p.category === 'Photoshoot').length },
-    { id: 'Other', label: 'Khác', count: photos.filter(p => p.category === 'Other').length },
-  ];
+  // Categories for filtering - dynamic based on media type
+  const categories = React.useMemo(() => {
+    const currentMedia = mediaType === 'photos' ? photos : videos;
+    const categoryList = mediaType === 'photos' ? photoCategories : videoCategories;
+    
+    // Vietnamese labels for photo categories
+    const photoLabels = {
+      'Cosplay': 'Cosplay',
+      'Portrait': 'Chân dung', 
+      'Action': 'Hành động',
+      'Group': 'Nhóm',
+      'Behind the Scenes': 'Hậu trường',
+      'Props': 'Đạo cụ',
+      'Makeup': 'Trang điểm',
+      'Work in Progress': 'Đang thực hiện',
+      'Convention': 'Sự kiện',
+      'Photoshoot': 'Chụp ảnh',
+      'Other': 'Khác'
+    };
+    
+    // Vietnamese labels for video categories
+    const videoLabels = {
+      'Performance': 'Biểu diễn',
+      'Tutorial': 'Hướng dẫn',
+      'Behind the Scenes': 'Hậu trường',
+      'Transformation': 'Biến hóa',
+      'Convention': 'Sự kiện',
+      'Dance': 'Nhảy múa',
+      'Skit': 'Tiểu phẩm',
+      'Voice Acting': 'Lồng tiếng',
+      'Review': 'Đánh giá',
+      'Other': 'Khác'
+    };
+    
+    const labels = mediaType === 'photos' ? photoLabels : videoLabels;
+    
+    const result = [
+      { id: 'all', label: 'Tất cả', count: currentMedia.length }
+    ];
+    
+    categoryList.forEach(category => {
+      const count = currentMedia.filter(media => media.category === category).length;
+      result.push({
+        id: category,
+        label: labels[category] || category,
+        count: count
+      });
+    });
+    
+    return result;
+  }, [mediaType, photos, videos, photoCategories, videoCategories]);
+
+  // Reset selected category when media type changes
+  React.useEffect(() => {
+    setSelectedCategory('all');
+  }, [mediaType]);
 
   // Filter media based on search and category
   const currentMedia = mediaType === 'photos' ? photos : videos;
@@ -158,7 +203,6 @@ const ProfileGallery = ({
       description: media.description || '',
       category: media.category || 'Other',
       isPortfolio: Boolean(media.isPortfolio),
-      displayOrder: Number(media.displayOrder) || 0,
       tags: Array.isArray(media.tags) ? media.tags : [],
       duration: Number(media.duration) || 0 // Add duration for videos
     });
@@ -198,7 +242,7 @@ const ProfileGallery = ({
           description: editFormData.description?.trim() || '',
           category: editFormData.category || 'Other',
           duration: Number(editFormData.duration) || 0,
-          displayOrder: Number(editFormData.displayOrder) || 0
+          displayOrder: Number(selectedMediaForMenu.displayOrder) || 0 // Keep current displayOrder
         };
 
         console.log('📤 Updating video with data:', requestData);
@@ -210,7 +254,7 @@ const ProfileGallery = ({
           description: editFormData.description?.trim() || '',
           category: editFormData.category || 'Other',
           isPortfolio: Boolean(editFormData.isPortfolio),
-          displayOrder: Number(editFormData.displayOrder) || 0,
+          displayOrder: Number(selectedMediaForMenu.displayOrder) || 0, // Keep current displayOrder
           tags: Array.isArray(editFormData.tags) ? editFormData.tags : []
         };
 
@@ -319,12 +363,13 @@ const ProfileGallery = ({
         <CardMedia
           component="img"
           height="250"
-          image={photo.photoUrl || photo.url}
+          image={photo.isVideo && !photo.photoUrl ? null : (photo.photoUrl || photo.url)}
           alt={photo.title || `${photo.isVideo ? 'Video' : 'Photo'} ${index + 1}`}
           sx={{
             objectFit: 'cover',
-            backgroundColor: 'grey.100',
-            position: 'relative'
+            backgroundColor: photo.isVideo && !photo.photoUrl ? 'grey.800' : 'grey.100',
+            position: 'relative',
+            display: photo.isVideo && !photo.photoUrl ? 'none' : 'block'
           }}
           onLoad={() => console.log('✅ CardMedia loaded:', photo.photoUrl || photo.url)}
           onError={(e) => {
@@ -332,6 +377,28 @@ const ProfileGallery = ({
             e.target.style.backgroundColor = '#f5f5f5';
           }}
         />
+
+        {/* Video placeholder when no thumbnail */}
+        {photo.isVideo && !photo.photoUrl && (
+          <Box
+            sx={{
+              height: 250,
+              width: 250,
+              backgroundColor: 'grey.800',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              position: 'relative',
+              gap: 2
+            }}
+          >
+            <VideoFile sx={{ fontSize: 48, color: 'grey.400' }} />
+            <Typography variant="body2" color="grey.400" sx={{ textAlign: 'center', px: 2 }}>
+              Video Preview
+            </Typography>
+          </Box>
+        )}
         
         {/* Video Play Icon Overlay */}
         {photo.isVideo && (
@@ -490,7 +557,7 @@ const ProfileGallery = ({
         {/* Portfolio Badge */}
         {photo.isPortfolio && (
           <Chip
-            label="Portfolio"
+            label="Tuyển chọn"
             size="small"
             sx={{
               position: 'absolute',
@@ -1075,9 +1142,42 @@ const ProfileGallery = ({
                 label="Danh mục"
                 sx={{ borderRadius: '12px' }}
               >
-                {(selectedMediaForMenu?.isVideo ? videoCategories : availableCategories).map((cat) => (
-                  <MenuItem key={cat} value={cat}>{cat}</MenuItem>
-                ))}
+                {(selectedMediaForMenu?.isVideo ? videoCategories : photoCategories).map((cat) => {
+                  // Vietnamese labels for categories
+                  const photoLabels = {
+                    'Cosplay': '🎭 Cosplay',
+                    'Portrait': '👤 Chân dung', 
+                    'Action': '⚡ Hành động',
+                    'Group': '👥 Nhóm',
+                    'Behind the Scenes': '🎬 Hậu trường',
+                    'Props': '🛡️ Phụ kiện',
+                    'Makeup': '💄 Trang điểm',
+                    'Work in Progress': '🔧 Đang thực hiện',
+                    'Convention': '🎪 Hội chợ',
+                    'Photoshoot': '📸 Chụp hình',
+                    'Other': '📂 Khác'
+                  };
+                  
+                  const videoLabels = {
+                    'Performance': '🎭 Biểu diễn',
+                    'Tutorial': '📚 Hướng dẫn',
+                    'Behind the Scenes': '🎬 Hậu trường',
+                    'Transformation': '✨ Biến hóa',
+                    'Convention': '🎪 Hội chợ',
+                    'Dance': '💃 Nhảy múa',
+                    'Skit': '🎪 Tiểu phẩm',
+                    'Voice Acting': '🎤 Lồng tiếng',
+                    'Review': '⭐ Đánh giá',
+                    'Other': '📂 Khác'
+                  };
+                  
+                  const labels = selectedMediaForMenu?.isVideo ? videoLabels : photoLabels;
+                  const displayLabel = labels[cat] || cat;
+                  
+                  return (
+                    <MenuItem key={cat} value={cat}>{displayLabel}</MenuItem>
+                  );
+                })}
               </Select>
             </FormControl>
 
@@ -1121,7 +1221,7 @@ const ProfileGallery = ({
                 renderInput={(params) => (
                   <TextField
                     {...params}
-                    label="Tags"
+                    label="Thẻ"
                     placeholder={editFormData.tags && editFormData.tags.length > 0 ? "Thêm thẻ..." : "anime, manga, tên nhân vật, series"}
                     helperText="Nhập và nhấn Enter để thêm thẻ, hoặc phân cách bằng dấu phẩy"
                     variant="outlined"
@@ -1156,43 +1256,7 @@ const ProfileGallery = ({
                     }
                   }}
                 />
-
-                {/* Display Order */}
-                <TextField
-                  fullWidth
-                  label="Thứ tự hiển thị"
-                  type="number"
-                  value={editFormData.displayOrder}
-                  onChange={(e) => setEditFormData({ ...editFormData, displayOrder: Number(e.target.value) })}
-                  inputProps={{ min: 0, max: 999 }}
-                  helperText="Thứ tự trong thư viện video (0 = đầu tiên)"
-                  variant="outlined"
-                  sx={{
-                    '& .MuiOutlinedInput-root': {
-                      borderRadius: '12px',
-                    }
-                  }}
-                />
               </>
-            )}
-
-            {/* Display Order for photos */}
-            {!selectedMediaForMenu?.isVideo && (
-              <TextField
-                fullWidth
-                label="Thứ tự hiển thị"
-                type="number"
-                value={editFormData.displayOrder}
-                onChange={(e) => setEditFormData({ ...editFormData, displayOrder: Number(e.target.value) })}
-                inputProps={{ min: 0, max: 999 }}
-                helperText="Thứ tự trong thư viện ảnh (0 = đầu tiên)"
-                variant="outlined"
-                sx={{
-                  '& .MuiOutlinedInput-root': {
-                    borderRadius: '12px',
-                  }
-                }}
-              />
             )}
           </Stack>
         </DialogContent>
