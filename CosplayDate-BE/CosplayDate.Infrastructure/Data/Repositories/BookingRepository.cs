@@ -15,8 +15,8 @@ namespace CosplayDate.Infrastructure.Data.Repositories
         public override async Task<Booking?> GetByIdAsync(int id)
         {
             var item = await _dbSet
-                //.Include(b => b.Cosplayer)
-                //.Include(b => b.Customer)
+                .Include(b => b.Cosplayer)
+                .Include(b => b.Customer)
                 .FirstOrDefaultAsync(b => b.Id == id);
             return item;
         }

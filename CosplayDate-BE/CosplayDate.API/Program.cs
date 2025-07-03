@@ -215,6 +215,9 @@ builder.Services.AddScoped<BookingValidationService>();
 builder.Services.AddScoped<BookingReminderBackgroundService>();
 builder.Services.AddScoped<IEscrowService, EscrowService>();
 
+// ===== ADD ADMIN ANALYTICS SERVICE =====
+builder.Services.AddScoped<IAdminAnalyticsService, AdminAnalyticsService>();
+
 // ===== JWT AUTHENTICATION CONFIGURATION =====
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
@@ -264,7 +267,7 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
         };
     });
 
-// ===== AUTHORIZATION POLICIES =====
+// ===== ENHANCED AUTHORIZATION POLICIES =====
 builder.Services.AddAuthorization(options =>
 {
     options.AddPolicy("RequireVerifiedUser", policy =>
@@ -280,9 +283,19 @@ builder.Services.AddAuthorization(options =>
         policy.RequireAuthenticatedUser()
               .RequireClaim("UserType", "Customer")
               .RequireClaim("IsVerified", "True"));
+
+    // ===== NEW ADMIN AUTHORIZATION POLICIES =====
+    options.AddPolicy("RequireAdmin", policy =>
+        policy.RequireAuthenticatedUser()
+              .RequireClaim("UserType", "Admin")
+              .RequireClaim("IsVerified", "True"));
+
+    // Alternative: Role-based authorization for Admin
+    options.AddPolicy("AdminOnly", policy =>
+        policy.RequireRole("Admin"));
 });
 
-// ===== RATE LIMITING =====
+// ===== ENHANCED RATE LIMITING =====
 builder.Services.AddRateLimiter(options =>
 {
     options.AddFixedWindowLimiter("AuthPolicy", limiterOptions =>
@@ -299,6 +312,15 @@ builder.Services.AddRateLimiter(options =>
         limiterOptions.Window = TimeSpan.FromMinutes(1);
         limiterOptions.QueueProcessingOrder = QueueProcessingOrder.OldestFirst;
         limiterOptions.QueueLimit = 10;
+    });
+
+    // ===== NEW ADMIN RATE LIMITING POLICY =====
+    options.AddFixedWindowLimiter("AdminPolicy", limiterOptions =>
+    {
+        limiterOptions.PermitLimit = builder.Environment.IsProduction() ? 200 : 2000;
+        limiterOptions.Window = TimeSpan.FromMinutes(1);
+        limiterOptions.QueueProcessingOrder = QueueProcessingOrder.OldestFirst;
+        limiterOptions.QueueLimit = 20;
     });
 });
 
@@ -435,7 +457,8 @@ app.MapGet("/", () => Results.Ok(new
         healthDatabase = "/health/database",
         debugConfig = "/debug/config",
         debugEnvironment = "/debug/environment",
-        api = "/api"
+        api = "/api",
+        adminDashboard = "/api/admin/dashboard/stats" // NEW ADMIN ENDPOINT
     },
     timestamp = DateTime.UtcNow
 })).AllowAnonymous();
@@ -532,6 +555,39 @@ app.MapGet("/health/database", async (CosplayDateDbContext context, ILogger<Prog
     }
 }).AllowAnonymous();
 
+// ===== NEW ADMIN DASHBOARD QUICK ACCESS ENDPOINT =====
+app.MapGet("/admin/quick-stats", async (IServiceProvider serviceProvider) =>
+{
+    try
+    {
+        using var scope = serviceProvider.CreateScope();
+        var analyticsService = scope.ServiceProvider.GetRequiredService<IAdminAnalyticsService>();
+
+        var result = await analyticsService.GetDashboardStatsAsync();
+
+        if (result.IsSuccess && result.Data != null)
+        {
+            return Results.Ok(new
+            {
+                message = "Admin Quick Stats",
+                totalUsers = result.Data.UserStats.TotalUsers,
+                onlineUsers = result.Data.UserStats.OnlineUsers,
+                onlineCosplayers = result.Data.UserStats.OnlineCosplayers,
+                completedBookings = result.Data.BookingStats.CompletedBookings,
+                totalRevenue = result.Data.RevenueStats.TotalRevenue,
+                revenueThisMonth = result.Data.RevenueStats.RevenueThisMonth,
+                generatedAt = result.Data.GeneratedAt
+            });
+        }
+
+        return Results.Problem("Failed to retrieve admin statistics");
+    }
+    catch (Exception ex)
+    {
+        return Results.Problem($"Error: {ex.Message}");
+    }
+}).AllowAnonymous(); // For quick testing - remove in production!
+
 // Health checks
 app.MapHealthChecks("/health");
 app.MapHealthChecks("/health/ready", new Microsoft.AspNetCore.Diagnostics.HealthChecks.HealthCheckOptions
@@ -578,5 +634,9 @@ if (app.Environment.IsProduction())
         }
     }
 }
+
+Console.WriteLine("🎭 CosplayDate API is ready!");
+Console.WriteLine($"📊 Admin Dashboard: {(app.Environment.IsDevelopment() ? "http://localhost:5000" : "https://yourdomain.com")}/api/admin/dashboard/stats");
+Console.WriteLine($"🔍 Quick Stats: {(app.Environment.IsDevelopment() ? "http://localhost:5000" : "https://yourdomain.com")}/admin/quick-stats");
 
 app.Run();
