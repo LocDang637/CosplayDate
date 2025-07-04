@@ -82,6 +82,12 @@ const CosplayerCard = ({
         }
       });
     } else if (isCustomer) {
+      // Clear any existing booking state for a fresh start
+      try {
+        sessionStorage.removeItem(`booking_${cosplayer.id}`);
+      } catch (e) {
+        console.warn('Failed to clear booking state:', e);
+      }
       navigate(`/booking/${cosplayer.id}`);
     } else {
       // Show popup for cosplayers trying to book

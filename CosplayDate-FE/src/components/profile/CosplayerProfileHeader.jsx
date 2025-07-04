@@ -1,5 +1,6 @@
 // src/components/profile/CosplayerProfileHeader.jsx - Improved Version with Avatar Upload
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Box,
   Typography,
@@ -16,6 +17,11 @@ import {
   DialogContent,
   DialogContentText,
   DialogActions,
+  IconButton,
+  Menu,
+  MenuItem,
+  ListItemIcon,
+  ListItemText,
 } from '@mui/material';
 import {
   Edit,
@@ -32,7 +38,8 @@ import {
   Verified,
   Event,
   Warning,
-  PersonAdd, PersonRemove
+  PersonAdd, PersonRemove,
+  MoreVert
 } from '@mui/icons-material';
 import EditCosplayerDialog from './EditCosplayerDialog';
 
@@ -48,14 +55,43 @@ const CosplayerProfileHeader = ({
   onFollowToggle,
   isFollowing,
   onEditClick = () => { },
+  currentUser = null, // Add currentUser prop
 }) => {
+  const navigate = useNavigate();
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [avatarHovered, setAvatarHovered] = useState(false);
+  const [anchorEl, setAnchorEl] = useState(null);
+  const [showPopup, setShowPopup] = useState(false);
+  const [popupMessage, setPopupMessage] = useState('');
 
   if (!user) return null;
 
   // Create cosplayer alias for easier refactoring
   const cosplayer = user;
+
+  // Get current user with fallback logic similar to CosplayerCard
+  const getCurrentUser = () => {
+    if (currentUser) return currentUser;
+
+    const storedUser = localStorage.getItem('user');
+    if (storedUser) {
+      try {
+        return JSON.parse(storedUser);
+      } catch (error) {
+        console.error('Error parsing stored user:', error);
+        return null;
+      }
+    }
+    return null;
+  };
+
+  const loggedInUser = getCurrentUser();
+
+  // Debug log
+  console.log('CosplayerProfileHeader - Current user:', loggedInUser);
+
+  // Check if current user is a customer (not a cosplayer)
+  const isCustomer = loggedInUser && loggedInUser.userType === 'Customer';
 
   const handleEditClick = () => {
     setEditDialogOpen(true);
@@ -79,6 +115,14 @@ const CosplayerProfileHeader = ({
     onConfirmDelete?.();
   };
 
+  const handleMenuOpen = (event) => {
+    setAnchorEl(event.currentTarget);
+  };
+
+  const handleMenuClose = () => {
+    setAnchorEl(null);
+  };
+
   const formatPrice = (price) => {
     return new Intl.NumberFormat('vi-VN').format(price) + 'đ/giờ';
   };
@@ -86,12 +130,49 @@ const CosplayerProfileHeader = ({
   const handleShare = () => {
     if (navigator.share) {
       navigator.share({
-        title: `${user.firstName} ${user.lastName} - Khách hàng CosplayDate`,
+        title: `${user.firstName} ${user.lastName} - Cosplayer CosplayDate`,
         url: window.location.href,
       });
     } else {
       navigator.clipboard.writeText(window.location.href);
     }
+    handleMenuClose();
+  };
+
+  const handleBookingClick = () => {
+    console.log('Booking clicked - User:', loggedInUser, 'Is Customer:', isCustomer);
+
+    if (!loggedInUser) {
+      // Navigate to login page with redirect message
+      navigate('/login', {
+        state: {
+          message: 'Vui lòng đăng nhập để đặt lịch với cosplayer',
+          redirectUrl: `/cosplayer/${cosplayer.id}`
+        }
+      });
+    } else if (isCustomer) {
+      // Clear any existing booking state for a fresh start
+      try {
+        sessionStorage.removeItem(`booking_${cosplayer.id}`);
+      } catch (e) {
+        console.warn('Failed to clear booking state:', e);
+      }
+      navigate(`/booking/${cosplayer.id}`);
+    } else {
+      // Show popup for cosplayers trying to book
+      setPopupMessage('Chỉ khách hàng mới có thể đặt lịch với cosplayer');
+      setShowPopup(true);
+    }
+    handleMenuClose();
+  };
+
+  const handleFollowClick = () => {
+    onFollowToggle();
+    handleMenuClose();
+  };
+
+  const handleClosePopup = () => {
+    setShowPopup(false);
   };
 
   return (
@@ -328,102 +409,16 @@ const CosplayerProfileHeader = ({
 
             {/* Action Buttons */}
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5, minWidth: 200 }}>
-              {isOwnProfile ? (
-                <Button
-                  variant="contained"
-                  startIcon={<Edit />}
-                  onClick={handleEditClick}
-                  sx={{
-                    background: 'linear-gradient(45deg, #E91E63, #9C27B0)',
-                    borderRadius: '12px',
-                    textTransform: 'none',
-                    fontWeight: 600,
-                    px: 3,
-                    py: 1.5,
-                    boxShadow: '0 4px 15px rgba(233, 30, 99, 0.3)',
-                    '&:hover': {
-                      background: 'linear-gradient(45deg, #AD1457, #7B1FA2)',
-                      transform: 'translateY(-2px)',
-                      boxShadow: '0 6px 20px rgba(233, 30, 99, 0.4)',
-                    },
-                    transition: 'all 0.3s ease',
-                  }}
-                >
-                  Chỉnh sửa hồ sơ
-                </Button>
-              ) : (
-                <>
-                  <Button
-                    variant="contained"
-                    onClick={onFollowToggle}
-                    disabled={!user} // Disable if not logged in
-                    startIcon={isFollowing ? <PersonRemove /> : <PersonAdd />}
-                    sx={{
-                      borderRadius: '12px',
-                      textTransform: 'none',
-                      fontWeight: 600,
-                      px: 3,
-                      py: 1.5,
-                      background: isFollowing
-                        ? 'linear-gradient(45deg, #757575, #424242)'
-                        : 'linear-gradient(45deg, #E91E63, #9C27B0)',
-                      boxShadow: '0 4px 20px rgba(233, 30, 99, 0.25)',
-                      '&:hover': {
-                        background: isFollowing
-                          ? 'linear-gradient(45deg, #616161, #212121)'
-                          : 'linear-gradient(45deg, #C2185B, #7B1FA2)',
-                        transform: 'translateY(-2px)',
-                        boxShadow: '0 6px 25px rgba(233, 30, 99, 0.35)',
-                      },
-                      transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                    }}
-                  >
-                    {isFollowing ? 'Bỏ theo dõi' : 'Theo dõi'}
-                  </Button>
-                  <Button
-                    variant="contained"
-                    startIcon={<Event />}
-                    onClick={() => onEditClick()}
-                    sx={{
-                      background: 'linear-gradient(45deg, #E91E63, #9C27B0)',
-                      borderRadius: '12px',
-                      textTransform: 'none',
-                      fontWeight: 600,
-                      px: 3,
-                      py: 1.5,
-                      boxShadow: '0 4px 15px rgba(233, 30, 99, 0.3)',
-                      '&:hover': {
-                        background: 'linear-gradient(45deg, #AD1457, #7B1FA2)',
-                        transform: 'translateY(-2px)',
-                        boxShadow: '0 6px 20px rgba(233, 30, 99, 0.4)',
-                      },
-                      transition: 'all 0.3s ease',
-                    }}
-                  >
-                    Đặt lịch ngay
-                  </Button>
-                </>
-              )}
-              <Button
-                variant="outlined"
-                startIcon={<Share />}
-                onClick={handleShare}
+              <IconButton
+                onClick={handleMenuOpen}
                 sx={{
-                  borderColor: 'primary.main',
-                  color: 'primary.main',
-                  borderRadius: '12px',
-                  textTransform: 'none',
-                  fontWeight: 600,
-                  px: 3,
-                  py: 1.5,
-                  '&:hover': {
-                    borderColor: 'primary.main',
-                    backgroundColor: 'rgba(233, 30, 99, 0.05)',
-                  },
+                  backgroundColor: 'rgba(255,255,255,0.8)',
+                  '&:hover': { backgroundColor: 'rgba(255,255,255,1)' },
+                  alignSelf: 'flex-end',
                 }}
               >
-                Chia sẻ
-              </Button>
+                <MoreVert />
+              </IconButton>
             </Box>
           </Box>
 
@@ -493,6 +488,92 @@ const CosplayerProfileHeader = ({
             </>
           )}
         </Box>
+
+        {/* Menu */}
+        <Menu
+          anchorEl={anchorEl}
+          open={Boolean(anchorEl)}
+          onClose={handleMenuClose}
+          transformOrigin={{ horizontal: 'right', vertical: 'top' }}
+          anchorOrigin={{ horizontal: 'right', vertical: 'bottom' }}
+          PaperProps={{
+            sx: {
+              borderRadius: '12px',
+              minWidth: 160,
+              boxShadow: '0 8px 24px rgba(0,0,0,0.15)',
+            }
+          }}
+        >
+          <MenuItem onClick={handleShare}>
+            <ListItemIcon>
+              <Share fontSize="small" />
+            </ListItemIcon>
+            <ListItemText primary="Chia sẻ hồ sơ" />
+          </MenuItem>
+          
+          {/* Only show these options for own profile */}
+          {isOwnProfile ? (
+            <MenuItem onClick={() => { handleMenuClose(); handleEditClick(); }}>
+              <ListItemIcon>
+                <Edit fontSize="small" />
+              </ListItemIcon>
+              <ListItemText primary="Chỉnh sửa hồ sơ" />
+            </MenuItem>
+          ) : (
+            <>
+              <MenuItem onClick={handleFollowClick} disabled={!loggedInUser}>
+                <ListItemIcon>
+                  {isFollowing ? <PersonRemove fontSize="small" /> : <PersonAdd fontSize="small" />}
+                </ListItemIcon>
+                <ListItemText primary={isFollowing ? 'Bỏ theo dõi' : 'Theo dõi'} />
+              </MenuItem>
+              
+              <MenuItem onClick={handleBookingClick}>
+                <ListItemIcon>
+                  <Event fontSize="small" />
+                </ListItemIcon>
+                <ListItemText primary="Đặt lịch ngay" />
+              </MenuItem>
+            </>
+          )}
+        </Menu>
+
+        {/* Popup Dialog */}
+        <Dialog
+          open={showPopup}
+          onClose={handleClosePopup}
+          PaperProps={{
+            sx: {
+              borderRadius: '12px',
+              padding: 2,
+              minWidth: '300px'
+            }
+          }}
+        >
+          <DialogContent sx={{ textAlign: 'center' }}>
+            <Typography variant="body1" sx={{ mb: 2 }}>
+              {popupMessage}
+            </Typography>
+          </DialogContent>
+          <DialogActions sx={{ justifyContent: 'center' }}>
+            <Button
+              onClick={handleClosePopup}
+              variant="contained"
+              sx={{
+                background: 'linear-gradient(45deg, #E91E63, #9C27B0)',
+                color: 'white',
+                px: 4,
+                py: 1,
+                textTransform: 'none',
+                '&:hover': {
+                  background: 'linear-gradient(45deg, #AD1457, #7B1FA2)',
+                }
+              }}
+            >
+              OK
+            </Button>
+          </DialogActions>
+        </Dialog>
 
         {/* Delete Confirmation Dialog */}
         <Dialog

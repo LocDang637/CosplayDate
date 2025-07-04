@@ -13,6 +13,8 @@ import {
 import { ThemeProvider } from '@mui/material/styles';
 import { cosplayTheme } from '../theme/cosplayTheme';
 import PageLayout from '../components/layout/PageLayout';
+import Header from '../components/layout/Header';
+import Footer from '../components/layout/Footer';
 import BookingServiceSelect from '../components/booking/BookingServiceSelect';
 import BookingSchedule from '../components/booking/BookingSchedule';
 import BookingWaitingConfirmation from '../components/booking/BookingWaitingConfirmation';
@@ -375,6 +377,7 @@ const BookingPage = () => {
   if (loading && activeStep === 0) {
     return (
       <ThemeProvider theme={cosplayTheme}>
+        <Header />
         <PageLayout>
           <Container maxWidth="lg">
             <Box sx={{
@@ -387,12 +390,14 @@ const BookingPage = () => {
             </Box>
           </Container>
         </PageLayout>
+        <Footer />
       </ThemeProvider>
     );
   }
 
   return (
     <ThemeProvider theme={cosplayTheme}>
+      <Header />
       <PageLayout>
         <Container maxWidth="lg">
           <Box sx={{ py: 4 }}>
@@ -423,6 +428,7 @@ const BookingPage = () => {
           </Box>
         </Container>
       </PageLayout>
+      <Footer />
     </ThemeProvider>
   );
 };

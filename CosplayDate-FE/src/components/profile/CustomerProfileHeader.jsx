@@ -322,36 +322,15 @@ const CustomerProfileHeader = ({
 
           {/* Action Buttons */}
           <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1 }}>
-            <>
-              <Button
-                variant="contained"
-                startIcon={<Edit />}
-                onClick={onEditProfile}
-                sx={{
-                  background: 'linear-gradient(45deg, #E91E63, #9C27B0)',
-                  color: 'white',
-                  px: 3,
-                  py: 1,
-                  borderRadius: '12px',
-                  textTransform: 'none',
-                  fontWeight: 600,
-                  '&:hover': {
-                    background: 'linear-gradient(45deg, #AD1457, #7B1FA2)',
-                  },
-                }}
-              >
-                Chỉnh sửa hồ sơ
-              </Button>
-              <IconButton
-                onClick={handleMenuOpen}
-                sx={{
-                  backgroundColor: 'rgba(255,255,255,0.8)',
-                  '&:hover': { backgroundColor: 'rgba(255,255,255,1)' },
-                }}
-              >
-                <MoreVert />
-              </IconButton>
-            </>
+            <IconButton
+              onClick={handleMenuOpen}
+              sx={{
+                backgroundColor: 'rgba(255,255,255,0.8)',
+                '&:hover': { backgroundColor: 'rgba(255,255,255,1)' },
+              }}
+            >
+              <MoreVert />
+            </IconButton>
           </Box>
         </Box>
 
@@ -531,21 +510,25 @@ const CustomerProfileHeader = ({
           </ListItemIcon>
           <ListItemText primary="Chia sẻ hồ sơ" />
         </MenuItem>
-        <>
-          <MenuItem onClick={handleBecomeCosplayer}>
-            <ListItemIcon>
-              <TheaterComedy fontSize="small" />
-            </ListItemIcon>
-            <ListItemText primary="Trở thành Cosplayer" />
-          </MenuItem>
-
-          <MenuItem onClick={() => { handleMenuClose(); /* Handle settings */ }}>
-            <ListItemIcon>
-              <Settings fontSize="small" />
-            </ListItemIcon>
-            <ListItemText primary="Cài đặt" />
-          </MenuItem>
-        </>
+        
+        {/* Only show these options for own profile */}
+        {isOwnProfile && (
+          <>
+            <MenuItem onClick={() => { handleMenuClose(); onEditProfile(); }}>
+              <ListItemIcon>
+                <Edit fontSize="small" />
+              </ListItemIcon>
+              <ListItemText primary="Chỉnh sửa hồ sơ" />
+            </MenuItem>
+            
+            <MenuItem onClick={handleBecomeCosplayer}>
+              <ListItemIcon>
+                <TheaterComedy fontSize="small" />
+              </ListItemIcon>
+              <ListItemText primary="Trở thành Cosplayer" />
+            </MenuItem>
+          </>
+        )}
       </Menu>
 
       {/* Delete Confirmation Dialog */}

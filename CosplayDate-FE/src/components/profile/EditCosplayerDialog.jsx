@@ -554,7 +554,7 @@ const EditCosplayerDialog = ({ open, onClose, cosplayer, onUpdateSuccess }) => {
                         disabled={loading}
                       />
                     }
-                    label="Có sẵn"
+                    label="Sẵn sàng?"
                     sx={{ ml: 2 }}
                   />
                 </Box>

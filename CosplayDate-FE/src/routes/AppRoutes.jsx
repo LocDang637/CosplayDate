@@ -75,16 +75,6 @@ function AppRoutes() {
         }
       />
 
-      {/* Protected routes */}
-      <Route
-        path="/profile/edit"
-        element={
-          <ProtectedRoute>
-            <div>Profile Edit Page - Coming Soon!</div>
-          </ProtectedRoute>
-        }
-      />
-
       {/* Booking routes */}
       <Route
         path="/booking/:cosplayerId"
