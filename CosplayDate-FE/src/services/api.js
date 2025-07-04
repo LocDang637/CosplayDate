@@ -1109,6 +1109,28 @@ export const followAPI = {
       };
     }
   },
+
+  // Get followers for a cosplayer
+  getFollowers: async (cosplayerId, page = 1, pageSize = 20) => {
+    try {
+      const response = await api.get(
+        `/users/followers?userId=${cosplayerId}&page=${page}&pageSize=${pageSize}`
+      );
+      return {
+        success: response.data.isSuccess,
+        data: response.data.data,
+        message: response.data.message || "Followers retrieved successfully",
+      };
+    } catch (error) {
+      console.error("Get followers API error:", error);
+      return {
+        success: false,
+        data: null,
+        message: error.response?.data?.message || "Failed to load followers",
+        errors: error.response?.data?.errors || {},
+      };
+    }
+  },
 };
 
 // 2. CUSTOMER STATS API (needed for CustomerProfileOverview stats)

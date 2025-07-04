@@ -38,6 +38,7 @@ import EditCosplayerDialog from './EditCosplayerDialog';
 
 const CosplayerProfileHeader = ({
   user,
+  currentProfile,
   onEditAvatar,
   onProfileUpdate,
   isOwnProfile,
@@ -209,6 +210,24 @@ const CosplayerProfileHeader = ({
                 >
                   {cosplayer.displayName}
                 </Typography>
+
+                {/* Membership Tier */}
+                {(cosplayer.membershipTier || currentProfile?.membershipTier) && (
+                  <Chip
+                    label={cosplayer.membershipTier || currentProfile?.membershipTier}
+                    size="small"
+                    icon={<WorkspacePremium sx={{ fontSize: 16 }} />}
+                    sx={{
+                      bgcolor: 
+                        (cosplayer.membershipTier || currentProfile?.membershipTier) === 'Gold' ? '#FFD700' :
+                        (cosplayer.membershipTier || currentProfile?.membershipTier) === 'Silver' ? '#C0C0C0' :
+                        '#CD7F32', // Bronze
+                      color: 'white',
+                      fontWeight: 600,
+                      '& .MuiChip-icon': { color: 'white' }
+                    }}
+                  />
+                )}
 
                 {cosplayer.isAvailable && (
                   <Chip

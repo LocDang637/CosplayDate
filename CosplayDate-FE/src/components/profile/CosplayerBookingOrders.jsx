@@ -718,7 +718,7 @@ const CosplayerBookingOrders = ({ isOwnProfile }) => {
         <Grid container spacing={2}>
           <Grid item xs={12} md={4}>
             <TextField
-              fullWidth
+              sx={{ width: 320 }}
               placeholder="Tìm kiếm theo tên, email, mã đặt..."
               variant="outlined"
               size="small"
@@ -740,6 +740,7 @@ const CosplayerBookingOrders = ({ isOwnProfile }) => {
               <Select
                 value={filterStatus}
                 onChange={(e) => setFilterStatus(e.target.value)}
+                sx={{ width: 150 }}
                 label="Trạng thái"
               >
                 <MenuItem value="">Tất cả</MenuItem>
@@ -772,6 +773,7 @@ const CosplayerBookingOrders = ({ isOwnProfile }) => {
               <InputLabel>Thanh toán</InputLabel>
               <Select
                 value={filterPaymentStatus}
+                sx={{ width: 150 }}
                 onChange={(e) => setFilterPaymentStatus(e.target.value)}
                 label="Thanh toán"
               >
@@ -783,7 +785,7 @@ const CosplayerBookingOrders = ({ isOwnProfile }) => {
                 </MenuItem>
                 <MenuItem value="Held">
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <Chip size="small" label="Đang tạm giữ" color="error" />
+                    <Chip size="small" label="Đang tạm giữ" color="warning" />
                   </Box>
                 </MenuItem>
                 <MenuItem value="Refunded">

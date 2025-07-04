@@ -28,11 +28,12 @@ import {
   Person,
   Category,
   LocationOn,
-  Note
+  Note,
+  WorkspacePremium
 } from '@mui/icons-material';
 import { bookingAPI } from '../../services/bookingAPI';
 
-const CosplayerProfileOverview = ({ user, isOwnProfile }) => {
+const CosplayerProfileOverview = ({ user, currentProfile, isOwnProfile }) => {
   const [upcomingBooking, setUpcomingBooking] = useState(null);
   const [loadingBooking, setLoadingBooking] = useState(true);
 
@@ -50,9 +51,42 @@ const CosplayerProfileOverview = ({ user, isOwnProfile }) => {
         const response = await bookingAPI.getUpcomingBookings();
         // Add console.log to debug
         console.log('API Response:', response);
-        // Fix: Check response.success instead of response.data.isSuccess
+        
         if (response.success && response.data?.bookings && response.data.bookings.length > 0) {
-          setUpcomingBooking(response.data.bookings[0]);
+          // Filter for only "Confirmed" status bookings
+          const confirmedBookings = response.data.bookings.filter(booking => 
+            booking.status && booking.status.toLowerCase() === 'confirmed'
+          );
+          
+          console.log('Confirmed bookings:', confirmedBookings);
+          
+          if (confirmedBookings.length > 0) {
+            // Find the next upcoming booking by sorting by date and time
+            const now = new Date();
+            const upcomingBookings = confirmedBookings
+              .map(booking => {
+                // Create a proper datetime for comparison
+                const bookingDateTime = new Date(`${booking.bookingDate}T${booking.startTime}`);
+                return {
+                  ...booking,
+                  dateTime: bookingDateTime
+                };
+              })
+              .filter(booking => booking.dateTime > now) // Only future bookings
+              .sort((a, b) => a.dateTime - b.dateTime); // Sort by earliest first
+            
+            console.log('Future upcoming bookings:', upcomingBookings);
+            
+            if (upcomingBookings.length > 0) {
+              setUpcomingBooking(upcomingBookings[0]); // Get the earliest upcoming booking
+            } else {
+              console.log('No future confirmed bookings found');
+              setUpcomingBooking(null);
+            }
+          } else {
+            console.log('No confirmed bookings found');
+            setUpcomingBooking(null);
+          }
         } else {
           console.log('No upcoming bookings found or API error');
           setUpcomingBooking(null);
@@ -296,24 +330,30 @@ const CosplayerProfileOverview = ({ user, isOwnProfile }) => {
                   color="#4CAF50"
                 />
               </Grid>
-              <Grid size={{ xs: 6, sm: 3 }}>
-                <StatCard
-                  icon={<PhotoCamera sx={{ color: 'white', fontSize: 20 }} />}
-                  title="Ảnh"
-                  value={user?.stats?.totalPhotos || 0}
-                  subtitle="Tổng số ảnh"
-                  color="#FF9800"
-                />
-              </Grid>
-              <Grid size={{ xs: 6, sm: 3 }}>
-                <StatCard
-                  icon={<Videocam sx={{ color: 'white', fontSize: 20 }} />}
-                  title="Video"
-                  value={user?.stats?.totalVideos || 0}
-                  subtitle="Tổng số video"
-                  color="#9C27B0"
-                />
-              </Grid>
+
+              {/* Private Information - Only for own profile */}
+              {isOwnProfile && currentProfile && (
+                <>
+                  <Grid size={{ xs: 6, sm: 3 }}>
+                    <StatCard
+                      icon={<AttachMoney sx={{ color: 'white', fontSize: 20 }} />}
+                      title="Ví tiền"
+                      value={new Intl.NumberFormat('vi-VN').format(currentProfile.walletBalance || 0)}
+                      subtitle="VND"
+                      color="#FF5722"
+                    />
+                  </Grid>
+                  <Grid size={{ xs: 6, sm: 3 }}>
+                    <StatCard
+                      icon={<TrendingUp sx={{ color: 'white', fontSize: 20 }} />}
+                      title="Điểm thưởng"
+                      value={currentProfile.loyaltyPoints || 0}
+                      subtitle="Loyalty Points"
+                      color="#3F51B5"
+                    />
+                  </Grid>
+                </>
+              )}
             </Grid>
           </Paper>
 
@@ -497,6 +537,20 @@ const CosplayerProfileOverview = ({ user, isOwnProfile }) => {
               <TrendingUp sx={{ color: 'success.main', fontSize: 20 }} />
               <Typography variant="body2" sx={{ fontWeight: 600 }}>
                 Thành viên từ {formatDate(user?.stats?.memberSince || user?.createdAt)}
+              </Typography>
+            </Box>
+
+            {/* Membership Tier - Show for everyone */}
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
+              <WorkspacePremium sx={{ 
+                color: 
+                  (user?.membershipTier || currentProfile?.membershipTier) === 'Gold' ? '#FFD700' :
+                  (user?.membershipTier || currentProfile?.membershipTier) === 'Silver' ? '#C0C0C0' :
+                  '#CD7F32', // Bronze
+                fontSize: 20 
+              }} />
+              <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                Hạng thành viên: {user?.membershipTier || currentProfile?.membershipTier || 'Bronze'}
               </Typography>
             </Box>
 

@@ -2,6 +2,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import CosplayerBookingOrders from '../components/profile/CosplayerBookingOrders';
+import CosplayerFollowers from '../components/profile/CosplayerFollowers';
 import {
   Box,
   Container,
@@ -34,6 +35,7 @@ const CosplayerProfilePage = () => {
   // State management
   const [user, setUser] = useState(null);
   const [profileUser, setProfileUser] = useState(null);
+  const [currentProfile, setCurrentProfile] = useState(null); // Add current profile state
   const [activeTab, setActiveTab] = useState('overview');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -379,7 +381,17 @@ const CosplayerProfilePage = () => {
         userType
       });
 
-      const result = await cosplayerAPI.getCosplayerDetails(targetUserId);
+      // Load cosplayer details and current profile data in parallel
+      const promises = [
+        cosplayerAPI.getCosplayerDetails(targetUserId)
+      ];
+
+      // Only load current profile data for own profile to get private info
+      if (apiIsOwnProfile) {
+        promises.push(userAPI.getCurrentProfile());
+      }
+
+      const [result, currentProfileResult] = await Promise.all(promises);
 
       console.log('📊 Cosplayer API Result:', {
         success: result.success,
@@ -387,6 +399,20 @@ const CosplayerProfilePage = () => {
         error: result.message,
         errorStatus: result.errors?.status
       });
+
+      if (currentProfileResult) {
+        console.log('📊 Current Profile API Result:', {
+          success: currentProfileResult.success,
+          hasData: !!currentProfileResult.data,
+          membershipTier: currentProfileResult.data?.membershipTier,
+          loyaltyPoints: currentProfileResult.data?.loyaltyPoints,
+          walletBalance: currentProfileResult.data?.walletBalance
+        });
+
+        if (currentProfileResult.success && currentProfileResult.data) {
+          setCurrentProfile(currentProfileResult.data);
+        }
+      }
 
       if (result.success && result.data) {
         // ✅ FIX: Ensure isVerified is included in the profile data
@@ -396,7 +422,9 @@ const CosplayerProfilePage = () => {
         const profileData = {
           ...result.data,
           // Add isVerified from user profile API response
-          isVerified: userProfileResult.data?.isVerified || false
+          isVerified: userProfileResult.data?.isVerified || false,
+          // Add membership tier from current profile for own profile
+          membershipTier: currentProfileResult?.data?.membershipTier || userProfileResult.data?.membershipTier || 'Bronze'
         };
 
         setProfileUser(profileData);
@@ -408,7 +436,10 @@ const CosplayerProfilePage = () => {
           setUser(updatedUser);
         }
 
-        console.log('✅ Cosplayer profile loaded successfully with isVerified:', profileData.isVerified);
+        console.log('✅ Cosplayer profile loaded successfully with additional data:', {
+          isVerified: profileData.isVerified,
+          membershipTier: profileData.membershipTier
+        });
       } else {
         // ✅ Cosplayer profile not found - handle different scenarios
         console.log('❌ Cosplayer profile loading failed:', result.message);
@@ -579,7 +610,7 @@ const CosplayerProfilePage = () => {
       id: 'bookings',
       label: 'Đặt lịch',
       icon: 'Event',
-      show: true
+      show: isOwnProfile
     },
     {
       id: 'gallery',
@@ -587,6 +618,13 @@ const CosplayerProfilePage = () => {
       icon: 'PhotoLibrary',
       count: photos.length + videos.length,
       show: true
+    },
+    {
+      id: 'followers',
+      label: 'Người theo dõi',
+      icon: 'People',
+      count: profileUser?.followersCount || profileUser?.stats?.totalFollowers || 0,
+      show: isOwnProfile
     }
   ];
 
@@ -597,6 +635,7 @@ const CosplayerProfilePage = () => {
         return (
           <CosplayerProfileOverview
             user={profileUser}
+            currentProfile={currentProfile}
             isOwnProfile={isOwnProfile}
           />
         );
@@ -622,6 +661,13 @@ const CosplayerProfilePage = () => {
             loading={mediaLoading}
             onMediaUpdate={handleMediaUpdate}
             onAddMedia={(mediaType) => setUploadDialog({ open: true, type: mediaType })}
+          />
+        );
+      case 'followers':
+        return (
+          <CosplayerFollowers
+            cosplayerId={profileUser?.id}
+            isOwnProfile={isOwnProfile}
           />
         );
       case 'videos':
@@ -773,6 +819,7 @@ const CosplayerProfilePage = () => {
           {/* Profile Header */}
           <CosplayerProfileHeader
             user={profileUser}
+            currentProfile={currentProfile}
             onEditAvatar={handleAvatarClick}
             onProfileUpdate={handleProfileUpdate}
             isOwnProfile={isOwnProfile}
