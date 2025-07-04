@@ -252,6 +252,10 @@ const ProfileEditModal = ({
               InputLabelProps={{
                 shrink: true,
               }}
+              inputProps={{
+                min: new Date(new Date().getFullYear() - 120, 0, 1).toISOString().split('T')[0], // 120 years ago
+                max: new Date(new Date().getFullYear() - 18, new Date().getMonth(), new Date().getDate()).toISOString().split('T')[0] // 18 years ago
+              }}
               sx={{
                 '& .MuiOutlinedInput-root': {
                   borderRadius: '12px',
