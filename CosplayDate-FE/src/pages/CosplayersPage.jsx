@@ -126,9 +126,14 @@ const CosplayersPage = () => {
 
       if (result.success) {
         const data = result.data;
-        setCosplayers(data.cosplayers || data.items || data || []);
-        setTotalCount(data.totalCount || data.length || 0);
-        setTotalPages(data.totalPages || Math.ceil((data.totalCount || data.length || 0) / itemsPerPage));
+        const cosplayersList = data.cosplayers || data.items || data || [];
+        
+        // Filter out cosplayers who are not available
+        const availableCosplayers = cosplayersList.filter(cosplayer => cosplayer.isAvailable !== false);
+        
+        setCosplayers(availableCosplayers);
+        setTotalCount(availableCosplayers.length);
+        setTotalPages(Math.ceil(availableCosplayers.length / itemsPerPage));
       } else {
         setError(result.message);
       }

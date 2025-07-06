@@ -8,7 +8,8 @@ import {
   Alert,
   Button,
   Snackbar,
-  Menu, MenuItem, ListItemIcon, ListItemText
+  Menu, MenuItem, ListItemIcon, ListItemText,
+  Typography
 } from "@mui/material";
 import { CameraAlt, Delete } from '@mui/icons-material';
 import { ThemeProvider } from "@mui/material/styles";
@@ -655,15 +656,20 @@ const CustomerProfilePage = () => {
             </Menu>
           )}
 
-          <ProfileTabs
-            activeTab={activeTab}
-            onTabChange={handleTabChange}
-            isOwnProfile={isOwnProfile}
-            counts={customerTabCounts}
-            customTabs={customerTabs}
-          />
+          {/* Only show profile tabs and content for own profile */}
+          {isOwnProfile && (
+            <>
+              <ProfileTabs
+                activeTab={activeTab}
+                onTabChange={handleTabChange}
+                isOwnProfile={isOwnProfile}
+                counts={customerTabCounts}
+                customTabs={customerTabs}
+              />
 
-          <Box sx={{ minHeight: "400px" }}>{renderTabContent()}</Box>
+              <Box sx={{ minHeight: "400px" }}>{renderTabContent()}</Box>
+            </>
+          )}
         </Container>
 
         <Footer />

@@ -5,19 +5,11 @@ import {
   Box,
   Container,
   Typography,
-  Grid,
-  Card,
   Button,
   Alert,
   Snackbar,
   Avatar
 } from '@mui/material';
-import {
-  TrendingUp,
-  People,
-  Event,
-  PhotoCamera
-} from '@mui/icons-material';
 import { ThemeProvider } from '@mui/material/styles';
 import { cosplayTheme } from '../theme/cosplayTheme';
 import Header from '../components/layout/Header';
@@ -79,7 +71,9 @@ const HomePage = () => {
 
       if (result.success && result.data) {
         // The fixed API now returns the array directly in result.data
-        setCosplayers(result.data);
+        // Filter out cosplayers who are not available
+        const availableCosplayers = result.data.filter(cosplayer => cosplayer.isAvailable !== false);
+        setCosplayers(availableCosplayers);
       } else {
         setCosplayers([]);
         console.warn('No cosplayers data received');

@@ -193,13 +193,13 @@ const CustomerProfileHeader = ({
       }
 
       console.log('Attempting to fetch interests from API');
-      
+
       // Use the configured API base URL from environment variables
       const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'https://localhost:7241/api';
       const apiUrl = `${apiBaseUrl}/users/interests`;
-      
+
       console.log('Making request to:', apiUrl);
-      
+
       const response = await fetch(apiUrl, {
         method: 'GET',
         headers: {
@@ -226,7 +226,7 @@ const CustomerProfileHeader = ({
       if (result.isSuccess) {
         // Use interests from API response, fallback to user.interests, fallback to empty array
         const currentInterests = result.data?.interests || customer.interests || [];
-        
+
         setInterestsDialog(prev => ({
           ...prev,
           loading: false,
@@ -245,14 +245,14 @@ const CustomerProfileHeader = ({
       }
     } catch (error) {
       console.error('Error fetching interests:', error);
-      
+
       // Fallback: Use predefined interests list if API is not available
       const fallbackInterests = [
         'Anime', 'Manga', 'Gaming', 'Cosplay', 'Photography', 'Art',
         'Music', 'Dance', 'Fashion', 'Movies', 'Technology', 'Travel',
         'Food', 'Sports', 'Reading', 'Writing', 'Drawing', 'Singing'
       ];
-      
+
       setInterestsDialog(prev => ({
         ...prev,
         loading: false,
@@ -310,9 +310,9 @@ const CustomerProfileHeader = ({
       if (result.isSuccess) {
         // Update the customer interests locally
         customer.interests = interestsDialog.selectedInterests;
-        
+
         setInterestsDialog(prev => ({ ...prev, open: false, loading: false }));
-        
+
         // You could also trigger a success notification here if needed
         console.log('Interests saved successfully');
       } else {
@@ -531,12 +531,14 @@ const CustomerProfileHeader = ({
               )}
 
               {/* Loyalty Points */}
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                <EmojiEvents sx={{ fontSize: 20, color: '#FFB400' }} />
-                <Typography variant="body2" sx={{ fontWeight: 600, color: '#FFB400' }}>
-                  {loyaltyPoints.toLocaleString()} điểm
-                </Typography>
-              </Box>
+              {isOwnProfile && (
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                  <EmojiEvents sx={{ fontSize: 20, color: '#FFB400' }} />
+                  <Typography variant="body2" sx={{ fontWeight: 600, color: '#FFB400' }}>
+                    {loyaltyPoints.toLocaleString()} điểm
+                  </Typography>
+                </Box>
+              )}
             </Box>
 
             {/* Interests */}
@@ -547,10 +549,10 @@ const CustomerProfileHeader = ({
                     Sở thích:
                   </Typography>
                   {isOwnProfile && (
-                    <IconButton 
-                      size="small" 
+                    <IconButton
+                      size="small"
                       onClick={handleOpenInterestsDialog}
-                      sx={{ 
+                      sx={{
                         p: 0.5,
                         '&:hover': { bgcolor: 'rgba(233, 30, 99, 0.1)' }
                       }}
@@ -615,7 +617,7 @@ const CustomerProfileHeader = ({
           </ListItemIcon>
           <ListItemText primary="Chia sẻ hồ sơ" />
         </MenuItem>
-        
+
         {isOwnProfile && [
           <MenuItem key="edit" onClick={() => { handleMenuClose(); onEditProfile?.(); }}>
             <ListItemIcon>
@@ -633,8 +635,8 @@ const CustomerProfileHeader = ({
       </Menu>
 
       {/* Interests Dialog */}
-      <Dialog 
-        open={interestsDialog.open} 
+      <Dialog
+        open={interestsDialog.open}
         onClose={() => setInterestsDialog(prev => ({ ...prev, open: false }))}
         maxWidth="sm"
         fullWidth
@@ -642,7 +644,7 @@ const CustomerProfileHeader = ({
           sx: { borderRadius: '16px' }
         }}
       >
-        <DialogTitle sx={{ 
+        <DialogTitle sx={{
           pb: 1,
           background: 'linear-gradient(135deg, #FFE0EC 0%, #E8D5F2 100%)',
           color: 'primary.main',
@@ -656,7 +658,7 @@ const CustomerProfileHeader = ({
               {interestsDialog.error}
             </Alert>
           )}
-          
+
           <Autocomplete
             multiple
             options={interestsDialog.availableInterests}
@@ -675,7 +677,7 @@ const CustomerProfileHeader = ({
                   label={option}
                   {...getTagProps({ index })}
                   key={option}
-                  sx={{ 
+                  sx={{
                     borderColor: 'primary.main',
                     color: 'primary.main',
                     '&:hover': {
@@ -715,23 +717,23 @@ const CustomerProfileHeader = ({
             )}
             sx={{ mt: 1 }}
           />
-          
+
           <Typography variant="body2" sx={{ mt: 2, color: 'text.secondary' }}>
             Chọn tối đa 10 sở thích để giúp chúng tôi gợi ý các cosplayer phù hợp với bạn.
           </Typography>
         </DialogContent>
         <DialogActions sx={{ p: 3, pt: 1 }}>
-          <Button 
+          <Button
             onClick={() => setInterestsDialog(prev => ({ ...prev, open: false }))}
             sx={{ borderRadius: '12px' }}
           >
             Hủy
           </Button>
-          <Button 
+          <Button
             onClick={handleSaveInterests}
             variant="contained"
             disabled={interestsDialog.loading}
-            sx={{ 
+            sx={{
               borderRadius: '12px',
               background: 'linear-gradient(135deg, #E91E63 0%, #9C27B0 100%)',
               '&:hover': {
@@ -752,7 +754,7 @@ const CustomerProfileHeader = ({
           sx: { borderRadius: '16px' }
         }}
       >
-        <DialogTitle sx={{ 
+        <DialogTitle sx={{
           color: 'error.main',
           fontWeight: 700,
           display: 'flex',
@@ -768,13 +770,13 @@ const CustomerProfileHeader = ({
           </DialogContentText>
         </DialogContent>
         <DialogActions sx={{ p: 3, pt: 1 }}>
-          <Button 
+          <Button
             onClick={handleDeleteCancel}
             sx={{ borderRadius: '12px' }}
           >
             Hủy
           </Button>
-          <Button 
+          <Button
             onClick={handleDeleteConfirm}
             variant="contained"
             color="error"

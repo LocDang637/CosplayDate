@@ -6,7 +6,6 @@ import ForgotPasswordPage from "../pages/ForgotPasswordPage";
 import ResetPasswordPage from "../pages/ResetPasswordPage";
 import ProtectedRoute from "../components/ProtectedRoute";
 import Cosplayers from "../pages/CosplayersPage";
-import CosplayerDetailsPage from "../pages/CosplayerDetailsPage";
 import CustomerProfilePage from "../pages/CustomerProfilePage";
 import CosplayerPolicyPage from "../pages/CosplayerPolicyPage";
 import CosplayerProfilePage from "../pages/CosplayerProfilePage";
@@ -36,7 +35,6 @@ function AppRoutes() {
 
       {/* Cosplayer public routes */}
       <Route path="/cosplayers" element={<Cosplayers />} />
-      <Route path="/cosplayer/:id" element={<CosplayerDetailsPage />} />
       <Route path="/cosplayer-policy" element={<CosplayerPolicyPage />} />
 
 
