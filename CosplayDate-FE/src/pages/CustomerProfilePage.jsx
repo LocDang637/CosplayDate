@@ -542,9 +542,6 @@ const CustomerProfilePage = () => {
             stats={mockStats}
             recentActivity={mockRecentActivity}
             favoriteCategories={mockFavoriteCategories}
-            walletBalance={currentProfile?.walletBalance || profileUser?.walletBalance}
-            loyaltyPoints={currentProfile?.loyaltyPoints || profileUser?.loyaltyPoints}
-            membershipTier={currentProfile?.membershipTier || profileUser?.membershipTier}
           />
         );
       case "wallet":
@@ -668,8 +665,6 @@ const CustomerProfilePage = () => {
             onAvatarDelete={handleAvatarDelete}
             deleteDialogOpen={deleteDialogOpen}
             onConfirmDelete={handleConfirmDelete}
-            walletBalance={currentProfile?.walletBalance || profileUser?.walletBalance}
-            membershipTier={currentProfile?.membershipTier || profileUser?.membershipTier}
           />
 
           {/* Avatar Menu */}

@@ -292,24 +292,6 @@ const CosplayerProfileHeader = ({
                   {cosplayer.displayName}
                 </Typography>
 
-                {/* Membership Tier */}
-                {(cosplayer.membershipTier || currentProfile?.membershipTier) && (
-                  <Chip
-                    label={cosplayer.membershipTier || currentProfile?.membershipTier}
-                    size="small"
-                    icon={<WorkspacePremium sx={{ fontSize: 16 }} />}
-                    sx={{
-                      bgcolor: 
-                        (cosplayer.membershipTier || currentProfile?.membershipTier) === 'Gold' ? '#FFD700' :
-                        (cosplayer.membershipTier || currentProfile?.membershipTier) === 'Silver' ? '#C0C0C0' :
-                        '#CD7F32', // Bronze
-                      color: 'white',
-                      fontWeight: 600,
-                      '& .MuiChip-icon': { color: 'white' }
-                    }}
-                  />
-                )}
-
                 {cosplayer.isAvailable && (
                   <Chip
                     label="Sẵn sàng"
@@ -317,6 +299,44 @@ const CosplayerProfileHeader = ({
                     icon={<Check sx={{ fontSize: 16 }} />}
                     sx={{
                       bgcolor: '#4CAF50',
+                      color: 'white',
+                      fontWeight: 600,
+                      '& .MuiChip-icon': { color: 'white' }
+                    }}
+                  />
+                )}
+
+                {!cosplayer.isAvailable && (
+                  <Chip
+                    label="Chưa sẵn sàng"
+                    size="small"
+                    icon={<Schedule sx={{ fontSize: 16 }} />}
+                    sx={{
+                      bgcolor: '#757575',
+                      color: 'white',
+                      fontWeight: 600,
+                      '& .MuiChip-icon': { color: 'white' }
+                    }}
+                  />
+                )}
+
+                {/* Membership Tier */}
+                {(cosplayer.membershipTier || currentProfile?.membershipTier) && (
+                  <Chip
+                    label={
+                      (cosplayer.membershipTier || currentProfile?.membershipTier) === 'Gold' ? 'Thành viên Vàng' :
+                      (cosplayer.membershipTier || currentProfile?.membershipTier) === 'Silver' ? 'Thành viên Bạc' :
+                      (cosplayer.membershipTier || currentProfile?.membershipTier) === 'Platinum' ? 'Thành viên Bạch kim' :
+                      'Thành viên Đồng'
+                    }
+                    size="small"
+                    icon={<WorkspacePremium sx={{ fontSize: 16 }} />}
+                    sx={{
+                      bgcolor: 
+                        (cosplayer.membershipTier || currentProfile?.membershipTier) === 'Gold' ? '#FFD700' :
+                        (cosplayer.membershipTier || currentProfile?.membershipTier) === 'Silver' ? '#C0C0C0' :
+                        (cosplayer.membershipTier || currentProfile?.membershipTier) === 'Platinum' ? '#E5E4E2' :
+                        '#CD7F32', // Bronze
                       color: 'white',
                       fontWeight: 600,
                       '& .MuiChip-icon': { color: 'white' }

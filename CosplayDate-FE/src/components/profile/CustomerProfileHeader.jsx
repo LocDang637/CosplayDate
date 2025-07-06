@@ -14,31 +14,30 @@ import {
   ListItemText,
   Fade,
   Badge,
-  Card,
-  CardContent,
-  Grid,
   Dialog,
   DialogTitle,
   DialogContent,
   DialogContentText,
   DialogActions,
+  TextField,
+  Autocomplete,
+  CircularProgress,
+  Alert,
 } from '@mui/material';
 import {
   Edit,
-  Settings,
+  Check,
   Share,
   MoreVert,
   LocationOn,
   Verified,
-  Star,
   CameraAlt,
-  AccountBalanceWallet,
-  LocalOffer,
   Event,
-  Favorite,
-  TrendingUp,
+  PersonAdd,
   TheaterComedy,
   Warning,
+  Schedule,
+  Add,
 } from '@mui/icons-material';
 
 
@@ -49,16 +48,31 @@ const CustomerProfileHeader = ({
   deleteDialogOpen,
   onDeleteDialogClose,
   onConfirmDelete,
-  walletBalance = 0,
-  membershipTier = 'Bronze',
   isOwnProfile,
 }) => {
   const navigate = useNavigate();
   const [anchorEl, setAnchorEl] = useState(null);
   const [avatarHovered, setAvatarHovered] = useState(false);
 
+  // Interests dialog state
+  const [interestsDialog, setInterestsDialog] = useState({
+    open: false,
+    loading: false,
+    availableInterests: [],
+    selectedInterests: [],
+    error: ''
+  });
+
   if (!user) return null;
+
+  // Extract user data from API response
   const customer = user;
+
+  // Get membership tier from API data
+  const membershipTier = customer.membershipTier || 'Bronze';
+
+  // Get stats from API data
+  const stats = customer.stats || {};
 
   const handleMenuOpen = (event) => {
     setAnchorEl(event.currentTarget);
@@ -93,11 +107,257 @@ const CustomerProfileHeader = ({
     navigate('/become-cosplayer');
     handleMenuClose();
   };
-  const formatCurrency = (amount) => {
-    return new Intl.NumberFormat('vi-VN', {
-      style: 'currency',
-      currency: 'VND'
-    }).format(amount);
+
+  // Interests dialog handlers
+  const handleOpenInterestsDialog = async () => {
+    setInterestsDialog(prev => ({ ...prev, open: true, loading: true, error: '' }));
+
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        throw new Error('No authentication token found');
+      }
+
+      console.log('Attempting to fetch interests from API');
+      
+      // Use the configured API base URL from environment variables
+      const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'https://localhost:7241/api';
+      const apiUrl = `${apiBaseUrl}/users/interests`;
+      
+      console.log('Making request to:', apiUrl);
+      
+      const response = await fetch(apiUrl, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      console.log('Response status:', response.status);
+      console.log('Response headers:', Object.fromEntries(response.headers.entries()));
+
+      // Check if response is ok
+      if (!response.ok) {
+        if (response.status === 401) {
+          throw new Error('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.');
+        }
+        if (response.status === 404) {
+          throw new Error('API endpoint chưa được triển khai. Sử dụng dữ liệu mẫu.');
+        }
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      // Try to parse JSON response - handle HTML responses gracefully
+      let result;
+      try {
+        const responseText = await response.text();
+        console.log('Response text preview:', responseText.substring(0, 200));
+        console.log('Full response text:', responseText);
+        
+        // Check if response is HTML (likely an error page)
+        if (responseText.trim().startsWith('!DOCTYPE') || responseText.trim().startsWith('<html')) {
+          throw new Error('API endpoint không tồn tại hoặc server trả về trang lỗi');
+        }
+        
+        // Check if response is empty
+        if (!responseText.trim()) {
+          throw new Error('Server trả về phản hồi trống');
+        }
+        
+        result = JSON.parse(responseText);
+        console.log('Parsed result:', result);
+      } catch (parseError) {
+        console.error('Parse error details:', parseError);
+        console.error('Response text that failed to parse:', responseText);
+        
+        if (parseError.message.includes('API endpoint') || parseError.message.includes('Server trả về')) {
+          throw parseError;
+        }
+        
+        // More specific error messages
+        if (parseError instanceof SyntaxError) {
+          throw new Error(`Lỗi định dạng JSON từ server: ${parseError.message}`);
+        }
+        
+        throw new Error('Phản hồi từ server không đúng định dạng JSON');
+      }
+
+      if (result.isSuccess) {
+        // Use interests from API response, fallback to user.interests, fallback to empty array
+        const currentInterests = result.data.interests || user.interests || [];
+        
+        setInterestsDialog(prev => ({
+          ...prev,
+          loading: false,
+          availableInterests: result.data.availableInterests || [],
+          selectedInterests: currentInterests,
+          error: ''
+        }));
+      } else {
+        setInterestsDialog(prev => ({
+          ...prev,
+          loading: false,
+          error: result.message || 'Không thể tải danh sách sở thích'
+        }));
+      }
+    } catch (error) {
+      console.error('Error loading interests:', error);
+      
+      // If API is not available, use mock data for development
+      if (error.message.includes('API endpoint') || error.message.includes('không tồn tại')) {
+        console.log('Using mock data for interests');
+        
+        const mockAvailableInterests = [
+          "Anime", "Manga", "Gaming", "Photography", "Cosplay Making", "Prop Making",
+          "Sewing", "Makeup", "Wig Styling", "Convention", "Video Making", "Dancing",
+          "Acting", "Singing", "Streaming", "Art", "Digital Art", "3D Printing",
+          "Crafting", "Fashion", "Design", "Music", "Movies", "TV Shows", "Books",
+          "Fantasy", "Sci-Fi", "Horror", "Romance", "Action", "Adventure", "Comedy",
+          "Drama", "Historical", "Mecha", "Magical Girl", "Shounen", "Shoujo",
+          "Seinen", "Josei", "Yaoi", "Yuri", "Isekai", "Slice of Life", "Sports",
+          "Racing", "Fighting Games", "RPG", "MMORPG", "Strategy", "Simulation",
+          "Puzzle", "Visual Novel", "Mobile Games", "Indie Games", "Retro Gaming"
+        ];
+        
+        setInterestsDialog(prev => ({
+          ...prev,
+          loading: false,
+          availableInterests: mockAvailableInterests,
+          selectedInterests: user.interests || [],
+          error: 'Sử dụng dữ liệu mẫu (API chưa sẵn sàng)'
+        }));
+      } else {
+        setInterestsDialog(prev => ({
+          ...prev,
+          loading: false,
+          error: error.message || 'Có lỗi xảy ra khi tải danh sách sở thích. Vui lòng thử lại sau.'
+        }));
+      }
+    }
+  };
+
+  const handleCloseInterestsDialog = () => {
+    setInterestsDialog({
+      open: false,
+      loading: false,
+      availableInterests: [],
+      selectedInterests: [],
+      error: ''
+    });
+  };
+
+  const handleInterestsChange = (event, newValue) => {
+    setInterestsDialog(prev => ({
+      ...prev,
+      selectedInterests: newValue
+    }));
+  };
+
+  const handleSaveInterests = async () => {
+    setInterestsDialog(prev => ({ ...prev, loading: true, error: '' }));
+
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        throw new Error('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.');
+      }
+
+      // Use the configured API base URL from environment variables
+      const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'https://localhost:7241/api';
+      const apiUrl = `${apiBaseUrl}/users/interests`;
+      
+      console.log('Making PUT request to:', apiUrl);
+
+      const response = await fetch(apiUrl, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          interests: interestsDialog.selectedInterests
+        }),
+      });
+
+      // Check if response is ok
+      if (!response.ok) {
+        if (response.status === 401) {
+          throw new Error('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.');
+        }
+        if (response.status === 404) {
+          throw new Error('API endpoint chưa được triển khai. Sử dụng lưu trữ cục bộ.');
+        }
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      // Try to parse JSON response - handle HTML responses gracefully
+      let result;
+      try {
+        const responseText = await response.text();
+        console.log('Save response text:', responseText);
+        
+        // Check if response is HTML (likely an error page)
+        if (responseText.trim().startsWith('<!DOCTYPE') || responseText.trim().startsWith('<html')) {
+          throw new Error('API endpoint không tồn tại hoặc server trả về trang lỗi');
+        }
+        
+        // Check if response is empty
+        if (!responseText.trim()) {
+          throw new Error('Server trả về phản hồi trống');
+        }
+        
+        result = JSON.parse(responseText);
+        console.log('Save parsed result:', result);
+      } catch (parseError) {
+        console.error('Save parse error details:', parseError);
+        console.error('Save response text that failed to parse:', responseText);
+        
+        if (parseError.message.includes('API endpoint') || parseError.message.includes('Server trả về')) {
+          throw parseError;
+        }
+        
+        // More specific error messages
+        if (parseError instanceof SyntaxError) {
+          throw new Error(`Lỗi định dạng JSON từ server: ${parseError.message}`);
+        }
+        
+        throw new Error('Phản hồi từ server không đúng định dạng JSON');
+      }
+
+      if (result.isSuccess) {
+        // Update user data locally (you might want to trigger a parent component refresh)
+        user.interests = interestsDialog.selectedInterests;
+        handleCloseInterestsDialog();
+        // Optional: Show success message or trigger parent refresh
+      } else {
+        setInterestsDialog(prev => ({
+          ...prev,
+          loading: false,
+          error: result.message || 'Không thể lưu sở thích'
+        }));
+      }
+    } catch (error) {
+      console.error('Error saving interests:', error);
+      
+      // If API is not available, save locally for development
+      if (error.message.includes('API endpoint') || error.message.includes('không tồn tại')) {
+        console.log('API not available, saving interests locally');
+        
+        // Update user data locally
+        user.interests = interestsDialog.selectedInterests;
+        handleCloseInterestsDialog();
+        
+        // Show a warning that it's only saved locally
+        alert('Sở thích đã được lưu tạm thời (API chưa sẵn sàng)');
+      } else {
+        setInterestsDialog(prev => ({
+          ...prev,
+          loading: false,
+          error: error.message || 'Có lỗi xảy ra khi lưu sở thích. Vui lòng thử lại sau.'
+        }));
+      }
+    }
   };
 
   const getTierColor = (tier) => {
@@ -135,22 +395,30 @@ const CustomerProfileHeader = ({
     <Paper
       elevation={0}
       sx={{
+        background: 'linear-gradient(135deg, #FFE0EC 0%, #E8D5F2 100%)',
         borderRadius: '24px',
         p: 4,
-        mb: 3,
-        background: 'linear-gradient(135deg, #F8BBD9 0%, #E1BEE7 100%)',
-        border: '1px solid rgba(233, 30, 99, 0.1)',
         position: 'relative',
         overflow: 'hidden',
         '&::before': {
           content: '""',
           position: 'absolute',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          background: 'radial-gradient(circle at 70% 20%, rgba(255,255,255,0.3) 0%, transparent 50%)',
-          pointerEvents: 'none',
+          top: -100,
+          right: -100,
+          width: 300,
+          height: 300,
+          borderRadius: '50%',
+          background: 'rgba(233, 30, 99, 0.1)',
+        },
+        '&::after': {
+          content: '""',
+          position: 'absolute',
+          bottom: -50,
+          left: -50,
+          width: 200,
+          height: 200,
+          borderRadius: '50%',
+          background: 'rgba(156, 39, 176, 0.1)',
         }
       }}
     >
@@ -234,18 +502,43 @@ const CustomerProfileHeader = ({
                   fontSize: { xs: '24px', md: '32px' },
                 }}
               >
-                {user.firstName} {user.lastName}
+                {customer.firstName} {customer.lastName}
               </Typography>
 
-              {user.isOnline && (
+              {customer.isOnline && (
                 <Chip
-                  label="Đang hoạt động"
+                  label="Đang online"
                   size="small"
+                  icon={<Check sx={{ fontSize: 16 }} />}
                   sx={{
-                    backgroundColor: '#4CAF50',
+                    bgcolor: '#4CAF50',
                     color: 'white',
                     fontWeight: 600,
                     fontSize: '12px',
+                    padding: '16px 8px',
+                    '& .MuiChip-icon': { color: 'white' }
+                  }}
+                />
+              )}
+
+              {!customer.isOnline && (
+                <Chip
+                  label="Đang offline"
+                  size="small"
+                  icon={<Schedule sx={{ fontSize: 16 }} />}
+                  sx={{
+                    bgcolor: '#757575',
+                    color: 'white',
+                    fontWeight: 600,
+                    '&::before': {
+                      content: '""',
+                      width: 8,
+                      height: 8,
+                      borderRadius: '50%',
+                      backgroundColor: '#757575',
+                      marginRight: 0.5,
+                      display: 'inline-block'
+                    }
                   }}
                 />
               )}
@@ -262,51 +555,18 @@ const CustomerProfileHeader = ({
               />
             </Box>
 
-            {/* Customer Stats Row */}
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 3, mb: 2 }}>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                <Event sx={{ color: 'primary.main', fontSize: 20 }} />
-                <Typography variant="body1" sx={{ fontWeight: 600 }}>
-                  {user.totalBookings || 0}
-                </Typography>
-                <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-                  lượt đặt
-                </Typography>
-              </Box>
-
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                <Favorite sx={{ color: '#FF6B6B', fontSize: 20 }} />
-                <Typography variant="body1" sx={{ fontWeight: 600 }}>
-                  {user.favoriteCosplayers || 0}
-                </Typography>
-                <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-                  yêu thích
-                </Typography>
-              </Box>
-
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                <Star sx={{ color: '#FFD700', fontSize: 20 }} />
-                <Typography variant="body1" sx={{ fontWeight: 600 }}>
-                  {user.reviewsGiven || 0}
-                </Typography>
-                <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-                  đánh giá
-                </Typography>
-              </Box>
-            </Box>
-
             {/* Location */}
-            {user.location && (
+            {customer.location && (
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
                 <LocationOn sx={{ color: 'text.secondary', fontSize: 18 }} />
                 <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-                  {user.location}
+                  {customer.location}
                 </Typography>
               </Box>
             )}
 
             {/* Bio */}
-            {user.bio && (
+            {customer.bio && (
               <Typography
                 variant="body1"
                 sx={{
@@ -315,7 +575,7 @@ const CustomerProfileHeader = ({
                   maxWidth: '500px',
                 }}
               >
-                {user.bio}
+                {customer.bio}
               </Typography>
             )}
           </Box>
@@ -334,159 +594,73 @@ const CustomerProfileHeader = ({
           </Box>
         </Box>
 
-        {/* Customer Dashboard Cards */}
-        <Grid container spacing={2}>
-          {/* Wallet Balance Card */}
-          <Grid item xs={12} sm={6} md={3}>
-            <Card
-              sx={{
-                background: 'linear-gradient(135deg, rgba(76, 175, 80, 0.1) 0%, rgba(76, 175, 80, 0.05) 100%)',
-                border: '1px solid rgba(76, 175, 80, 0.2)',
-                borderRadius: '16px',
-                transition: 'all 0.3s ease',
-                '&:hover': {
-                  transform: 'translateY(-2px)',
-                  boxShadow: '0 8px 24px rgba(76, 175, 80, 0.15)',
-                },
-              }}
-            >
-              <CardContent sx={{ textAlign: 'center', py: 2 }}>
-                <AccountBalanceWallet
-                  sx={{
-                    fontSize: 32,
-                    color: '#4CAF50',
-                    mb: 1
-                  }}
-                />
-                <Typography variant="h6" sx={{ fontWeight: 700, fontSize: '18px' }}>
-                  {formatCurrency(walletBalance)}
-                </Typography>
-                <Typography variant="body2" sx={{ color: 'text.secondary', fontSize: '12px' }}>
-                  Số dư ví
-                </Typography>
-              </CardContent>
-            </Card>
-          </Grid>
-
-          {/* Active Bookings */}
-          <Grid item xs={12} sm={6} md={3}>
-            <Card
-              sx={{
-                background: 'linear-gradient(135deg, rgba(33, 150, 243, 0.1) 0%, rgba(33, 150, 243, 0.05) 100%)',
-                border: '1px solid rgba(33, 150, 243, 0.2)',
-                borderRadius: '16px',
-                transition: 'all 0.3s ease',
-                '&:hover': {
-                  transform: 'translateY(-2px)',
-                  boxShadow: '0 8px 24px rgba(33, 150, 243, 0.15)',
-                },
-              }}
-            >
-              <CardContent sx={{ textAlign: 'center', py: 2 }}>
-                <Event
-                  sx={{
-                    fontSize: 32,
-                    color: '#2196F3',
-                    mb: 1
-                  }}
-                />
-                <Typography variant="h6" sx={{ fontWeight: 700, fontSize: '18px' }}>
-                  {user.activeBookings || 2}
-                </Typography>
-                <Typography variant="body2" sx={{ color: 'text.secondary', fontSize: '12px' }}>
-                  Đặt chỗ đang hoạt động
-                </Typography>
-              </CardContent>
-            </Card>
-          </Grid>
-
-          {/* Loyalty Points */}
-          <Grid item xs={12} sm={6} md={3}>
-            <Card
-              sx={{
-                background: 'linear-gradient(135deg, rgba(255, 193, 7, 0.1) 0%, rgba(255, 193, 7, 0.05) 100%)',
-                border: '1px solid rgba(255, 193, 7, 0.2)',
-                borderRadius: '16px',
-                transition: 'all 0.3s ease',
-                '&:hover': {
-                  transform: 'translateY(-2px)',
-                  boxShadow: '0 8px 24px rgba(255, 193, 7, 0.15)',
-                },
-              }}
-            >
-              <CardContent sx={{ textAlign: 'center', py: 2 }}>
-                <LocalOffer
-                  sx={{
-                    fontSize: 32,
-                    color: '#FFC107',
-                    mb: 1
-                  }}
-                />
-                <Typography variant="h6" sx={{ fontWeight: 700, fontSize: '18px' }}>
-                  {user.loyaltyPoints || 1250}
-                </Typography>
-                <Typography variant="body2" sx={{ color: 'text.secondary', fontSize: '12px' }}>
-                  Điểm tích lũy
-                </Typography>
-              </CardContent>
-            </Card>
-          </Grid>
-
-          {/* Member Since */}
-          <Grid item xs={12} sm={6} md={3}>
-            <Card
-              sx={{
-                background: 'linear-gradient(135deg, rgba(233, 30, 99, 0.1) 0%, rgba(233, 30, 99, 0.05) 100%)',
-                border: '1px solid rgba(233, 30, 99, 0.2)',
-                borderRadius: '16px',
-                transition: 'all 0.3s ease',
-                '&:hover': {
-                  transform: 'translateY(-2px)',
-                  boxShadow: '0 8px 24px rgba(233, 30, 99, 0.15)',
-                },
-              }}
-            >
-              <CardContent sx={{ textAlign: 'center', py: 2 }}>
-                <TrendingUp
-                  sx={{
-                    fontSize: 32,
-                    color: '#E91E63',
-                    mb: 1
-                  }}
-                />
-                <Typography variant="h6" sx={{ fontWeight: 700, fontSize: '18px' }}>
-                  {new Date().getFullYear()}
-                </Typography>
-                <Typography variant="body2" sx={{ color: 'text.secondary', fontSize: '12px' }}>
-                  Thành viên từ
-                </Typography>
-              </CardContent>
-            </Card>
-          </Grid>
-        </Grid>
-
         {/* Customer Interests/Preferences */}
-        {user.interests && user.interests.length > 0 && (
-          <Box sx={{ mt: 3, display: 'flex', flexWrap: 'wrap', gap: 1 }}>
-            <Typography variant="subtitle2" sx={{ width: '100%', mb: 1, fontWeight: 600 }}>
+        <Box sx={{ mt: 3 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
+            <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
               Sở thích:
             </Typography>
-            {user.interests.map((interest, index) => (
-              <Chip
-                key={index}
-                label={interest}
+            {(!user.interests || user.interests.length === 0) && isOwnProfile && (
+              <Button
+                variant="outlined"
+                size="small"
+                startIcon={<Add />}
+                onClick={handleOpenInterestsDialog}
                 sx={{
-                  backgroundColor: 'rgba(255,255,255,0.8)',
+                  borderColor: 'primary.main',
                   color: 'primary.main',
-                  fontWeight: 500,
+                  fontSize: '12px',
+                  py: 0.5,
+                  px: 1.5,
                   '&:hover': {
-                    backgroundColor: 'rgba(255,255,255,1)',
-                  },
+                    borderColor: 'primary.dark',
+                    backgroundColor: 'rgba(233, 30, 99, 0.08)'
+                  }
                 }}
-              />
-            ))}
+              >
+                Thêm sở thích
+              </Button>
+            )}
           </Box>
-        )}
+
+          {user.interests && user.interests.length > 0 ? (
+            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+              {user.interests.map((interest, index) => (
+                <Chip
+                  key={index}
+                  label={interest}
+                  sx={{
+                    backgroundColor: 'rgba(255,255,255,0.8)',
+                    color: 'primary.main',
+                    fontWeight: 500,
+                    '&:hover': {
+                      backgroundColor: 'rgba(255,255,255,1)',
+                    },
+                  }}
+                />
+              ))}
+              {isOwnProfile && (
+                <Chip
+                  label="Chỉnh sửa"
+                  onClick={handleOpenInterestsDialog}
+                  sx={{
+                    backgroundColor: 'primary.main',
+                    color: 'white',
+                    fontWeight: 500,
+                    cursor: 'pointer',
+                    '&:hover': {
+                      backgroundColor: 'primary.dark',
+                    },
+                  }}
+                />
+              )}
+            </Box>
+          ) : (
+            <Typography variant="body2" color="text.secondary">
+              Chưa có sở thích nào được thêm
+            </Typography>
+          )}
+        </Box>
       </Box>
 
       {/* Menu */}
@@ -510,24 +684,24 @@ const CustomerProfileHeader = ({
           </ListItemIcon>
           <ListItemText primary="Chia sẻ hồ sơ" />
         </MenuItem>
-        
+
         {/* Only show these options for own profile */}
         {isOwnProfile && (
-          <>
-            <MenuItem onClick={() => { handleMenuClose(); onEditProfile(); }}>
-              <ListItemIcon>
-                <Edit fontSize="small" />
-              </ListItemIcon>
-              <ListItemText primary="Chỉnh sửa hồ sơ" />
-            </MenuItem>
-            
-            <MenuItem onClick={handleBecomeCosplayer}>
-              <ListItemIcon>
-                <TheaterComedy fontSize="small" />
-              </ListItemIcon>
-              <ListItemText primary="Trở thành Cosplayer" />
-            </MenuItem>
-          </>
+          <MenuItem onClick={() => { handleMenuClose(); onEditProfile(); }}>
+            <ListItemIcon>
+              <Edit fontSize="small" />
+            </ListItemIcon>
+            <ListItemText primary="Chỉnh sửa hồ sơ" />
+          </MenuItem>
+        )}
+
+        {isOwnProfile && (
+          <MenuItem onClick={handleBecomeCosplayer}>
+            <ListItemIcon>
+              <TheaterComedy fontSize="small" />
+            </ListItemIcon>
+            <ListItemText primary="Trở thành Cosplayer" />
+          </MenuItem>
         )}
       </Menu>
 
@@ -546,11 +720,11 @@ const CustomerProfileHeader = ({
       >
         <DialogTitle id="delete-dialog-title" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
           <Warning color="error" />
-          Delete Avatar
+          Xóa ảnh đại diện
         </DialogTitle>
         <DialogContent>
           <DialogContentText id="delete-dialog-description">
-            Are you sure you want to delete your profile avatar? This action cannot be undone.
+            Bạn có chắc chắn muốn xóa ảnh đại diện của mình? Hành động này không thể hoàn tác.
           </DialogContentText>
         </DialogContent>
         <DialogActions sx={{ px: 3, pb: 2 }}>
@@ -566,7 +740,7 @@ const CustomerProfileHeader = ({
               }
             }}
           >
-            Cancel
+            Hủy
           </Button>
           <Button
             onClick={handleDeleteConfirm}
@@ -574,7 +748,134 @@ const CustomerProfileHeader = ({
             color="error"
             autoFocus
           >
-            Delete
+            Xóa
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Interests Dialog */}
+      <Dialog
+        open={interestsDialog.open}
+        onClose={handleCloseInterestsDialog}
+        maxWidth="sm"
+        fullWidth
+        PaperProps={{
+          sx: {
+            borderRadius: '16px',
+            p: 1
+          }
+        }}
+      >
+        <DialogTitle sx={{ pb: 2, fontWeight: 600 }}>
+          Cập nhật sở thích
+          <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+            Chọn những sở thích phù hợp với bạn
+          </Typography>
+        </DialogTitle>
+
+        <DialogContent>
+          {interestsDialog.error && (
+            <Alert severity="error" sx={{ mb: 2 }}>
+              {interestsDialog.error}
+            </Alert>
+          )}
+
+          {interestsDialog.loading ? (
+            <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
+              <CircularProgress />
+            </Box>
+          ) : (
+            <Autocomplete
+              multiple
+              options={interestsDialog.availableInterests}
+              value={interestsDialog.selectedInterests}
+              onChange={handleInterestsChange}
+              filterSelectedOptions
+              renderInput={(params) => (
+                <TextField
+                  {...params}
+                  placeholder="Tìm kiếm và chọn sở thích..."
+                  variant="outlined"
+                  fullWidth
+                />
+              )}
+              renderTags={(value, getTagProps) =>
+                value.map((option, index) => (
+                  <Chip
+                    variant="outlined"
+                    label={option}
+                    {...getTagProps({ index })}
+                    key={index}
+                    sx={{
+                      borderColor: 'primary.main',
+                      color: 'primary.main',
+                      '& .MuiChip-deleteIcon': {
+                        color: 'primary.main'
+                      }
+                    }}
+                  />
+                ))
+              }
+              sx={{
+                '& .MuiOutlinedInput-root': {
+                  borderRadius: '12px',
+                }
+              }}
+            />
+          )}
+
+          {interestsDialog.selectedInterests.length > 0 && (
+            <Box sx={{ mt: 2 }}>
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                Đã chọn {interestsDialog.selectedInterests.length} sở thích:
+              </Typography>
+              <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+                {interestsDialog.selectedInterests.map((interest, index) => (
+                  <Chip
+                    key={index}
+                    label={interest}
+                    size="small"
+                    sx={{
+                      backgroundColor: 'primary.main',
+                      color: 'white',
+                      fontWeight: 500
+                    }}
+                  />
+                ))}
+              </Box>
+            </Box>
+          )}
+        </DialogContent>
+
+        <DialogActions sx={{ px: 3, pb: 3, gap: 1 }}>
+          <Button
+            onClick={handleCloseInterestsDialog}
+            variant="outlined"
+            disabled={interestsDialog.loading}
+            sx={{
+              borderColor: '#ccc',
+              color: '#666',
+              '&:hover': {
+                borderColor: '#999',
+                backgroundColor: '#f5f5f5'
+              }
+            }}
+          >
+            Hủy
+          </Button>
+          <Button
+            onClick={handleSaveInterests}
+            variant="contained"
+            disabled={interestsDialog.loading}
+            startIcon={interestsDialog.loading ? <CircularProgress size={16} /> : null}
+            sx={{
+              backgroundColor: 'primary.main',
+              '&:hover': {
+                backgroundColor: 'primary.dark'
+              }
+            }}
+          >
+            {interestsDialog.loading ? 'Đang lưu...' : 'Lưu thay đổi'}
           </Button>
         </DialogActions>
       </Dialog>

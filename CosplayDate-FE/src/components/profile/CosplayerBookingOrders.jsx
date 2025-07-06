@@ -213,6 +213,130 @@ const CosplayerBookingOrders = ({ isOwnProfile }) => {
     }
   };
 
+  // Add validation functions for edit dialog
+  const validateEditDate = (date) => {
+    if (!date || !isValid(date)) {
+      setEditErrors(prev => ({ ...prev, dateError: 'Vui lòng chọn ngày hợp lệ' }));
+      return false;
+    }
+    
+    if (isBefore(date, new Date())) {
+      setEditErrors(prev => ({ ...prev, dateError: 'Ngày đặt không thể trong quá khứ' }));
+      return false;
+    }
+    
+    const maxDate = addDays(new Date(), 30);
+    if (date > maxDate) {
+      setEditErrors(prev => ({ ...prev, dateError: 'Chỉ có thể đặt lịch trong vòng 30 ngày' }));
+      return false;
+    }
+    
+    setEditErrors(prev => ({ ...prev, dateError: '' }));
+    return true;
+  };
+
+  const validateEditTime = (time, isStartTime) => {
+    if (!time) {
+      const errorField = isStartTime ? 'startTimeError' : 'endTimeError';
+      const errorMessage = isStartTime ? 'Vui lòng chọn giờ bắt đầu' : 'Vui lòng chọn giờ kết thúc';
+      setEditErrors(prev => ({ ...prev, [errorField]: errorMessage }));
+      return false;
+    }
+
+    const hour = parseInt(time.split(':')[0]);
+    if (hour < 8 || hour > 22) {
+      const errorField = isStartTime ? 'startTimeError' : 'endTimeError';
+      setEditErrors(prev => ({ ...prev, [errorField]: 'Thời gian hoạt động từ 8:00 đến 22:00' }));
+      return false;
+    }
+
+    // If both times are set, validate that end time is after start time
+    if (!isStartTime && editDialog.formData.startTime) {
+      const startTime = editDialog.formData.startTime;
+      if (time <= startTime) {
+        setEditErrors(prev => ({ ...prev, endTimeError: 'Giờ kết thúc phải sau giờ bắt đầu' }));
+        return false;
+      }
+    }
+
+    const errorField = isStartTime ? 'startTimeError' : 'endTimeError';
+    setEditErrors(prev => ({ ...prev, [errorField]: '' }));
+    return true;
+  };
+
+  const validateEditLocation = (location) => {
+    if (!location || location.trim().length < 3) {
+      setEditErrors(prev => ({ ...prev, locationError: 'Địa điểm phải có ít nhất 3 ký tự' }));
+      return false;
+    }
+    
+    setEditErrors(prev => ({ ...prev, locationError: '' }));
+    return true;
+  };
+
+  const clearEditErrors = () => {
+    setEditErrors({
+      dateError: '',
+      startTimeError: '',
+      endTimeError: '',
+      locationError: '',
+      generalError: ''
+    });
+  };
+
+  // Handler functions for edit dialog
+  const handleEditDateChange = (newDate) => {
+    setEditDialog({
+      ...editDialog,
+      formData: { ...editDialog.formData, bookingDate: newDate }
+    });
+    
+    if (newDate) {
+      validateEditDate(newDate);
+    }
+  };
+
+  const handleEditStartTimeChange = (e) => {
+    const newStartTime = e.target.value;
+    setEditDialog({
+      ...editDialog,
+      formData: { ...editDialog.formData, startTime: newStartTime }
+    });
+    
+    if (newStartTime) {
+      validateEditTime(newStartTime, true);
+      
+      // Re-validate end time if it's already set
+      if (editDialog.formData.endTime) {
+        validateEditTime(editDialog.formData.endTime, false);
+      }
+    }
+  };
+
+  const handleEditEndTimeChange = (e) => {
+    const newEndTime = e.target.value;
+    setEditDialog({
+      ...editDialog,
+      formData: { ...editDialog.formData, endTime: newEndTime }
+    });
+    
+    if (newEndTime) {
+      validateEditTime(newEndTime, false);
+    }
+  };
+
+  const handleEditLocationChange = (e) => {
+    const newLocation = e.target.value;
+    setEditDialog({
+      ...editDialog,
+      formData: { ...editDialog.formData, location: newLocation }
+    });
+    
+    if (newLocation) {
+      validateEditLocation(newLocation);
+    }
+  };
+
   useEffect(() => {
     loadBookings();
   }, [page]); // Only reload when page changes, not filters
@@ -689,6 +813,7 @@ const CosplayerBookingOrders = ({ isOwnProfile }) => {
         </CardContent>
       </Card>
     );
+
   };
 
   if (loading) {

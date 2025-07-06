@@ -19,33 +19,50 @@ import {
 } from '@mui/material';
 import {
   Event,
-  AttachMoney,
   Star,
   TrendingUp,
-  Favorite,
   LocalOffer,
-  PhotoCamera,
-  Message,
   Person,
+  PersonAdd,
+  Visibility,
+  AccountBalanceWallet,
   Schedule,
   CheckCircle,
-  Cancel,
-  AccountBalanceWallet,
   EmojiEvents,
-  Group,
   CalendarMonth,
-  RateReview
 } from '@mui/icons-material';
 
 const CustomerProfileOverview = ({ 
   user, 
-  stats, 
+  stats: propStats, // Keep prop stats as propStats to avoid conflict
   recentActivity, 
-  favoriteCategories, 
-  walletBalance = 2500000,
-  loyaltyPoints = 1250,
-  membershipTier = 'Bronze'
+  favoriteCategories
 }) => {
+  if (!user) return null;
+
+  // Extract data from API response
+  const customer = user;
+  
+  // Get wallet balance from API data
+  const walletBalance = customer.walletBalance || 0;
+  
+  // Get loyalty points from API data  
+  const loyaltyPoints = customer.loyaltyPoints || 0;
+  
+  // Get membership tier from API data
+  const membershipTier = customer.membershipTier || 'Bronze';
+  
+  // Get profile completeness from API data
+  const profileCompleteness = customer.profileCompleteness || 0;
+  
+  // Get stats from API data (prioritize API stats over prop stats)
+  const stats = customer.stats || propStats || {};
+  
+  // Get verification status from API data
+  const isVerified = customer.isVerified || false;
+  
+  // Get member since date from API data
+  const memberSince = stats.memberSince || customer.createdAt;
   const StatCard = ({ icon, label, value, color = 'primary', trend, trendValue }) => (
     <Card
       sx={{
@@ -152,17 +169,17 @@ const CustomerProfileOverview = ({
         <Grid item xs={6} md={3}>
           <StatCard
             icon={<Event />}
-            label="Total Bookings"
-            value={stats?.totalBookings || 0}
+            label="Sự kiện tham gia"
+            value={stats?.eventsAttended || 0}
             trend="up"
             trendValue="+12%"
           />
         </Grid>
         <Grid item xs={6} md={3}>
           <StatCard
-            icon={<AttachMoney />}
-            label="Total Spent"
-            value={formatCurrency(stats?.totalSpent || 0)}
+            icon={<AccountBalanceWallet />}
+            label="Số dư ví"
+            value={formatCurrency(walletBalance)}
             color="success"
             trend="up"
             trendValue="+8%"
@@ -170,17 +187,17 @@ const CustomerProfileOverview = ({
         </Grid>
         <Grid item xs={6} md={3}>
           <StatCard
-            icon={<Favorite />}
-            label="Favorite Cosplayers"
-            value={stats?.favoriteCosplayers || 0}
+            icon={<PersonAdd />}
+            label="Đang theo dõi"
+            value={stats?.totalFollowing || 0}
             color="warning"
           />
         </Grid>
         <Grid item xs={6} md={3}>
           <StatCard
-            icon={<RateReview />}
-            label="Reviews Given"
-            value={stats?.reviewsGiven || 0}
+            icon={<Visibility />}
+            label="Lượt xem hồ sơ"
+            value={stats?.profileViews || 0}
             color="success"
           />
         </Grid>
@@ -200,36 +217,42 @@ const CustomerProfileOverview = ({
             }}
           >
             <Typography variant="h6" sx={{ fontWeight: 700, mb: 2, color: 'text.primary' }}>
-              About {user.firstName}
+              Về {customer.firstName}
             </Typography>
             <Typography variant="body1" sx={{ color: 'text.secondary', lineHeight: 1.6, mb: 3 }}>
-              {user.bio || "A passionate cosplay enthusiast who loves connecting with talented cosplayers and experiencing amazing transformations. Always looking for new and creative cosplay experiences!"}
+              {customer.bio || "Một người đam mê cosplay, yêu thích kết nối với các cosplayer tài năng và trải nghiệm những màn hóa thân tuyệt vời. Luôn tìm kiếm những trải nghiệm cosplay mới và sáng tạo!"}
             </Typography>
 
-            {/* Interests/Preferences */}
-            {user.interests && user.interests.length > 0 && (
-              <Box sx={{ mb: 3 }}>
-                <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 2 }}>
-                  Cosplay Interests
-                </Typography>
-                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
-                  {user.interests.map((interest, index) => (
-                    <Chip
-                      key={index}
-                      label={interest}
-                      sx={{
-                        backgroundColor: 'rgba(233, 30, 99, 0.1)',
-                        color: 'primary.main',
-                        fontWeight: 500,
-                        '&:hover': {
-                          backgroundColor: 'rgba(233, 30, 99, 0.2)',
-                        },
-                      }}
-                    />
-                  ))}
+            {/* User Info */}
+            <Box sx={{ mb: 3 }}>
+              <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 2 }}>
+                Thông tin cá nhân
+              </Typography>
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                {customer.location && (
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <Person sx={{ fontSize: 16, color: 'text.secondary' }} />
+                    <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+                      Đến từ: {customer.location}
+                    </Typography>
+                  </Box>
+                )}
+                {memberSince && (
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <Schedule sx={{ fontSize: 16, color: 'text.secondary' }} />
+                    <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+                      Thành viên từ: {new Date(memberSince).toLocaleDateString('vi-VN')}
+                    </Typography>
+                  </Box>
+                )}
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <Star sx={{ fontSize: 16, color: 'text.secondary' }} />
+                  <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+                    Hạng thành viên: {membershipTier}
+                  </Typography>
                 </Box>
               </Box>
-            )}
+            </Box>
 
             {/* Favorite Categories */}
             {favoriteCategories && favoriteCategories.length > 0 && (
@@ -315,7 +338,7 @@ const CustomerProfileOverview = ({
             }}
           >
             <Typography variant="h6" sx={{ fontWeight: 700, mb: 2, color: 'text.primary' }}>
-              Wallet Summary
+              Tóm tắt ví
             </Typography>
             <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
               <AccountBalanceWallet sx={{ color: '#4CAF50', mr: 1 }} />
@@ -324,17 +347,17 @@ const CustomerProfileOverview = ({
               </Typography>
             </Box>
             <Typography variant="body2" sx={{ color: 'text.secondary', mb: 2 }}>
-              Available Balance
+              Số dư khả dụng
             </Typography>
             
             <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
               <LocalOffer sx={{ color: '#9C27B0', mr: 1, fontSize: 20 }} />
               <Typography variant="body1" sx={{ fontWeight: 600 }}>
-                {loyaltyPoints.toLocaleString()} Points
+                {loyaltyPoints.toLocaleString()} Điểm
               </Typography>
             </Box>
             <Typography variant="body2" sx={{ color: 'text.secondary', fontSize: '12px' }}>
-              ≈ {formatCurrency(loyaltyPoints * 10)} value
+              ≈ {formatCurrency(loyaltyPoints * 10)} giá trị
             </Typography>
           </Paper>
 
@@ -349,7 +372,7 @@ const CustomerProfileOverview = ({
             }}
           >
             <Typography variant="h6" sx={{ fontWeight: 700, mb: 2, color: 'text.primary' }}>
-              Membership Status
+              Trạng thái thành viên
             </Typography>
             
             <Box sx={{ textAlign: 'center', mb: 3 }}>
@@ -369,7 +392,7 @@ const CustomerProfileOverview = ({
                 <EmojiEvents sx={{ color: 'white', fontSize: 36 }} />
               </Box>
               <Typography variant="h6" sx={{ fontWeight: 700, color: getTierColor(membershipTier) }}>
-                {membershipTier} Member
+                Thành viên {membershipTier}
               </Typography>
             </Box>
 

@@ -610,9 +610,9 @@ const CosplayerProfileOverview = ({ user, currentProfile, isOwnProfile }) => {
                 Trạng thái
               </Typography>
               <Chip
-                label={user?.isAvailable ? 'Sẵn sàng nhận đơn' : 'Tạm thời bận'}
+                label={user?.isAvailable ? 'Sẵn sàng nhận đơn' : 'Chưa sẵn sàng'}
                 sx={{
-                  backgroundColor: user?.isAvailable ? '#4CAF50' : '#FF9800',
+                  backgroundColor: user?.isAvailable ? '#4CAF50' : '#757575',
                   color: 'white',
                   fontWeight: 600,
                 }}
