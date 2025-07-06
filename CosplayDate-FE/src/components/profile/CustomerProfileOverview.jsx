@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   Box,
   Typography,
@@ -15,7 +15,15 @@ import {
   ListItemIcon,
   ListItemText,
   ListItemAvatar,
-  Button
+  Button,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  TextField,
+  Autocomplete,
+  CircularProgress,
+  Alert,
 } from '@mui/material';
 import {
   Event,
@@ -30,37 +38,43 @@ import {
   CheckCircle,
   EmojiEvents,
   CalendarMonth,
+  Add,
 } from '@mui/icons-material';
 
 const CustomerProfileOverview = ({ 
   user, 
   stats: propStats, // Keep prop stats as propStats to avoid conflict
   recentActivity, 
-  favoriteCategories
+  favoriteCategories,
+  isOwnProfile, // Add isOwnProfile prop
+  onEditProfile // Add onEditProfile prop to trigger ProfileEditModal
 }) => {
+  // Interests dialog state
+  const [interestsDialog, setInterestsDialog] = useState({
+    open: false,
+    loading: false,
+    availableInterests: [],
+    selectedInterests: [],
+    error: ''
+  });
+
   if (!user) return null;
 
   // Extract data from API response
   const customer = user;
-  
+
   // Get wallet balance from API data
   const walletBalance = customer.walletBalance || 0;
-  
+
   // Get loyalty points from API data  
   const loyaltyPoints = customer.loyaltyPoints || 0;
-  
+
   // Get membership tier from API data
   const membershipTier = customer.membershipTier || 'Bronze';
-  
-  // Get profile completeness from API data
-  const profileCompleteness = customer.profileCompleteness || 0;
-  
+
   // Get stats from API data (prioritize API stats over prop stats)
   const stats = customer.stats || propStats || {};
-  
-  // Get verification status from API data
-  const isVerified = customer.isVerified || false;
-  
+
   // Get member since date from API data
   const memberSince = stats.memberSince || customer.createdAt;
   const StatCard = ({ icon, label, value, color = 'primary', trend, trendValue }) => (
@@ -154,55 +168,243 @@ const CustomerProfileOverview = ({
   };
 
   const membershipProgress = {
-    Bronze: { current: 1250, next: 2500, nextTier: 'Silver' },
-    Silver: { current: 3750, next: 5000, nextTier: 'Gold' },
-    Gold: { current: 7500, next: 10000, nextTier: 'Platinum' },
-    Platinum: { current: 15000, next: 15000, nextTier: 'Platinum Max' }
+    Bronze: { current: loyaltyPoints, next: 2500, nextTier: 'Silver' },
+    Silver: { current: loyaltyPoints, next: 5000, nextTier: 'Gold' },
+    Gold: { current: loyaltyPoints, next: 10000, nextTier: 'Platinum' },
+    Platinum: { current: loyaltyPoints, next: loyaltyPoints, nextTier: 'Platinum Max' }
   };
 
   const currentProgress = membershipProgress[membershipTier];
 
+  // Interests dialog handlers
+  const handleOpenInterestsDialog = async () => {
+    setInterestsDialog(prev => ({ ...prev, open: true, loading: true, error: '' }));
+
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        throw new Error('No authentication token found');
+      }
+
+      console.log('Attempting to fetch interests from API');
+      
+      // Use the configured API base URL from environment variables
+      const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'https://localhost:7241/api';
+      const apiUrl = `${apiBaseUrl}/users/interests`;
+      
+      console.log('Making request to:', apiUrl);
+      
+      const response = await fetch(apiUrl, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      console.log('Response status:', response.status);
+      console.log('Response headers:', Object.fromEntries(response.headers.entries()));
+
+      // Check if response is ok
+      if (!response.ok) {
+        if (response.status === 401) {
+          throw new Error('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.');
+        }
+        if (response.status === 404) {
+          throw new Error('API endpoint chưa được triển khai. Sử dụng dữ liệu mẫu.');
+        }
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      // Try to parse JSON response - handle HTML responses gracefully
+      let result;
+      try {
+        const responseText = await response.text();
+        console.log('Response text preview:', responseText.substring(0, 200));
+        console.log('Full response text:', responseText);
+        
+        // Check if response is HTML (likely an error page)
+        if (responseText.trim().startsWith('<!DOCTYPE') || responseText.trim().startsWith('<html')) {
+          throw new Error('API endpoint không tồn tại hoặc server trả về trang lỗi');
+        }
+        
+        // Check if response is empty
+        if (!responseText.trim()) {
+          throw new Error('Server trả về phản hồi trống');
+        }
+        
+        result = JSON.parse(responseText);
+        console.log('Parsed result:', result);
+      } catch (parseError) {
+        console.error('Parse error details:', parseError);
+        console.error('Response text that failed to parse:', responseText);
+        
+        if (parseError.message.includes('API endpoint') || parseError.message.includes('Server trả về')) {
+          throw parseError;
+        }
+        
+        // More specific error messages
+        if (parseError instanceof SyntaxError) {
+          throw new Error(`Lỗi định dạng JSON từ server: ${parseError.message}`);
+        }
+        
+        throw new Error('Phản hồi từ server không đúng định dạng JSON');
+      }
+
+      if (result.isSuccess) {
+        // Use interests from API response, fallback to user.interests, fallback to empty array
+        const currentInterests = result.data.interests || user.interests || [];
+        
+        setInterestsDialog(prev => ({
+          ...prev,
+          loading: false,
+          availableInterests: result.data.availableInterests || [],
+          selectedInterests: currentInterests,
+          error: ''
+        }));
+      } else {
+        setInterestsDialog(prev => ({
+          ...prev,
+          loading: false,
+          error: result.message || 'Không thể tải danh sách sở thích'
+        }));
+      }
+    } catch (error) {
+      console.error('Error loading interests:', error);
+      
+      // If API is not available, use fallback
+      setInterestsDialog(prev => ({
+        ...prev,
+        loading: false,
+        error: error.message || 'Có lỗi xảy ra khi tải danh sách sở thích. Vui lòng thử lại sau.'
+      }));
+    }
+  };
+
+  const handleCloseInterestsDialog = () => {
+    setInterestsDialog({
+      open: false,
+      loading: false,
+      availableInterests: [],
+      selectedInterests: [],
+      error: ''
+    });
+  };
+
+  const handleInterestsChange = (event, newValue) => {
+    setInterestsDialog(prev => ({
+      ...prev,
+      selectedInterests: newValue
+    }));
+  };
+
+  const handleSaveInterests = async () => {
+    setInterestsDialog(prev => ({ ...prev, loading: true, error: '' }));
+
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        throw new Error('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.');
+      }
+
+      // Use the configured API base URL from environment variables
+      const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'https://localhost:7241/api';
+      const apiUrl = `${apiBaseUrl}/users/interests`;
+      
+      console.log('Making PUT request to:', apiUrl);
+
+      const response = await fetch(apiUrl, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          interests: interestsDialog.selectedInterests
+        }),
+      });
+
+      // Check if response is ok
+      if (!response.ok) {
+        if (response.status === 401) {
+          throw new Error('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.');
+        }
+        if (response.status === 404) {
+          throw new Error('API endpoint chưa được triển khai. Sử dụng lưu trữ cục bộ.');
+        }
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      // Try to parse JSON response - handle HTML responses gracefully
+      let result;
+      try {
+        const responseText = await response.text();
+        console.log('Save response text:', responseText);
+        
+        // Check if response is HTML (likely an error page)
+        if (responseText.trim().startsWith('<!DOCTYPE') || responseText.trim().startsWith('<html')) {
+          throw new Error('API endpoint không tồn tại hoặc server trả về trang lỗi');
+        }
+        
+        // Check if response is empty
+        if (!responseText.trim()) {
+          throw new Error('Server trả về phản hồi trống');
+        }
+        
+        result = JSON.parse(responseText);
+        console.log('Save parsed result:', result);
+      } catch (parseError) {
+        console.error('Save parse error details:', parseError);
+        console.error('Save response text that failed to parse:', responseText);
+        
+        if (parseError.message.includes('API endpoint') || parseError.message.includes('Server trả về')) {
+          throw parseError;
+        }
+        
+        // More specific error messages
+        if (parseError instanceof SyntaxError) {
+          throw new Error(`Lỗi định dạng JSON từ server: ${parseError.message}`);
+        }
+        
+        throw new Error('Phản hồi từ server không đúng định dạng JSON');
+      }
+
+      if (result.isSuccess) {
+        // Update user data locally
+        user.interests = interestsDialog.selectedInterests;
+        handleCloseInterestsDialog();
+      } else {
+        setInterestsDialog(prev => ({
+          ...prev,
+          loading: false,
+          error: result.message || 'Không thể lưu sở thích'
+        }));
+      }
+    } catch (error) {
+      console.error('Error saving interests:', error);
+      
+      // If API is not available, save locally for development
+      if (error.message.includes('API endpoint') || error.message.includes('không tồn tại')) {
+        console.log('API not available, saving interests locally');
+        
+        // Update user data locally
+        user.interests = interestsDialog.selectedInterests;
+        handleCloseInterestsDialog();
+        
+        // Show a warning that it's only saved locally
+        alert('Sở thích đã được lưu tạm thời (API chưa sẵn sàng)');
+      } else {
+        setInterestsDialog(prev => ({
+          ...prev,
+          loading: false,
+          error: error.message || 'Có lỗi xảy ra khi lưu sở thích. Vui lòng thử lại sau.'
+        }));
+      }
+    }
+  };
+
   return (
     <Box>
-      {/* Stats Grid */}
-      <Grid container spacing={3} sx={{ mb: 4 }}>
-        <Grid item xs={6} md={3}>
-          <StatCard
-            icon={<Event />}
-            label="Sự kiện tham gia"
-            value={stats?.eventsAttended || 0}
-            trend="up"
-            trendValue="+12%"
-          />
-        </Grid>
-        <Grid item xs={6} md={3}>
-          <StatCard
-            icon={<AccountBalanceWallet />}
-            label="Số dư ví"
-            value={formatCurrency(walletBalance)}
-            color="success"
-            trend="up"
-            trendValue="+8%"
-          />
-        </Grid>
-        <Grid item xs={6} md={3}>
-          <StatCard
-            icon={<PersonAdd />}
-            label="Đang theo dõi"
-            value={stats?.totalFollowing || 0}
-            color="warning"
-          />
-        </Grid>
-        <Grid item xs={6} md={3}>
-          <StatCard
-            icon={<Visibility />}
-            label="Lượt xem hồ sơ"
-            value={stats?.profileViews || 0}
-            color="success"
-          />
-        </Grid>
-      </Grid>
-
       <Grid container spacing={3}>
         {/* About Section */}
         <Grid item xs={12} md={8}>
@@ -219,9 +421,11 @@ const CustomerProfileOverview = ({
             <Typography variant="h6" sx={{ fontWeight: 700, mb: 2, color: 'text.primary' }}>
               Về {customer.firstName}
             </Typography>
-            <Typography variant="body1" sx={{ color: 'text.secondary', lineHeight: 1.6, mb: 3 }}>
-              {customer.bio || "Một người đam mê cosplay, yêu thích kết nối với các cosplayer tài năng và trải nghiệm những màn hóa thân tuyệt vời. Luôn tìm kiếm những trải nghiệm cosplay mới và sáng tạo!"}
-            </Typography>
+            {customer.bio && (
+              <Typography variant="body1" sx={{ color: 'text.secondary', lineHeight: 1.6, mb: 3 }}>
+                {customer.bio}
+              </Typography>
+            )}
 
             {/* User Info */}
             <Box sx={{ mb: 3 }}>
@@ -245,122 +449,193 @@ const CustomerProfileOverview = ({
                     </Typography>
                   </Box>
                 )}
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                  <Star sx={{ fontSize: 16, color: 'text.secondary' }} />
-                  <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-                    Hạng thành viên: {membershipTier}
-                  </Typography>
-                </Box>
               </Box>
             </Box>
 
-            {/* Favorite Categories */}
-            {favoriteCategories && favoriteCategories.length > 0 && (
-              <Box>
-                <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 2 }}>
-                  Booking Preferences
+            {/* Customer Interests/Preferences */}
+            <Box sx={{ mb: 3 }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
+                <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
+                  Sở thích:
                 </Typography>
-                {favoriteCategories.map((category, index) => (
-                  <CategoryBar
-                    key={index}
-                    category={category.name}
-                    bookings={category.bookings}
-                    total={stats?.totalBookings || 1}
-                    color={category.color || '#E91E63'}
-                  />
-                ))}
+                {isOwnProfile && (
+                  <Button
+                    variant="outlined"
+                    size="small"
+                    startIcon={<Add />}
+                    onClick={handleOpenInterestsDialog}
+                    sx={{
+                      borderColor: 'primary.main',
+                      color: 'primary.main',
+                      fontSize: '12px',
+                      py: 0.5,
+                      px: 1.5,
+                      '&:hover': {
+                        borderColor: 'primary.dark',
+                        backgroundColor: 'rgba(233, 30, 99, 0.08)'
+                      }
+                    }}
+                  >
+                    {(!user.interests || user.interests.length === 0) ? 'Thêm sở thích' : 'Chỉnh sửa'}
+                  </Button>
+                )}
               </Box>
-            )}
+
+              {user.interests && user.interests.length > 0 ? (
+                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+                  {user.interests.map((interest, index) => (
+                    <Chip
+                      key={index}
+                      label={interest}
+                      sx={{
+                        backgroundColor: 'rgba(233, 30, 99, 0.1)',
+                        color: 'primary.main',
+                        fontWeight: 500,
+                        '&:hover': {
+                          backgroundColor: 'rgba(233, 30, 99, 0.2)',
+                        },
+                      }}
+                    />
+                  ))}
+                </Box>
+              ) : (
+                <Typography variant="body2" color="text.secondary">
+                  Chưa có sở thích nào được thêm
+                </Typography>
+              )}
+            </Box>
           </Paper>
 
-          {/* Recent Activity */}
-          {recentActivity && recentActivity.length > 0 && (
-            <Paper
-              sx={{
+          {/* Interests Dialog */}
+          <Dialog
+            open={interestsDialog.open}
+            onClose={handleCloseInterestsDialog}
+            maxWidth="sm"
+            fullWidth
+            PaperProps={{
+              sx: {
                 borderRadius: '16px',
-                p: 3,
-                background: 'rgba(255,255,255,0.95)',
-                border: '1px solid rgba(233, 30, 99, 0.1)',
-              }}
-            >
-              <Typography variant="h6" sx={{ fontWeight: 700, mb: 2, color: 'text.primary' }}>
-                Recent Activity
+                p: 1
+              }
+            }}
+          >
+            <DialogTitle sx={{ pb: 2, fontWeight: 600 }}>
+              Cập nhật sở thích
+              <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+                Chọn những sở thích phù hợp với bạn
               </Typography>
-              <List sx={{ p: 0 }}>
-                {recentActivity.map((activity, index) => (
-                  <React.Fragment key={index}>
-                    <ListItem sx={{ px: 0, py: 1.5 }}>
-                      <ListItemAvatar>
-                        <Avatar
-                          sx={{
-                            backgroundColor: 'primary.main',
-                            width: 40,
-                            height: 40,
-                          }}
-                        >
-                          {activity.icon}
-                        </Avatar>
-                      </ListItemAvatar>
-                      <ListItemText
-                        primary={activity.title}
-                        secondary={activity.description}
-                        primaryTypographyProps={{
-                          fontWeight: 600,
-                          fontSize: '14px',
-                        }}
-                        secondaryTypographyProps={{
-                          fontSize: '12px',
-                          color: 'text.secondary',
+            </DialogTitle>
+
+            <DialogContent>
+              {interestsDialog.error && (
+                <Alert severity="error" sx={{ mb: 2 }}>
+                  {interestsDialog.error}
+                </Alert>
+              )}
+
+              {interestsDialog.loading ? (
+                <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
+                  <CircularProgress />
+                </Box>
+              ) : (
+                <Autocomplete
+                  multiple
+                  options={interestsDialog.availableInterests}
+                  value={interestsDialog.selectedInterests}
+                  onChange={handleInterestsChange}
+                  filterSelectedOptions
+                  renderInput={(params) => (
+                    <TextField
+                      {...params}
+                      placeholder="Tìm kiếm và chọn sở thích..."
+                      variant="outlined"
+                      fullWidth
+                    />
+                  )}
+                  renderTags={(value, getTagProps) =>
+                    value.map((option, index) => (
+                      <Chip
+                        variant="outlined"
+                        label={option}
+                        {...getTagProps({ index })}
+                        key={index}
+                        sx={{
+                          borderColor: 'primary.main',
+                          color: 'primary.main',
+                          '& .MuiChip-deleteIcon': {
+                            color: 'primary.main'
+                          }
                         }}
                       />
-                      <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-                        {activity.time}
-                      </Typography>
-                    </ListItem>
-                    {index < recentActivity.length - 1 && <Divider />}
-                  </React.Fragment>
-                ))}
-              </List>
-            </Paper>
-          )}
+                    ))
+                  }
+                  sx={{
+                    '& .MuiOutlinedInput-root': {
+                      borderRadius: '12px',
+                    }
+                  }}
+                />
+              )}
+
+              {interestsDialog.selectedInterests.length > 0 && (
+                <Box sx={{ mt: 2 }}>
+                  <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                    Đã chọn {interestsDialog.selectedInterests.length} sở thích:
+                  </Typography>
+                  <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+                    {interestsDialog.selectedInterests.map((interest, index) => (
+                      <Chip
+                        key={index}
+                        label={interest}
+                        size="small"
+                        sx={{
+                          backgroundColor: 'primary.main',
+                          color: 'white',
+                          fontWeight: 500
+                        }}
+                      />
+                    ))}
+                  </Box>
+                </Box>
+              )}
+            </DialogContent>
+
+            <DialogActions sx={{ px: 3, pb: 3, gap: 1 }}>
+              <Button
+                onClick={handleCloseInterestsDialog}
+                variant="outlined"
+                disabled={interestsDialog.loading}
+                sx={{
+                  borderColor: '#ccc',
+                  color: '#666',
+                  '&:hover': {
+                    borderColor: '#999',
+                    backgroundColor: '#f5f5f5'
+                  }
+                }}
+              >
+                Hủy
+              </Button>
+              <Button
+                onClick={handleSaveInterests}
+                variant="contained"
+                disabled={interestsDialog.loading}
+                startIcon={interestsDialog.loading ? <CircularProgress size={16} /> : null}
+                sx={{
+                  backgroundColor: 'primary.main',
+                  '&:hover': {
+                    backgroundColor: 'primary.dark'
+                  }
+                }}
+              >
+                {interestsDialog.loading ? 'Đang lưu...' : 'Lưu thay đổi'}
+              </Button>
+            </DialogActions>
+          </Dialog>
         </Grid>
 
         {/* Sidebar */}
         <Grid item xs={12} md={4}>
-          {/* Wallet Summary */}
-          <Paper
-            sx={{
-              borderRadius: '16px',
-              p: 3,
-              mb: 3,
-              background: 'linear-gradient(135deg, rgba(76, 175, 80, 0.1) 0%, rgba(76, 175, 80, 0.05) 100%)',
-              border: '1px solid rgba(76, 175, 80, 0.2)',
-            }}
-          >
-            <Typography variant="h6" sx={{ fontWeight: 700, mb: 2, color: 'text.primary' }}>
-              Tóm tắt ví
-            </Typography>
-            <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-              <AccountBalanceWallet sx={{ color: '#4CAF50', mr: 1 }} />
-              <Typography variant="h5" sx={{ fontWeight: 700, color: '#4CAF50' }}>
-                {formatCurrency(walletBalance)}
-              </Typography>
-            </Box>
-            <Typography variant="body2" sx={{ color: 'text.secondary', mb: 2 }}>
-              Số dư khả dụng
-            </Typography>
-            
-            <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-              <LocalOffer sx={{ color: '#9C27B0', mr: 1, fontSize: 20 }} />
-              <Typography variant="body1" sx={{ fontWeight: 600 }}>
-                {loyaltyPoints.toLocaleString()} Điểm
-              </Typography>
-            </Box>
-            <Typography variant="body2" sx={{ color: 'text.secondary', fontSize: '12px' }}>
-              ≈ {formatCurrency(loyaltyPoints * 10)} giá trị
-            </Typography>
-          </Paper>
-
           {/* Membership Status */}
           <Paper
             sx={{
@@ -374,7 +649,7 @@ const CustomerProfileOverview = ({
             <Typography variant="h6" sx={{ fontWeight: 700, mb: 2, color: 'text.primary' }}>
               Trạng thái thành viên
             </Typography>
-            
+
             <Box sx={{ textAlign: 'center', mb: 3 }}>
               <Box
                 sx={{
@@ -424,191 +699,6 @@ const CustomerProfileOverview = ({
                 </Typography>
               </Box>
             )}
-          </Paper>
-
-          {/* Quick Stats */}
-          <Paper
-            sx={{
-              borderRadius: '16px',
-              p: 3,
-              mb: 3,
-              background: 'rgba(255,255,255,0.95)',
-              border: '1px solid rgba(233, 30, 99, 0.1)',
-            }}
-          >
-            <Typography variant="h6" sx={{ fontWeight: 700, mb: 2, color: 'text.primary' }}>
-              Quick Stats
-            </Typography>
-            <List sx={{ p: 0 }}>
-              <ListItem sx={{ px: 0, py: 1 }}>
-                <ListItemIcon sx={{ minWidth: 36 }}>
-                  <Schedule sx={{ color: 'primary.main' }} />
-                </ListItemIcon>
-                <ListItemText
-                  primary="Avg. Response Time"
-                  secondary={user.avgResponseTime || "< 30 minutes"}
-                  primaryTypographyProps={{ fontSize: '14px', fontWeight: 600 }}
-                  secondaryTypographyProps={{ fontSize: '12px' }}
-                />
-              </ListItem>
-              <ListItem sx={{ px: 0, py: 1 }}>
-                <ListItemIcon sx={{ minWidth: 36 }}>
-                  <CheckCircle sx={{ color: 'success.main' }} />
-                </ListItemIcon>
-                <ListItemText
-                  primary="Completion Rate"
-                  secondary={user.completionRate || "98%"}
-                  primaryTypographyProps={{ fontSize: '14px', fontWeight: 600 }}
-                  secondaryTypographyProps={{ fontSize: '12px' }}
-                />
-              </ListItem>
-              <ListItem sx={{ px: 0, py: 1 }}>
-                <ListItemIcon sx={{ minWidth: 36 }}>
-                  <CalendarMonth sx={{ color: 'info.main' }} />
-                </ListItemIcon>
-                <ListItemText
-                  primary="Member Since"
-                  secondary={user.memberSince || "January 2023"}
-                  primaryTypographyProps={{ fontSize: '14px', fontWeight: 600 }}
-                  secondaryTypographyProps={{ fontSize: '12px' }}
-                />
-              </ListItem>
-              <ListItem sx={{ px: 0, py: 1 }}>
-                <ListItemIcon sx={{ minWidth: 36 }}>
-                  <Star sx={{ color: 'warning.main' }} />
-                </ListItemIcon>
-                <ListItemText
-                  primary="Avg. Rating Given"
-                  secondary={user.avgRatingGiven || "4.7/5"}
-                  primaryTypographyProps={{ fontSize: '14px', fontWeight: 600 }}
-                  secondaryTypographyProps={{ fontSize: '12px' }}
-                />
-              </ListItem>
-            </List>
-          </Paper>
-
-          {/* Achievements */}
-          <Paper
-            sx={{
-              borderRadius: '16px',
-              p: 3,
-              background: 'rgba(255,255,255,0.95)',
-              border: '1px solid rgba(233, 30, 99, 0.1)',
-            }}
-          >
-            <Typography variant="h6" sx={{ fontWeight: 700, mb: 2, color: 'text.primary' }}>
-              Recent Achievements
-            </Typography>
-            
-            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-              {/* Achievement badges */}
-              <Box
-                sx={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  p: 2,
-                  backgroundColor: 'rgba(76, 175, 80, 0.1)',
-                  borderRadius: '12px',
-                  border: '1px solid rgba(76, 175, 80, 0.2)',
-                }}
-              >
-                <Avatar
-                  sx={{
-                    backgroundColor: '#4CAF50',
-                    width: 40,
-                    height: 40,
-                    mr: 2,
-                  }}
-                >
-                  🏆
-                </Avatar>
-                <Box>
-                  <Typography variant="subtitle2" sx={{ fontWeight: 600, fontSize: '13px' }}>
-                    Loyal Customer
-                  </Typography>
-                  <Typography variant="body2" sx={{ color: 'text.secondary', fontSize: '11px' }}>
-                    Completed 10+ bookings
-                  </Typography>
-                </Box>
-              </Box>
-
-              <Box
-                sx={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  p: 2,
-                  backgroundColor: 'rgba(255, 193, 7, 0.1)',
-                  borderRadius: '12px',
-                  border: '1px solid rgba(255, 193, 7, 0.2)',
-                }}
-              >
-                <Avatar
-                  sx={{
-                    backgroundColor: '#FFC107',
-                    width: 40,
-                    height: 40,
-                    mr: 2,
-                  }}
-                >
-                  ⭐
-                </Avatar>
-                <Box>
-                  <Typography variant="subtitle2" sx={{ fontWeight: 600, fontSize: '13px' }}>
-                    Review Master
-                  </Typography>
-                  <Typography variant="body2" sx={{ color: 'text.secondary', fontSize: '11px' }}>
-                    Left 5+ detailed reviews
-                  </Typography>
-                </Box>
-              </Box>
-
-              <Box
-                sx={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  p: 2,
-                  backgroundColor: 'rgba(233, 30, 99, 0.1)',
-                  borderRadius: '12px',
-                  border: '1px solid rgba(233, 30, 99, 0.2)',
-                }}
-              >
-                <Avatar
-                  sx={{
-                    backgroundColor: '#E91E63',
-                    width: 40,
-                    height: 40,
-                    mr: 2,
-                  }}
-                >
-                  💝
-                </Avatar>
-                <Box>
-                  <Typography variant="subtitle2" sx={{ fontWeight: 600, fontSize: '13px' }}>
-                    Generous Tipper
-                  </Typography>
-                  <Typography variant="body2" sx={{ color: 'text.secondary', fontSize: '11px' }}>
-                    Consistently rates 5 stars
-                  </Typography>
-                </Box>
-              </Box>
-            </Box>
-
-            <Button
-              variant="outlined"
-              fullWidth
-              sx={{
-                mt: 2,
-                borderColor: 'primary.main',
-                color: 'primary.main',
-                borderRadius: '12px',
-                textTransform: 'none',
-                '&:hover': {
-                  backgroundColor: 'rgba(233, 30, 99, 0.05)',
-                },
-              }}
-            >
-              View All Achievements
-            </Button>
           </Paper>
         </Grid>
       </Grid>

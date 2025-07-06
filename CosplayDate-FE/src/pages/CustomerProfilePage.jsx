@@ -542,6 +542,8 @@ const CustomerProfilePage = () => {
             stats={mockStats}
             recentActivity={mockRecentActivity}
             favoriteCategories={mockFavoriteCategories}
+            isOwnProfile={isOwnProfile}
+            onEditProfile={handleEditProfile}
           />
         );
       case "wallet":
