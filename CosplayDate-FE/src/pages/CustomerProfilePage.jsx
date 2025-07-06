@@ -24,7 +24,6 @@ import Header from '../components/layout/Header';
 import Footer from '../components/layout/Footer';
 import CustomerProfileHeader from '../components/profile/CustomerProfileHeader';
 import ProfileTabs from '../components/profile/ProfileTabs';
-import CustomerProfileOverview from '../components/profile/CustomerProfileOverview';
 import CustomerWallet from '../components/profile/CustomerWallet';
 import ProfileGallery from '../components/profile/ProfileGallery';
 import ProfileEditModal from '../components/profile/ProfileEditModal';
@@ -39,7 +38,7 @@ const CustomerProfilePage = () => {
   const [user, setUser] = useState(null);
   const [profileUser, setProfileUser] = useState(null);
   const [currentProfile, setCurrentProfile] = useState(null); // Add current profile state
-  const [activeTab, setActiveTab] = useState('overview');
+  const [activeTab, setActiveTab] = useState('gallery');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [isOwnProfile, setIsOwnProfile] = useState(false); // Changed to state instead of computed
@@ -124,17 +123,11 @@ const CustomerProfilePage = () => {
         case 'wallet':
           setActiveTab('wallet');
           break;
-        case 'gallery':
-          setActiveTab('gallery');
-          break;
         case 'following':
           setActiveTab('following');
           break;
-        case 'favorites':
-          setActiveTab('favorites');
-          break;
         default:
-          setActiveTab('overview');
+          setActiveTab('gallery');
       }
     }
   }, [location.search]);
@@ -499,9 +492,10 @@ const CustomerProfilePage = () => {
 
   const customerTabs = [
     {
-      id: "overview",
-      label: "Overview",
-      icon: "Info",
+      id: "gallery",
+      label: "Gallery",
+      icon: "PhotoLibrary",
+      count: customerTabCounts.photos,
       show: true,
     },
     {
@@ -518,13 +512,6 @@ const CustomerProfilePage = () => {
       show: isOwnProfile,
     },
     {
-      id: "gallery",
-      label: "Gallery",
-      icon: "PhotoLibrary",
-      count: customerTabCounts.photos,
-      show: true,
-    },
-    {
       id: "following",
       label: "Đang theo dõi",
       icon: "PersonAdd",
@@ -535,17 +522,6 @@ const CustomerProfilePage = () => {
 
   const renderTabContent = () => {
     switch (activeTab) {
-      case "overview":
-        return (
-          <CustomerProfileOverview
-            user={profileUser}
-            stats={mockStats}
-            recentActivity={mockRecentActivity}
-            favoriteCategories={mockFavoriteCategories}
-            isOwnProfile={isOwnProfile}
-            onEditProfile={handleEditProfile}
-          />
-        );
       case "wallet":
         return (
           <CustomerWallet
@@ -658,14 +634,14 @@ const CustomerProfilePage = () => {
         <Container maxWidth="lg" sx={{ py: 4 }}>
           <CustomerProfileHeader
             user={profileUser}
+            stats={mockStats}
+            recentActivity={mockRecentActivity}
+            favoriteCategories={mockFavoriteCategories}
             isOwnProfile={isOwnProfile}
             onEditProfile={handleEditProfile}
             onEditAvatar={handleAvatarClick}
-            anchorEl={anchorEl}
-            onMenuClose={handleMenuClose}
-            onAvatarUpload={handleAvatarUpload}
-            onAvatarDelete={handleAvatarDelete}
             deleteDialogOpen={deleteDialogOpen}
+            onDeleteDialogClose={() => setDeleteDialogOpen(false)}
             onConfirmDelete={handleConfirmDelete}
           />
 
