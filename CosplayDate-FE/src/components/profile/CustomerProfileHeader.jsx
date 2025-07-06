@@ -509,7 +509,7 @@ const CustomerProfileHeader = ({
             )}
 
             {/* Info Grid */}
-            <Box sx={{ display: 'flex', gap: 3, flexWrap: 'wrap' }}>
+            <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', flexDirection: 'column' }}>
               {/* Location */}
               {customer.location && (
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>

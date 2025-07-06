@@ -16,7 +16,7 @@ import { cosplayTheme } from "../theme/cosplayTheme";
 import {
   userAPI,
   enhancedWalletAPI,
-  customerMediaAPI,
+
 } from "../services/api";
 
 // Import components
@@ -25,7 +25,7 @@ import Footer from '../components/layout/Footer';
 import CustomerProfileHeader from '../components/profile/CustomerProfileHeader';
 import ProfileTabs from '../components/profile/ProfileTabs';
 import CustomerWallet from '../components/profile/CustomerWallet';
-import ProfileGallery from '../components/profile/ProfileGallery';
+
 import ProfileEditModal from '../components/profile/ProfileEditModal';
 import CustomerBookingOrders from '../components/profile/CustomerBookingOrders';
 import CustomerFollowing from '../components/profile/CustomerFollowing';
@@ -38,7 +38,7 @@ const CustomerProfilePage = () => {
   const [user, setUser] = useState(null);
   const [profileUser, setProfileUser] = useState(null);
   const [currentProfile, setCurrentProfile] = useState(null); // Add current profile state
-  const [activeTab, setActiveTab] = useState('gallery');
+  const [activeTab, setActiveTab] = useState('wallet');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [isOwnProfile, setIsOwnProfile] = useState(false); // Changed to state instead of computed
@@ -127,7 +127,7 @@ const CustomerProfilePage = () => {
           setActiveTab('following');
           break;
         default:
-          setActiveTab('gallery');
+          setActiveTab('wallet');
       }
     }
   }, [location.search]);
@@ -405,10 +405,6 @@ const CustomerProfilePage = () => {
     }
   };
 
-  const handleAddPhoto = () => {
-    showSnackbar('Photo upload feature coming soon!', 'info');
-  };
-
   const showSnackbar = (message, severity = "success") => {
     setSnackbar({ open: true, message, severity });
   };
@@ -468,36 +464,17 @@ const CustomerProfilePage = () => {
     },
   ];
 
-  const mockCustomerPhotos = Array.from({ length: 16 }, (_, index) => ({
-    id: index + 1,
-    url: `/src/assets/cosplayer${(index % 8) + 1}.png`,
-    title: `Event Photo ${index + 1}`,
-    description: `Amazing cosplay event experience #${index + 1}`,
-    category: ["event", "photoshoot", "convention", "meetup"][index % 4],
-    likes: Math.floor(Math.random() * 100) + 20,
-    tags: ["cosplay", "event", "memories", "community"],
-  }));
-
   const customerTabCounts = {
-    photos: mockCustomerPhotos.length,
-    videos: 0,
     reviews: mockStats.reviewsGiven,
     events: mockStats.totalBookings,
     achievements: 8,
     favorites: mockStats.favoriteCosplayers,
     bookings: mockStats.totalBookings,
-    following: profileUser?.followingCount || 0, // Add following count
+    following: profileUser?.followingCount || 0,
     wallet: 1,
   };
 
   const customerTabs = [
-    {
-      id: "gallery",
-      label: "Gallery",
-      icon: "PhotoLibrary",
-      count: customerTabCounts.photos,
-      show: true,
-    },
     {
       id: "wallet",
       label: "Wallet",
@@ -539,22 +516,6 @@ const CustomerProfilePage = () => {
         );
       case 'bookings':
         return <CustomerBookingOrders />;
-      case 'gallery':
-        return (
-          <ProfileGallery
-            photos={mockCustomerPhotos}
-            isOwnProfile={isOwnProfile}
-            onAddPhoto={handleAddPhoto}
-            loading={false}
-            // Pass API functions for real gallery data
-            onLoadGallery={(category) =>
-              customerMediaAPI.getCustomerGallery(profileUser?.id, category)
-            }
-            onDeletePhoto={(photoId) =>
-              customerMediaAPI.deleteProfilePhoto(photoId)
-            }
-          />
-        );
       case 'following':
         return (
           <CustomerFollowing
