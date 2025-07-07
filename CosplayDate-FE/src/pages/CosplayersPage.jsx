@@ -50,32 +50,69 @@ const CosplayersPage = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [filters, setFilters] = useState({
     gender: [],
-    categories: [],
+    category: [],
     minPrice: '',
     maxPrice: '',
     minRating: '',
     location: '',
     specialties: [],
+    tags: [],
     isAvailable: null
   });
   const [sortBy, setSortBy] = useState('rating');
   const [sortOrder, setSortOrder] = useState('desc');
 
+  // Static tags data (handled on frontend)
+  const staticTags = [
+    'Beginner Friendly',
+    'Professional',
+    'Affordable',
+    'Premium',
+    'Quick Response',
+    'Custom Outfits',
+    'Props Included',
+    'Makeup Included',
+    'Photography',
+    'Events',
+    'Conventions',
+    'Photoshoots',
+    'Group Cosplay',
+    'Solo Performance',
+    'Interactive',
+    'High Quality',
+    'Award Winner',
+    'Experienced',
+    'Creative',
+    'Detailed'
+  ];
+
+  // Dynamic data from API
+  const [availableCategories, setAvailableCategories] = useState([]);
+
   const itemsPerPage = 12;
 
-  const categories = [
-    'Anime', 'Game', 'Movie', 'TV Show', 'Comic', 'Original Character',
-    'Fantasy', 'Sci-Fi', 'Historical', 'Gothic', 'Kawaii', 'Maid',
-    'School Uniform', 'Traditional', 'Modern', 'Other'
-  ];
-
-  const specialties = [
-    'Costume Making', 'Prop Making', 'Wig Styling', 'Makeup Artist',
-    'Photography', 'Performance', 'Voice Acting', 'Dancing'
-  ];
-
+  // Static location data (not provided by API)
   const locations = [
     'Hà Nội', 'TP. Hồ Chí Minh', 'Đà Nẵng', 'Cần Thơ', 'Hải Phòng', 'Nha Trang'
+  ];
+
+  // Static specialties data (handled on frontend)
+  const specialties = [
+    'Costume Making',
+    'Prop Making',
+    'Wig Styling',
+    'Makeup Artist',
+    'Photography',
+    'Performance',
+    'Voice Acting',
+    'Dancing',
+    'Singing',
+    'Martial Arts',
+    'Magic Shows',
+    'Comedy',
+    'Character Interaction',
+    'Event Hosting',
+    'Workshop Teaching'
   ];
 
   useEffect(() => {
@@ -92,7 +129,17 @@ const CosplayersPage = () => {
 
     const initialFilters = Object.fromEntries(searchParams);
     if (Object.keys(initialFilters).length > 0) {
-      setFilters(prev => ({ ...prev, ...initialFilters }));
+      // Parse array parameters from URL
+      const parsedFilters = { ...filters };
+      Object.entries(initialFilters).forEach(([key, value]) => {
+        if (['gender', 'category', 'specialties', 'tags'].includes(key)) {
+          parsedFilters[key] = value ? value.split(',') : [];
+        } else if (key !== 'searchTerm') {
+          parsedFilters[key] = value;
+        }
+      });
+
+      setFilters(parsedFilters);
       setSearchTerm(initialFilters.searchTerm || '');
     }
   }, []);
@@ -113,32 +160,71 @@ const CosplayersPage = () => {
         sortOrder: sortOrder,
         ...(searchTerm && { searchTerm }),
         ...(filters.gender.length > 0 && { gender: filters.gender.join(',') }),
-        ...(filters.categories.length > 0 && { category: filters.categories.join(',') }),
+        ...(filters.category.length > 0 && { category: filters.category.join(',') }),
         ...(filters.location && { location: filters.location }),
         ...(filters.minPrice && { minPrice: parseFloat(filters.minPrice) }),
         ...(filters.maxPrice && { maxPrice: parseFloat(filters.maxPrice) }),
         ...(filters.minRating && { minRating: parseFloat(filters.minRating) }),
-        ...(filters.specialties.length > 0 && { specialties: filters.specialties.join(',') }),
+        // Note: specialties and tags filtering are handled on frontend, not sent to API
         ...(filters.isAvailable !== null && { isAvailable: filters.isAvailable })
       };
+
+      console.log('API Query Params:', queryParams);
+      console.log('Selected tags filter:', filters.tags);
 
       const result = await cosplayerAPI.getCosplayers(queryParams);
 
       if (result.success) {
         const data = result.data;
-        const cosplayersList = data.cosplayers || data.items || data || [];
-        
-        // Filter out cosplayers who are not available
-        const availableCosplayers = cosplayersList.filter(cosplayer => cosplayer.isAvailable !== false);
-        
-        setCosplayers(availableCosplayers);
-        setTotalCount(availableCosplayers.length);
-        setTotalPages(Math.ceil(availableCosplayers.length / itemsPerPage));
+
+        // Get cosplayers from API
+        let cosplayersData = data.cosplayers || [];
+
+        // Apply frontend specialties filtering
+        if (filters.specialties.length > 0) {
+          cosplayersData = cosplayersData.filter(cosplayer => {
+            // Check if cosplayer has ALL of the selected specialties (AND logic)
+            const cosplayerSpecialties = cosplayer.specialties || [];
+            return filters.specialties.every(selectedSpecialty => 
+              cosplayerSpecialties.includes(selectedSpecialty)
+            );
+          });
+        }
+
+        // Apply frontend tags filtering
+        if (filters.tags.length > 0) {
+          cosplayersData = cosplayersData.filter(cosplayer => {
+            // Check if cosplayer has ALL of the selected tags (AND logic)
+            const cosplayerTags = cosplayer.tags || [];
+            return filters.tags.every(selectedTag => 
+              cosplayerTags.includes(selectedTag)
+            );
+          });
+        }
+
+        // Set filtered cosplayers data
+        setCosplayers(cosplayersData);
+        setTotalCount(data.totalCount || 0);
+        setTotalPages(data.totalPages || 1);
+
+        // Update available filter options from API response
+        if (data.availableCategories) {
+          setAvailableCategories(data.availableCategories);
+        }
+
+        console.log('Available tags (static):', staticTags);
+        console.log('Current filters:', filters);
       } else {
         setError(result.message);
+        setCosplayers([]);
+        setTotalCount(0);
+        setTotalPages(1);
       }
     } catch (err) {
       setError('Không thể tải danh sách cosplayer');
+      setCosplayers([]);
+      setTotalCount(0);
+      setTotalPages(1);
     } finally {
       setLoading(false);
     }
@@ -153,13 +239,20 @@ const CosplayersPage = () => {
   const handleFilterChange = (filterType, value, checked) => {
     let newFilters = { ...filters };
 
-    if (Array.isArray(newFilters[filterType])) {
+    // Handle category and gender as single selection (comes as array from dropdown)
+    if ((filterType === 'category' || filterType === 'gender') && Array.isArray(value)) {
+      newFilters[filterType] = value;
+    }
+    // Handle other array filters (specialties, tags) as multiple selection
+    else if (Array.isArray(newFilters[filterType])) {
       if (checked) {
         newFilters[filterType] = [...newFilters[filterType], value];
       } else {
         newFilters[filterType] = newFilters[filterType].filter(item => item !== value);
       }
-    } else {
+    } 
+    // Handle non-array filters (strings, numbers, etc.)
+    else {
       newFilters[filterType] = value;
     }
 
@@ -211,12 +304,13 @@ const CosplayersPage = () => {
   const clearFilters = () => {
     setFilters({
       gender: [],
-      categories: [],
+      category: [],
       minPrice: '',
       maxPrice: '',
       minRating: '',
       location: '',
       specialties: [],
+      tags: [],
       isAvailable: null
     });
     setSearchTerm('');
@@ -259,34 +353,12 @@ const CosplayersPage = () => {
               top: '84px',
               p: 3,
               borderRadius: '16px',
-              mt: 2,
+              mt: 5,
+              mb: 5,
               flexShrink: 0,
             }}
           >
-            <TextField
-              fullWidth
-              placeholder="Tìm kiếm cosplayer..."
-              value={searchTerm}
-              onChange={(e) => handleSearch(e.target.value)}
-              size="small"
-              sx={{
-                mb: 3,
-                '& .MuiOutlinedInput-root': {
-                  backgroundColor: 'rgba(255,255,255,0.8)',
-                  borderRadius: '25px',
-                  fontSize: '14px',
-                  height: '40px',
-                },
-              }}
-              InputProps={{
-                startAdornment: (
-                  <InputAdornment position="start">
-                    <Search sx={{ color: 'text.secondary', fontSize: 18 }} />
-                  </InputAdornment>
-                ),
-              }}
-            />
-
+            {/* Sorting Section */}
             <Accordion defaultExpanded sx={{ backgroundColor: 'transparent', boxShadow: 'none', mb: 2 }}>
               <AccordionSummary expandIcon={<ExpandMore />} sx={{ px: 0 }}>
                 <Typography variant="h6" sx={{ fontWeight: 600, fontSize: '16px', color: '#333' }}>
@@ -301,10 +373,10 @@ const CosplayersPage = () => {
                     onChange={(e) => setSortBy(e.target.value)}
                     label="Sắp xếp theo"
                   >
-                    <MenuItem value="rating">Đánh giá</MenuItem>
                     <MenuItem value="price">Giá</MenuItem>
                     <MenuItem value="name">Tên</MenuItem>
-                    <MenuItem value="created_date">Ngày tham gia</MenuItem>
+                    <MenuItem value="followersCount">Số người theo dõi</MenuItem>
+                    <MenuItem value="createdDate">Ngày tham gia</MenuItem>
                   </Select>
                 </FormControl>
                 <FormControl fullWidth size="small">
@@ -321,6 +393,7 @@ const CosplayersPage = () => {
               </AccordionDetails>
             </Accordion>
 
+            {/* Filters Section */}
             <Accordion defaultExpanded sx={{ backgroundColor: 'transparent', boxShadow: 'none', mb: 2 }}>
               <AccordionSummary expandIcon={<ExpandMore />} sx={{ px: 0 }}>
                 <Typography variant="h6" sx={{ fontWeight: 600, fontSize: '16px', color: '#333' }}>
@@ -328,96 +401,124 @@ const CosplayersPage = () => {
                 </Typography>
               </AccordionSummary>
               <AccordionDetails sx={{ px: 0, pt: 0 }}>
+
+                {/* Gender Filter - Single selection using dropdown */}
                 <Typography variant="subtitle1" sx={{ fontWeight: 600, fontSize: '14px', color: '#333', mb: 1 }}>
                   Giới tính
                 </Typography>
-                <FormGroup sx={{ mb: 2 }}>
-                  {['Male', 'Female', 'Other'].map((gender) => (
-                    <FormControlLabel
-                      key={gender}
-                      control={
-                        <Checkbox
-                          checked={filters.gender.includes(gender)}
-                          onChange={(e) => handleFilterChange('gender', gender, e.target.checked)}
-                          size="small"
-                        />
-                      }
-                      label={gender === 'Male' ? 'Nam' : gender === 'Female' ? 'Nữ' : 'Khác'}
-                      sx={{ '& .MuiFormControlLabel-label': { fontSize: '14px' } }}
-                    />
-                  ))}
-                </FormGroup>
+                <FormControl fullWidth size="small" sx={{ mb: 2 }}>
+                  <InputLabel>Chọn giới tính</InputLabel>
+                  <Select
+                    value={filters.gender.length > 0 ? filters.gender[0] : ''}
+                    onChange={(e) => handleFilterChange('gender', e.target.value ? [e.target.value] : [])}
+                    label="Chọn giới tính"
+                  >
+                    <MenuItem value="">Tất cả giới tính</MenuItem>
+                    <MenuItem value="Male">Nam</MenuItem>
+                    <MenuItem value="Female">Nữ</MenuItem>
+                    <MenuItem value="Other">Khác</MenuItem>
+                  </Select>
+                </FormControl>
 
-                <Typography variant="subtitle1" sx={{ fontWeight: 600, fontSize: '14px', color: '#333', mb: 1 }}>
-                  Danh mục
-                </Typography>
-                <FormGroup sx={{ mb: 2, maxHeight: 150, overflowY: 'auto' }}>
-                  {categories.slice(0, 5).map((category) => (
-                    <FormControlLabel
-                      key={category}
-                      control={
-                        <Checkbox
-                          checked={filters.categories.includes(category)}
-                          onChange={(e) => handleFilterChange('categories', category, e.target.checked)}
-                          size="small"
-                        />
-                      }
-                      label={category}
-                      sx={{ '& .MuiFormControlLabel-label': { fontSize: '14px' } }}
-                    />
-                  ))}
-                </FormGroup>
-
+                {/* Price Range Filter */}
                 <Typography variant="subtitle1" sx={{ fontWeight: 600, fontSize: '14px', color: '#333', mb: 1 }}>
                   Khoảng giá (VNĐ/giờ)
                 </Typography>
                 <Box sx={{ display: 'flex', gap: 1, mb: 2 }}>
                   <TextField
                     size="small"
-                    placeholder="Từ"
+                    placeholder="Giá tối thiểu"
                     type="number"
                     value={filters.minPrice}
                     onChange={(e) => handleFilterChange('minPrice', e.target.value)}
                     sx={{ flex: 1 }}
+                    InputProps={{
+                      inputProps: { min: 0 }
+                    }}
                   />
                   <TextField
                     size="small"
-                    placeholder="Đến"
+                    placeholder="Giá tối đa"
                     type="number"
                     value={filters.maxPrice}
                     onChange={(e) => handleFilterChange('maxPrice', e.target.value)}
                     sx={{ flex: 1 }}
+                    InputProps={{
+                      inputProps: { min: 0 }
+                    }}
                   />
                 </Box>
 
-                <FormControl fullWidth size="small" sx={{ mb: 2 }}>
-                  <InputLabel>Khu vực</InputLabel>
-                  <Select
-                    value={filters.location}
-                    onChange={(e) => handleFilterChange('location', e.target.value)}
-                    label="Khu vực"
-                  >
-                    <MenuItem value="">Tất cả</MenuItem>
-                    {locations.map((location) => (
-                      <MenuItem key={location} value={location}>{location}</MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
+                {/* Category Filter - Single selection using Radio buttons */}
+                {availableCategories.length > 0 && (
+                  <>
+                    <Typography variant="subtitle1" sx={{ fontWeight: 600, fontSize: '14px', color: '#333', mb: 1 }}>
+                      Danh mục
+                    </Typography>
+                    <FormControl fullWidth size="small" sx={{ mb: 2 }}>
+                      <InputLabel>Chọn danh mục</InputLabel>
+                      <Select
+                        value={filters.category.length > 0 ? filters.category[0] : ''}
+                        onChange={(e) => handleFilterChange('category', e.target.value ? [e.target.value] : [])}
+                        label="Chọn danh mục"
+                      >
+                        <MenuItem value="">Tất cả danh mục</MenuItem>
+                        {availableCategories.map((category) => (
+                          <MenuItem key={category} value={category}>
+                            {category}
+                          </MenuItem>
+                        ))}
+                      </Select>
+                    </FormControl>
+                  </>
+                )}
 
-                <FormControlLabel
-                  control={
-                    <Checkbox
-                      checked={filters.isAvailable === true}
-                      onChange={(e) => handleFilterChange('isAvailable', e.target.checked ? true : null)}
-                      size="small"
+                {/* Specialties Filter - Using static data from frontend */}
+                <Typography variant="subtitle1" sx={{ fontWeight: 600, fontSize: '14px', color: '#333', mb: 1 }}>
+                  Chuyên môn
+                </Typography>
+                <FormGroup sx={{ mb: 2, maxHeight: 120, overflowY: 'auto' }}>
+                  {specialties.map((specialty) => (
+                    <FormControlLabel
+                      key={specialty}
+                      control={
+                        <Checkbox
+                          checked={filters.specialties.includes(specialty)}
+                          onChange={(e) => handleFilterChange('specialties', specialty, e.target.checked)}
+                          size="small"
+                        />
+                      }
+                      label={specialty}
+                      sx={{ '& .MuiFormControlLabel-label': { fontSize: '14px' } }}
                     />
-                  }
-                  label="Chỉ cosplayer sẵn sàng"
-                  sx={{ '& .MuiFormControlLabel-label': { fontSize: '14px' } }}
-                />
+                  ))}
+                </FormGroup>
+
+                {/* Tags Filter - Using static data from frontend */}
+                <Typography variant="subtitle1" sx={{ fontWeight: 600, fontSize: '14px', color: '#333', mb: 1 }}>
+                  Thẻ đặc biệt
+                </Typography>
+                <FormGroup sx={{ mb: 2, maxHeight: 120, overflowY: 'auto' }}>
+                  {staticTags.map((tag) => (
+                    <FormControlLabel
+                      key={tag}
+                      control={
+                        <Checkbox
+                          checked={filters.tags.includes(tag)}
+                          onChange={(e) => handleFilterChange('tags', tag, e.target.checked)}
+                          size="small"
+                        />
+                      }
+                      label={tag}
+                      sx={{ '& .MuiFormControlLabel-label': { fontSize: '14px' } }}
+                    />
+                  ))}
+                </FormGroup>
+
               </AccordionDetails>
             </Accordion>
 
+            {/* Clear Filters Button */}
             <Button
               variant="contained"
               onClick={clearFilters}
@@ -434,7 +535,7 @@ const CosplayersPage = () => {
                 '&:hover': { background: '#222' },
               }}
             >
-              Xóa bộ lọc
+              Xóa tất cả bộ lọc
             </Button>
           </Box>
 

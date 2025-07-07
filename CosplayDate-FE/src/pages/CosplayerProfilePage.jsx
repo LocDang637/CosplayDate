@@ -22,7 +22,6 @@ import Footer from '../components/layout/Footer';
 import CosplayerProfileHeader from '../components/profile/CosplayerProfileHeader';
 import ProfileTabs from '../components/profile/ProfileTabs';
 import CosplayerProfileOverview from '../components/profile/CosplayerProfileOverview';
-import CosplayerServices from '../components/cosplayer/CosplayerServices';
 import ProfileGallery from '../components/profile/ProfileGallery';
 import MediaUploadDialog from '../components/media/MediaUploadDialog';
 import BecomeCosplayerForm from '../components/cosplayer/BecomeCosplayerForm';
@@ -601,12 +600,6 @@ const CosplayerProfilePage = () => {
       show: true
     },
     {
-      id: 'services',
-      label: 'Dịch vụ',
-      icon: 'Work',
-      show: true
-    },
-    {
       id: 'bookings',
       label: 'Đặt lịch',
       icon: 'Event',
@@ -636,13 +629,6 @@ const CosplayerProfilePage = () => {
           <CosplayerProfileOverview
             user={profileUser}
             currentProfile={currentProfile}
-            isOwnProfile={isOwnProfile}
-          />
-        );
-      case 'services':
-        return (
-          <CosplayerServices
-            cosplayerId={profileUser?.id}
             isOwnProfile={isOwnProfile}
           />
         );

@@ -425,6 +425,27 @@ const CosplayerProfileHeader = ({
                   ))}
                 </Box>
               )}
+
+              {/* Bio Introduction */}
+              {(cosplayer.bio || cosplayer.description) && (
+                <Box sx={{ mt: 2 }}>
+                  <Typography 
+                    variant="body2" 
+                    sx={{ 
+                      color: 'text.secondary', 
+                      lineHeight: 1.6,
+                      fontStyle: 'italic',
+                      maxWidth: '100%',
+                      display: '-webkit-box',
+                      WebkitLineClamp: 3,
+                      WebkitBoxOrient: 'vertical',
+                      overflow: 'hidden'
+                    }}
+                  >
+                    "{cosplayer.bio || cosplayer.description}"
+                  </Typography>
+                </Box>
+              )}
             </Box>
 
             {/* Action Buttons */}

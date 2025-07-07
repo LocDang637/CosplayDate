@@ -137,7 +137,7 @@ const CosplayerCard = ({
 
   const handleFollowClick = async (e) => {
     e.stopPropagation();
-    
+
     if (!user) {
       navigate('/login', {
         state: {
@@ -155,7 +155,7 @@ const CosplayerCard = ({
     }
 
     setFollowLoading(true);
-    
+
     try {
       let result;
       if (followState) {
@@ -333,24 +333,6 @@ const CosplayerCard = ({
             </Typography>
           </Box>
 
-          {/* Location */}
-          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', mb: 1 }}>
-            <LocationOn sx={{ fontSize: 16, color: 'text.secondary', mr: 0.5 }} />
-            <Typography variant="body2" sx={{ fontSize: '13px', color: 'text.secondary' }}>
-              {cosplayer.location}
-            </Typography>
-          </Box>
-
-          {/* Response Time */}
-          {cosplayer.responseTime && (
-            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', mb: 1.5 }}>
-              <Schedule sx={{ fontSize: 16, color: 'text.secondary', mr: 0.5 }} />
-              <Typography variant="body2" sx={{ fontSize: '13px', color: 'text.secondary' }}>
-                Phản hồi: {cosplayer.responseTime}
-              </Typography>
-            </Box>
-          )}
-
           {/* Tags */}
           {cosplayer.tags && cosplayer.tags.length > 0 && (
             <Box sx={{
@@ -439,11 +421,11 @@ const CosplayerCard = ({
 
             <Tooltip
               title={
-                !user 
-                  ? "Vui lòng đăng nhập để đặt lịch" 
-                  : !isCustomer 
-                  ? "Chỉ khách hàng mới có thể đặt lịch" 
-                  : ""
+                !user
+                  ? "Vui lòng đăng nhập để đặt lịch"
+                  : !isCustomer
+                    ? "Chỉ khách hàng mới có thể đặt lịch"
+                    : ""
               }
               disableHoverListener={isCustomer && user !== null}
             >

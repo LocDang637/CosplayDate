@@ -61,7 +61,13 @@ export const cosplayerAPI = {
         hasData: !!response.data,
         hasDataData: !!response.data?.data,
         hasCosplayers: !!response.data?.data?.cosplayers,
-        cosplayersCount: response.data?.data?.cosplayers?.length || 0
+        cosplayersCount: response.data?.data?.cosplayers?.length || 0,
+        hasAvailableCategories: !!response.data?.data?.availableCategories,
+        hasAvailableSpecialties: !!response.data?.data?.availableSpecialties,
+        hasAvailableTags: !!response.data?.data?.availableTags,
+        categoriesCount: response.data?.data?.availableCategories?.length || 0,
+        specialtiesCount: response.data?.data?.availableSpecialties?.length || 0,
+        tagsCount: response.data?.data?.availableTags?.length || 0
       });
 
       // Fixed: Extract cosplayers from the nested structure
@@ -85,7 +91,19 @@ export const cosplayerAPI = {
 
       return {
         success: true,
-        data: cosplayersArray, // Return the array directly
+        data: {
+          cosplayers: cosplayersArray,
+          totalCount: response.data.data.totalCount || 0,
+          currentPage: response.data.data.currentPage || 1,
+          pageSize: response.data.data.pageSize || 12,
+          totalPages: response.data.data.totalPages || 1,
+          hasNextPage: response.data.data.hasNextPage || false,
+          hasPreviousPage: response.data.data.hasPreviousPage || false,
+          // Include filter options for frontend
+          availableCategories: response.data.data.availableCategories || [],
+          availableSpecialties: response.data.data.availableSpecialties || [],
+          availableTags: response.data.data.availableTags || []
+        },
         pagination: paginationData,
         message: response.data?.message || 'Cosplayers loaded successfully'
       };
@@ -93,7 +111,18 @@ export const cosplayerAPI = {
       console.error('Failed to load cosplayers:', error);
       return {
         success: false,
-        data: [],
+        data: {
+          cosplayers: [],
+          totalCount: 0,
+          currentPage: 1,
+          pageSize: 12,
+          totalPages: 0,
+          hasNextPage: false,
+          hasPreviousPage: false,
+          availableCategories: [],
+          availableSpecialties: [],
+          availableTags: []
+        },
         pagination: {},
         message: error.response?.data?.message || 'Failed to load cosplayers',
         errors: error.response?.data?.errors || {}

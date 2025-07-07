@@ -65,14 +65,15 @@ const HomePage = () => {
 
       console.log('HomePage - API Result:', {
         success: result.success,
-        dataLength: result.data?.length || 0,
+        dataType: typeof result.data,
+        hasCosplayers: !!result.data?.cosplayers,
+        cosplayersLength: result.data?.cosplayers?.length || 0,
         data: result.data
       });
 
-      if (result.success && result.data) {
-        // The fixed API now returns the array directly in result.data
-        // Filter out cosplayers who are not available
-        const availableCosplayers = result.data.filter(cosplayer => cosplayer.isAvailable !== false);
+      if (result.success && result.data && result.data.cosplayers) {
+        // The API now returns structured data with cosplayers array
+        const availableCosplayers = result.data.cosplayers.filter(cosplayer => cosplayer.isAvailable !== false);
         setCosplayers(availableCosplayers);
       } else {
         setCosplayers([]);
