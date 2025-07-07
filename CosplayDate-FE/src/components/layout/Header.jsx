@@ -135,7 +135,6 @@ const Header = ({ user = null, onLogout }) => {
   const navigationItems = [
     { label: 'Trang chủ', path: '/', icon: <Home /> },
     { label: 'Cosplayer', path: '/cosplayers', icon: <Person /> },
-    { label: 'Dịch vụ', path: '/services', icon: <Favorite /> },
   ];
 
   // ✅ FIXED: Updated auth menu items with correct profile action

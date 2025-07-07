@@ -14,14 +14,14 @@ import {
   MenuItem,
   Chip,
   InputAdornment,
-  FormControlLabel,
   Switch,
   IconButton,
   Alert,
   CircularProgress,
   Autocomplete,
   Typography,
-  Divider
+  Divider,
+  FormControlLabel
 } from '@mui/material';
 import { Close, Person, LocationOn, CalendarMonth, Info } from '@mui/icons-material';
 import { cosplayerAPI } from '../../services/cosplayerAPI';
@@ -31,6 +31,13 @@ import { debugToken, hasValidCosplayerToken } from '../../utils/tokenUtils';
 const EditCosplayerDialog = ({ open, onClose, cosplayer, onUpdateSuccess }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [fieldErrors, setFieldErrors] = useState({
+    dateOfBirth: '',
+    firstName: '',
+    lastName: '',
+    displayName: '',
+    pricePerHour: ''
+  });
   
   // Split form data into user profile and cosplayer profile sections
   const [userFormData, setUserFormData] = useState({
@@ -99,7 +106,16 @@ const EditCosplayerDialog = ({ open, onClose, cosplayer, onUpdateSuccess }) => {
         isAvailable: cosplayer.isAvailable !== undefined ? cosplayer.isAvailable : true,
         specialties: cosplayer.specialties || []
       });
+      
+      // Clear all errors when dialog opens
       setError('');
+      setFieldErrors({
+        dateOfBirth: '',
+        firstName: '',
+        lastName: '',
+        displayName: '',
+        pricePerHour: ''
+      });
     }
   }, [cosplayer, open]);
 
@@ -110,6 +126,28 @@ const EditCosplayerDialog = ({ open, onClose, cosplayer, onUpdateSuccess }) => {
       ...prev,
       [field]: value
     }));
+    
+    // Real-time validation
+    if (field === 'dateOfBirth') {
+      validateDateOfBirth(value);
+    } else if (field === 'firstName') {
+      if (!value.trim()) {
+        setFieldErrors(prev => ({ ...prev, firstName: 'Tên là bắt buộc' }));
+      } else if (value.trim().length < 2) {
+        setFieldErrors(prev => ({ ...prev, firstName: 'Tên phải có ít nhất 2 ký tự' }));
+      } else {
+        clearFieldError('firstName');
+      }
+    } else if (field === 'lastName') {
+      if (!value.trim()) {
+        setFieldErrors(prev => ({ ...prev, lastName: 'Họ là bắt buộc' }));
+      } else if (value.trim().length < 2) {
+        setFieldErrors(prev => ({ ...prev, lastName: 'Họ phải có ít nhất 2 ký tự' }));
+      } else {
+        clearFieldError('lastName');
+      }
+    }
+    
     setError('');
   };
 
@@ -120,6 +158,23 @@ const EditCosplayerDialog = ({ open, onClose, cosplayer, onUpdateSuccess }) => {
       ...prev,
       [field]: value
     }));
+    
+    // Real-time validation
+    if (field === 'displayName') {
+      if (!value.trim()) {
+        setFieldErrors(prev => ({ ...prev, displayName: 'Tên hiển thị là bắt buộc' }));
+      } else {
+        clearFieldError('displayName');
+      }
+    } else if (field === 'pricePerHour') {
+      const numValue = Number(value);
+      if (isNaN(numValue) || numValue < 0) {
+        setFieldErrors(prev => ({ ...prev, pricePerHour: 'Giá phải lớn hơn hoặc bằng 0' }));
+      } else {
+        clearFieldError('pricePerHour');
+      }
+    }
+    
     setError('');
   };
 
@@ -157,19 +212,44 @@ const EditCosplayerDialog = ({ open, onClose, cosplayer, onUpdateSuccess }) => {
         return;
       }
 
+      // Validate all fields before submission
+      let hasValidationErrors = false;
+
       // Validate required fields
-      if (!userFormData.firstName.trim() || !userFormData.lastName.trim()) {
-        setError('Tên và họ không được để trống');
-        return;
+      if (!userFormData.firstName.trim()) {
+        setFieldErrors(prev => ({ ...prev, firstName: 'Tên là bắt buộc' }));
+        hasValidationErrors = true;
+      } else if (userFormData.firstName.trim().length < 2) {
+        setFieldErrors(prev => ({ ...prev, firstName: 'Tên phải có ít nhất 2 ký tự' }));
+        hasValidationErrors = true;
+      }
+
+      if (!userFormData.lastName.trim()) {
+        setFieldErrors(prev => ({ ...prev, lastName: 'Họ là bắt buộc' }));
+        hasValidationErrors = true;
+      } else if (userFormData.lastName.trim().length < 2) {
+        setFieldErrors(prev => ({ ...prev, lastName: 'Họ phải có ít nhất 2 ký tự' }));
+        hasValidationErrors = true;
       }
 
       if (!cosplayerFormData.displayName.trim()) {
-        setError('Tên hiển thị không được để trống');
-        return;
+        setFieldErrors(prev => ({ ...prev, displayName: 'Tên hiển thị là bắt buộc' }));
+        hasValidationErrors = true;
       }
 
       if (cosplayerFormData.pricePerHour < 0) {
-        setError('Giá phải lớn hơn hoặc bằng 0');
+        setFieldErrors(prev => ({ ...prev, pricePerHour: 'Giá phải lớn hơn hoặc bằng 0' }));
+        hasValidationErrors = true;
+      }
+
+      // Validate date of birth
+      if (userFormData.dateOfBirth && !validateDateOfBirth(userFormData.dateOfBirth)) {
+        hasValidationErrors = true;
+      }
+
+      // If there are validation errors, stop submission
+      if (hasValidationErrors) {
+        setError('Vui lòng kiểm tra lại thông tin và sửa các lỗi');
         return;
       }
 
@@ -241,6 +321,62 @@ const EditCosplayerDialog = ({ open, onClose, cosplayer, onUpdateSuccess }) => {
     return cosplayerFormData.tags.split(',').map(tag => tag.trim()).filter(tag => tag);
   };
 
+  // Helper function to clear field errors
+  const clearFieldError = (fieldName) => {
+    setFieldErrors(prev => ({ ...prev, [fieldName]: '' }));
+  };
+
+  // Validate date of birth
+  const validateDateOfBirth = (dateValue) => {
+    if (!dateValue) {
+      // Date is optional, so no error for empty value
+      clearFieldError('dateOfBirth');
+      return true;
+    }
+
+    try {
+      const birthDate = new Date(dateValue);
+      const today = new Date();
+      
+      // Check if date is valid
+      if (isNaN(birthDate.getTime())) {
+        setFieldErrors(prev => ({ ...prev, dateOfBirth: 'Ngày sinh không hợp lệ' }));
+        return false;
+      }
+      
+      // Check if date is not in the future
+      if (birthDate > today) {
+        setFieldErrors(prev => ({ ...prev, dateOfBirth: 'Ngày sinh không thể là ngày trong tương lai' }));
+        return false;
+      }
+      
+      // Calculate age
+      const age = today.getFullYear() - birthDate.getFullYear();
+      const monthDiff = today.getMonth() - birthDate.getMonth();
+      const calculatedAge = monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate()) 
+        ? age - 1 : age;
+      
+      // Check minimum age (18 years)
+      if (calculatedAge < 18) {
+        setFieldErrors(prev => ({ ...prev, dateOfBirth: 'Bạn phải ít nhất 18 tuổi' }));
+        return false;
+      }
+      
+      // Check maximum reasonable age (120 years)
+      if (calculatedAge > 120) {
+        setFieldErrors(prev => ({ ...prev, dateOfBirth: 'Ngày sinh không hợp lệ' }));
+        return false;
+      }
+
+      clearFieldError('dateOfBirth');
+      return true;
+    } catch (error) {
+      console.error('Error validating date of birth:', error);
+      setFieldErrors(prev => ({ ...prev, dateOfBirth: 'Ngày sinh không hợp lệ' }));
+      return false;
+    }
+  };
+
   return (
     <Dialog
       open={open}
@@ -295,6 +431,8 @@ const EditCosplayerDialog = ({ open, onClose, cosplayer, onUpdateSuccess }) => {
                     fullWidth
                     required
                     disabled={loading}
+                    error={!!fieldErrors.firstName}
+                    helperText={fieldErrors.firstName}
                   />
                   <TextField
                     label="Tên"
@@ -303,6 +441,8 @@ const EditCosplayerDialog = ({ open, onClose, cosplayer, onUpdateSuccess }) => {
                     fullWidth
                     required
                     disabled={loading}
+                    error={!!fieldErrors.lastName}
+                    helperText={fieldErrors.lastName}
                   />
                 </Box>
 
@@ -333,6 +473,10 @@ const EditCosplayerDialog = ({ open, onClose, cosplayer, onUpdateSuccess }) => {
                   InputLabelProps={{
                     shrink: true,
                   }}
+                  inputProps={{
+                    min: new Date(new Date().getFullYear() - 120, 0, 1).toISOString().split('T')[0], // 120 years ago
+                    max: new Date(new Date().getFullYear() - 18, new Date().getMonth(), new Date().getDate()).toISOString().split('T')[0] // 18 years ago
+                  }}
                   InputProps={{
                     startAdornment: (
                       <InputAdornment position="start">
@@ -340,7 +484,8 @@ const EditCosplayerDialog = ({ open, onClose, cosplayer, onUpdateSuccess }) => {
                       </InputAdornment>
                     ),
                   }}
-                  helperText="Bạn phải từ 18 tuổi trở lên"
+                  error={!!fieldErrors.dateOfBirth}
+                  helperText={fieldErrors.dateOfBirth || 'Bạn phải từ 18 tuổi trở lên'}
                 />
 
                 {/* Bio */}
@@ -381,7 +526,8 @@ const EditCosplayerDialog = ({ open, onClose, cosplayer, onUpdateSuccess }) => {
                   fullWidth
                   required
                   disabled={loading}
-                  helperText="Tên sẽ được hiển thị trên hồ sơ Cosplayer của bạn"
+                  error={!!fieldErrors.displayName}
+                  helperText={fieldErrors.displayName || "Tên sẽ được hiển thị trên hồ sơ Cosplayer của bạn"}
                 />
 
                 {/* Price and Availability Row */}
@@ -396,6 +542,8 @@ const EditCosplayerDialog = ({ open, onClose, cosplayer, onUpdateSuccess }) => {
                       endAdornment: <InputAdornment position="end">₫/giờ</InputAdornment>,
                     }}
                     disabled={loading}
+                    error={!!fieldErrors.pricePerHour}
+                    helperText={fieldErrors.pricePerHour}
                   />
                   <FormControlLabel
                     control={
@@ -406,7 +554,7 @@ const EditCosplayerDialog = ({ open, onClose, cosplayer, onUpdateSuccess }) => {
                         disabled={loading}
                       />
                     }
-                    label="Có sẵn"
+                    label="Sẵn sàng?"
                     sx={{ ml: 2 }}
                   />
                 </Box>

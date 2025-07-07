@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Card,
@@ -19,23 +19,26 @@ import {
 import {
   Message,
   LocationOn,
-  Favorite,
-  FavoriteBorder,
+  PersonAdd,
+  PersonRemove,
   Schedule,
   AttachMoney
 } from '@mui/icons-material';
+import { userAPI } from '../../services/api';
 
 const CosplayerCard = ({
   cosplayer,
   onBooking,
   onMessage,
-  onFavorite,
-  isFavorite = false,
+  onFollow,
+  isFollowing = false,
   currentUser = null
 }) => {
   const navigate = useNavigate();
   const [showPopup, setShowPopup] = useState(false);
   const [popupMessage, setPopupMessage] = useState('');
+  const [followState, setFollowState] = useState(isFollowing);
+  const [followLoading, setFollowLoading] = useState(false);
 
   const getCurrentUser = () => {
     if (currentUser) return currentUser;
@@ -60,12 +63,35 @@ const CosplayerCard = ({
   // Check if current user is a customer (not a cosplayer)
   const isCustomer = user && user.userType === 'Customer';
 
+  // Check follow status on component mount
+  useEffect(() => {
+    const checkFollowStatus = async () => {
+      if (user && isCustomer && cosplayer.id) {
+        try {
+          const result = await userAPI.getUserProfile(cosplayer.id);
+          if (result?.success) {
+            setFollowState(result.data?.isFollowing || false);
+          }
+        } catch (error) {
+          console.error('Error checking follow status:', error);
+        }
+      }
+    };
+
+    checkFollowStatus();
+  }, [user, isCustomer, cosplayer.id]);
+
+  // Sync with prop changes
+  useEffect(() => {
+    setFollowState(isFollowing);
+  }, [isFollowing]);
+
   const formatPrice = (price) => {
     return new Intl.NumberFormat('vi-VN').format(price) + 'đ/giờ';
   };
 
   const handleViewProfile = () => {
-    navigate(`/cosplayer/${cosplayer.id}`);
+    navigate(`/profile/${cosplayer.id}`);
   };
 
   const handleBookingClick = (e) => {
@@ -78,10 +104,16 @@ const CosplayerCard = ({
       navigate('/login', {
         state: {
           message: 'Vui lòng đăng nhập để đặt lịch với cosplayer',
-          redirectUrl: `/cosplayer/${cosplayer.id}`
+          redirectUrl: `/profile/${cosplayer.id}`
         }
       });
     } else if (isCustomer) {
+      // Clear any existing booking state for a fresh start
+      try {
+        sessionStorage.removeItem(`booking_${cosplayer.id}`);
+      } catch (e) {
+        console.warn('Failed to clear booking state:', e);
+      }
       navigate(`/booking/${cosplayer.id}`);
     } else {
       // Show popup for cosplayers trying to book
@@ -90,30 +122,72 @@ const CosplayerCard = ({
     }
   };
 
-  const handleMessageClick = (e) => {
-    e.stopPropagation();
-    if (!user) {
-      navigate('/login', {
-        state: {
-          message: 'Vui lòng đăng nhập để nhắn tin với cosplayer',
-          redirectUrl: `/cosplayer/${cosplayer.id}`
-        }
-      });
-    }
-    // No reaction if user is logged in as per requirement
-  };
+  // const handleMessageClick = (e) => {
+  //   e.stopPropagation();
+  //   if (!user) {
+  //     navigate('/login', {
+  //       state: {
+  //         message: 'Vui lòng đăng nhập để nhắn tin với cosplayer',
+  //         redirectUrl: `/profile/${cosplayer.id}`
+  //       }
+  //     });
+  //   }
+  //   // No reaction if user is logged in as per requirement
+  // };
 
-  const handleFavoriteClick = (e) => {
+  const handleFollowClick = async (e) => {
     e.stopPropagation();
+
     if (!user) {
       navigate('/login', {
         state: {
-          message: 'Vui lòng đăng nhập để lưu cosplayer yêu thích',
-          redirectUrl: `/cosplayer/${cosplayer.id}`
+          message: 'Vui lòng đăng nhập để theo dõi cosplayer',
+          redirectUrl: `/profile/${cosplayer.id}`
         }
       });
+      return;
     }
-    // No reaction if user is logged in as per requirement
+
+    if (!isCustomer) {
+      setPopupMessage('Chỉ khách hàng mới có thể theo dõi cosplayer');
+      setShowPopup(true);
+      return;
+    }
+
+    setFollowLoading(true);
+
+    try {
+      let result;
+      if (followState) {
+        // Unfollow
+        result = await userAPI.unfollowUser(cosplayer.id);
+        if (result.success) {
+          setFollowState(false);
+          // Call parent callback if provided
+          onFollow && onFollow(cosplayer.id, false);
+        } else {
+          setPopupMessage(result.message || 'Không thể bỏ theo dõi cosplayer');
+          setShowPopup(true);
+        }
+      } else {
+        // Follow
+        result = await userAPI.followUser(cosplayer.id);
+        if (result.success) {
+          setFollowState(true);
+          // Call parent callback if provided
+          onFollow && onFollow(cosplayer.id, true);
+        } else {
+          setPopupMessage(result.message || 'Không thể theo dõi cosplayer');
+          setShowPopup(true);
+        }
+      }
+    } catch (error) {
+      console.error('Follow/unfollow error:', error);
+      setPopupMessage('Có lỗi xảy ra. Vui lòng thử lại sau.');
+      setShowPopup(true);
+    } finally {
+      setFollowLoading(false);
+    }
   };
 
   const handleClosePopup = () => {
@@ -177,40 +251,27 @@ const CosplayerCard = ({
             </Box>
           )}
 
-          {/* Favorite Button */}
+          {/* Follow Button */}
           <IconButton
-            onClick={handleFavoriteClick}
+            onClick={handleFollowClick}
+            disabled={followLoading}
             sx={{
               position: 'absolute',
               top: 8,
               right: 8,
               backgroundColor: 'rgba(255,255,255,0.9)',
-              color: isFavorite ? '#E91E63' : 'text.secondary',
+              color: followState ? '#E91E63' : 'text.secondary',
               width: 36,
               height: 36,
               '&:hover': { backgroundColor: 'rgba(255,255,255,1)' },
+              '&.Mui-disabled': {
+                backgroundColor: 'rgba(255,255,255,0.7)',
+                color: 'rgba(0, 0, 0, 0.26)'
+              }
             }}
           >
-            {isFavorite ? <Favorite /> : <FavoriteBorder />}
+            {followState ? <PersonRemove /> : <PersonAdd />}
           </IconButton>
-
-          {/* Availability Badge */}
-          {cosplayer.isAvailable && (
-            <Chip
-              label="Sẵn sàng"
-              size="small"
-              sx={{
-                position: 'absolute',
-                top: 8,
-                left: 8,
-                backgroundColor: '#4CAF50',
-                color: 'white',
-                fontSize: '12px',
-                height: '24px',
-                fontWeight: 600
-              }}
-            />
-          )}
         </Box>
 
         {/* Content Section */}
@@ -272,24 +333,6 @@ const CosplayerCard = ({
             </Typography>
           </Box>
 
-          {/* Location */}
-          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', mb: 1 }}>
-            <LocationOn sx={{ fontSize: 16, color: 'text.secondary', mr: 0.5 }} />
-            <Typography variant="body2" sx={{ fontSize: '13px', color: 'text.secondary' }}>
-              {cosplayer.location}
-            </Typography>
-          </Box>
-
-          {/* Response Time */}
-          {cosplayer.responseTime && (
-            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', mb: 1.5 }}>
-              <Schedule sx={{ fontSize: 16, color: 'text.secondary', mr: 0.5 }} />
-              <Typography variant="body2" sx={{ fontSize: '13px', color: 'text.secondary' }}>
-                Phản hồi: {cosplayer.responseTime}
-              </Typography>
-            </Box>
-          )}
-
           {/* Tags */}
           {cosplayer.tags && cosplayer.tags.length > 0 && (
             <Box sx={{
@@ -349,7 +392,7 @@ const CosplayerCard = ({
 
           {/* Action Buttons */}
           <Box sx={{ display: 'flex', gap: 1, mt: 'auto' }}>
-            <Button
+            {/* <Button
               variant="outlined"
               size="small"
               startIcon={<Message sx={{ fontSize: 16 }} />}
@@ -374,10 +417,16 @@ const CosplayerCard = ({
               }}
             >
               Nhắn tin
-            </Button>
+            </Button> */}
 
             <Tooltip
-              title={!user ? "Vui lòng đăng nhập để đặt lịch" : !isCustomer ? "Chỉ khách hàng mới có thể đặt lịch" : ""}
+              title={
+                !user
+                  ? "Vui lòng đăng nhập để đặt lịch"
+                  : !isCustomer
+                    ? "Chỉ khách hàng mới có thể đặt lịch"
+                    : ""
+              }
               disableHoverListener={isCustomer && user !== null}
             >
               <span style={{ flex: 1 }}>
