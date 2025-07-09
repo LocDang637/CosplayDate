@@ -457,8 +457,6 @@ namespace CosplayDate.Application.Services.Implementations
 
             public async Task<ApiResponse<string>> CancelBookingAsync(int bookingId, int userId, CancelBookingRequestDto request)
             {
-                //await _unitOfWork.BeginTransactionAsync();
-
                 try
                 {
                     var booking = await _unitOfWork.Bookings.GetByIdAsync(bookingId);
@@ -467,7 +465,7 @@ namespace CosplayDate.Application.Services.Implementations
                         return ApiResponse<string>.Error("Booking not found");
                     }
 
-                    // Check permissions
+                    // Check permissions (customer hoặc cosplayer đều có thể huỷ)
                     if (booking.CustomerId != userId && booking.Cosplayer?.UserId != userId)
                     {
                         return ApiResponse<string>.Error("You don't have permission to cancel this booking");
@@ -483,52 +481,58 @@ namespace CosplayDate.Application.Services.Implementations
                         return ApiResponse<string>.Error("Cannot cancel a completed booking");
                     }
 
-                    // Calculate refund amount based on policy
+                    // --- BUSINESS RULE: REFUND POLICY ---
+                    // - More than 24 hours: 100% refund
+                    // - 12-24 hours: 50% refund
+                    // - Less than 12 hours: No refund
                     var refundAmount = CalculateRefundAmount(booking);
+                    _logger.LogInformation("[CANCEL] Calculated refund amount: {RefundAmount} for booking {BookingId}", refundAmount, bookingId);
+
                     if (refundAmount == 0)
                     {
                         booking.Status = "Cancelled";
                         booking.CancellationReason = request.CancellationReason ?? "No refund due to policy";
                         _unitOfWork.Bookings.Update(booking);
                         await _unitOfWork.SaveChangesAsync();
-                        await _unitOfWork.CommitTransactionAsync();
-
-                        _logger.LogInformation("Booking cancelled without refund: {BookingCode} by user {UserId}", booking.BookingCode, userId);
+                        _logger.LogInformation("[CANCEL] Booking cancelled without refund: {BookingCode} by user {UserId}", booking.BookingCode, userId);
                         return ApiResponse<string>.Success("", "Booking cancelled successfully. No refund due to policy.");
                     }
 
-                    // Get escrow transaction
+                    // Lấy escrow transaction
                     var escrow = await _escrowService.GetEscrowByBookingAsync(bookingId);
-                    if (escrow != null && escrow.Status == "Held")
+                    if (escrow == null || escrow.Status != "Held")
                     {
-                        // Adjust escrow amount if refund is partial
-                        if (refundAmount != escrow.Amount)
-                        {
-                            escrow.Amount = refundAmount;
-                            _unitOfWork.EscrowTransactions.Update(escrow);
-                            await _unitOfWork.SaveChangesAsync();
-                        }
-
-                        // Refund escrow
-                        var refundResult = await _escrowService.RefundEscrowAsync(escrow.Id, request.CancellationReason ?? "Booking cancelled");
-                        if (!refundResult)
-                        {
-                            await _unitOfWork.RollbackTransactionAsync();
-                            return ApiResponse<string>.Error("Failed to process refund");
-                        }
+                        _logger.LogError("[CANCEL] Escrow not found or not held for booking {BookingId}", bookingId);
+                        return ApiResponse<string>.Error("Escrow not found or not held. Cannot process refund.");
                     }
 
-                    //await _unitOfWork.CommitTransactionAsync();
-                    await _unitOfWork.SaveChangesAsync();
-                    _unitOfWork.Clear();
+                    // Nếu refundAmount khác escrow.Amount (partial refund), cập nhật lại escrow
+                    if (refundAmount != escrow.Amount)
+                    {
+                        escrow.Amount = refundAmount;
+                        _unitOfWork.EscrowTransactions.Update(escrow);
+                        await _unitOfWork.SaveChangesAsync();
+                    }
 
-                _logger.LogInformation("Booking cancelled with escrow refund: {BookingCode} by user {UserId}, RefundAmount: {RefundAmount}", booking.BookingCode, userId, refundAmount);
+                    // Refund escrow (cộng tiền lại ví user)
+                    var (refundSuccess, refundError) = await _escrowService.RefundEscrowAsync(escrow.Id, request.CancellationReason ?? "Booking cancelled");
+                    if (!refundSuccess)
+                    {
+                        _logger.LogError("[CANCEL] Refund escrow failed: {Error}", refundError);
+                        return ApiResponse<string>.Error(refundError ?? "Failed to process refund");
+                    }
+
+                    booking.Status = "Cancelled";
+                    booking.CancellationReason = request.CancellationReason ?? "Cancelled and refunded";
+                    _unitOfWork.Bookings.Update(booking);
+                    await _unitOfWork.SaveChangesAsync();
+
+                    _logger.LogInformation("[CANCEL] Booking cancelled with escrow refund: {BookingCode} by user {UserId}, RefundAmount: {RefundAmount}", booking.BookingCode, userId, refundAmount);
                     return ApiResponse<string>.Success("", $"Booking cancelled successfully. Refunded {refundAmount:N0} VND.");
                 }
                 catch (Exception ex)
                 {
-                    //await _unitOfWork.RollbackTransactionAsync();
-                    _logger.LogError(ex, "Error cancelling booking {BookingId}", bookingId);
+                    _logger.LogError(ex, "[CANCEL] Error cancelling booking {BookingId}", bookingId);
                     return ApiResponse<string>.Error("An error occurred while cancelling the booking");
                 }
             }
@@ -693,23 +697,31 @@ namespace CosplayDate.Application.Services.Implementations
 
             private decimal CalculateRefundAmount(Booking booking)
             {
-                var bookingDateTime = booking.BookingDate.ToDateTime(booking.StartTime);
-                var timeUntilBooking = bookingDateTime - DateTime.Now;
-
-                // Refund policy:
+                // --- BUSINESS RULE: REFUND POLICY ---
                 // - More than 24 hours: 100% refund
                 // - 12-24 hours: 50% refund
                 // - Less than 12 hours: No refund
-                if (timeUntilBooking.TotalHours > 24)
+
+                var startDateTime = booking.BookingDate.ToDateTime(booking.StartTime);
+                var now = DateTime.UtcNow;
+                var timeLeft = startDateTime - now;
+
+                // Nếu muốn test nhanh: luôn hoàn 100% (bỏ comment dòng dưới và comment các rule trên)
+                // return booking.TotalPrice;
+
+                if (timeLeft.TotalHours > 24)
                 {
+                    // Huỷ trước >24h: hoàn 100%
                     return booking.TotalPrice;
                 }
-                else if (timeUntilBooking.TotalHours > 12)
+                else if (timeLeft.TotalHours > 12)
                 {
+                    // Huỷ trong 12-24h: hoàn 50%
                     return booking.TotalPrice * 0.5m;
                 }
                 else
                 {
+                    // Huỷ <12h: không hoàn tiền
                     return 0;
                 }
             }

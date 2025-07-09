@@ -12,12 +12,12 @@ namespace CosplayDate.Application.Services.Interfaces
     {
         Task<ApiResponse<WalletTopUpResponseDto>> CreateTopUpRequestAsync(int userId, WalletTopUpRequestDto request);
         Task<ApiResponse<WalletBalanceResponseDto>> GetWalletBalanceAsync(int userId);
-        Task<ApiResponse<string>> ProcessPaymentWebhookAsync(WebhookDataDto webhookData);
+        Task<ApiResponse<string>> ProcessPaymentWebhookAsync(WebhookDataDto webhookData);   
         Task<ApiResponse<string>> ProcessWalletTransactionAsync(int userId, decimal amount, string type, string description, string? referenceId = null);
         Task<ApiResponse<List<RecentTransactionDto>>> GetTransactionHistoryAsync(int userId, int page = 1, int pageSize = 20);
         Task<ApiResponse<string>> AddToWalletAsync(int userId, decimal amount, string type, string description, string? referenceId = null);
         Task<ApiResponse<string>> HoldEscrowAsync(int userId, decimal amount, int escrowId, string transactionCode);
         Task<ApiResponse<string>> ReleaseEscrowAsync(int cosplayerId, decimal amount, int escrowId);
-        Task<ApiResponse<string>> RefundEscrowAsync(int userId, decimal amount, int escrowId, string transactionCode);
+        Task<ApiResponse<string>> RefundEscrowAsync(int userId, decimal amount, int escrowId);
     }
 }
