@@ -82,7 +82,7 @@ const Header = ({ user = null, onLogout }) => {
     }
 
     // ✅ THE MAIN FIX: Always use user ID (not cosplayer ID) for profile routes
-    const userId = user.id || user.userId;
+    const userId = user.userId;
     const userType = (user.userType || user.role || '').toLowerCase();
 
     console.log('🔍 Header Profile Path Debug:', {
@@ -135,7 +135,6 @@ const Header = ({ user = null, onLogout }) => {
   const navigationItems = [
     { label: 'Trang chủ', path: '/', icon: <Home /> },
     { label: 'Cosplayer', path: '/cosplayers', icon: <Person /> },
-    { label: 'Dịch vụ', path: '/services', icon: <Favorite /> },
   ];
 
   // ✅ FIXED: Updated auth menu items with correct profile action

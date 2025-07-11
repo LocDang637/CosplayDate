@@ -19,7 +19,7 @@ import {
   CircularProgress,
   Divider
 } from '@mui/material';
-import { 
+import {
   TheaterComedy,
   AttachMoney,
   Category,
@@ -71,7 +71,7 @@ const BecomeCosplayerForm = ({ user, onSuccess }) => {
   const handleInputChange = (field) => (e) => {
     const value = e.target.type === 'checkbox' ? e.target.checked : e.target.value;
     setFormData(prev => ({ ...prev, [field]: value }));
-    
+
     if (errors[field]) {
       setErrors(prev => ({ ...prev, [field]: '' }));
     }
@@ -83,7 +83,7 @@ const BecomeCosplayerForm = ({ user, onSuccess }) => {
       ...prev,
       specialties: prev.specialties.includes(specialty)
         ? prev.specialties.filter(s => s !== specialty)
-        : prev.specialties.length < 5 
+        : prev.specialties.length < 5
           ? [...prev.specialties, specialty]
           : prev.specialties
     }));
@@ -94,7 +94,7 @@ const BecomeCosplayerForm = ({ user, onSuccess }) => {
       ...prev,
       selectedTags: prev.selectedTags.includes(tag)
         ? prev.selectedTags.filter(t => t !== tag)
-        : prev.selectedTags.length < 5 
+        : prev.selectedTags.length < 5
           ? [...prev.selectedTags, tag]
           : prev.selectedTags
     }));
@@ -102,26 +102,26 @@ const BecomeCosplayerForm = ({ user, onSuccess }) => {
 
   const validateForm = () => {
     const newErrors = {};
-    
+
     if (!formData.displayName.trim()) {
       newErrors.displayName = 'Tên hiển thị là bắt buộc';
     } else if (formData.displayName.trim().length < 2) {
       newErrors.displayName = 'Tên hiển thị phải có ít nhất 2 ký tự';
     }
-    
+
     const price = parseFloat(formData.pricePerHour);
     if (!formData.pricePerHour || isNaN(price) || price < 1) {
       newErrors.pricePerHour = 'Giá phải từ 1đ trở lên';
     }
-    
+
     if (!formData.category) {
       newErrors.category = 'Vui lòng chọn danh mục';
     }
-    
+
     if (!formData.acceptCosplayerTerms) {
       newErrors.acceptCosplayerTerms = 'Bạn phải chấp nhận điều khoản';
     }
-    
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -131,12 +131,12 @@ const BecomeCosplayerForm = ({ user, onSuccess }) => {
 
     setLoading(true);
     setError('');
-    
+
     try {
       // Log the current user to check authentication
       const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
       const currentToken = localStorage.getItem('token');
-      
+
       console.log('🔍 Debug - Current user:', {
         id: currentUser.id,
         email: currentUser.email,
@@ -161,27 +161,25 @@ const BecomeCosplayerForm = ({ user, onSuccess }) => {
       console.log('🔄 Submitting become cosplayer data:', becomeCosplayerData);
 
       const result = await cosplayerAPI.becomeCosplayer(becomeCosplayerData);
-      
+
       console.log('📋 API result:', result);
-      
+
       if (result.success) {
-        const updatedUser = { 
-          ...user, 
-          userType: 'Cosplayer',
-          cosplayerId: result.data.cosplayerId || result.data.id
-        };
-        localStorage.setItem('user', JSON.stringify(updatedUser));
-        
-        if (onSuccess) {
-          onSuccess(updatedUser, result.data);
-        } else {
-          navigate(`/profile/${updatedUser.id}`, { 
-            state: { 
-              message: result.message || 'Chúc mừng! Bạn đã trở thành Cosplayer.',
-              upgraded: true 
-            }
-          });
-        }
+        // SUCCESS: Clear the old token and user data
+        console.log('✅ Successfully became cosplayer! Logging out for new token...');
+
+        // Clear localStorage
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+
+        // Redirect to login page with message and email
+        navigate('/login', {
+          state: {
+            message: 'Tài khoản của bạn đã được nâng cấp thành Cosplayer! Vui lòng đăng nhập lại để tiếp tục.',
+            email: currentUser.email || ''
+          }
+        });
+
       } else {
         console.error('❌ API call failed:', {
           message: result.message,
@@ -191,24 +189,24 @@ const BecomeCosplayerForm = ({ user, onSuccess }) => {
         // Handle specific validation errors
         if (result.errors && typeof result.errors === 'object') {
           const backendErrors = {};
-          
+
           // Map backend field names to frontend field names
           if (result.errors.DisplayName) {
-            backendErrors.displayName = Array.isArray(result.errors.DisplayName) 
-              ? result.errors.DisplayName[0] 
+            backendErrors.displayName = Array.isArray(result.errors.DisplayName)
+              ? result.errors.DisplayName[0]
               : result.errors.DisplayName;
           }
           if (result.errors.PricePerHour) {
-            backendErrors.pricePerHour = Array.isArray(result.errors.PricePerHour) 
-              ? result.errors.PricePerHour[0] 
+            backendErrors.pricePerHour = Array.isArray(result.errors.PricePerHour)
+              ? result.errors.PricePerHour[0]
               : result.errors.PricePerHour;
           }
           if (result.errors.Category) {
-            backendErrors.category = Array.isArray(result.errors.Category) 
-              ? result.errors.Category[0] 
+            backendErrors.category = Array.isArray(result.errors.Category)
+              ? result.errors.Category[0]
               : result.errors.Category;
           }
-          
+
           if (Object.keys(backendErrors).length > 0) {
             setErrors(backendErrors);
           } else {
@@ -218,7 +216,7 @@ const BecomeCosplayerForm = ({ user, onSuccess }) => {
           setError(result.message || 'Không thể hoàn tất đăng ký. Vui lòng thử lại.');
         }
       }
-      
+
     } catch (err) {
       console.error('❌ Unexpected error:', err);
       setError('Lỗi kết nối. Vui lòng thử lại.');
@@ -239,12 +237,12 @@ const BecomeCosplayerForm = ({ user, onSuccess }) => {
       }}
     >
       <Box sx={{ textAlign: 'center', mb: 4 }}>
-        <TheaterComedy 
-          sx={{ 
-            fontSize: 48, 
-            color: 'primary.main', 
-            mb: 2 
-          }} 
+        <TheaterComedy
+          sx={{
+            fontSize: 48,
+            color: 'primary.main',
+            mb: 2
+          }}
         />
         <Typography
           variant="h4"
@@ -269,8 +267,8 @@ const BecomeCosplayerForm = ({ user, onSuccess }) => {
       </Box>
 
       {error && (
-        <Alert 
-          severity="error" 
+        <Alert
+          severity="error"
           sx={{ mb: 3, borderRadius: '12px' }}
           onClose={() => setError('')}
         >
@@ -396,11 +394,11 @@ const BecomeCosplayerForm = ({ user, onSuccess }) => {
                 disabled={loading || (formData.selectedTags.length >= 5 && !formData.selectedTags.includes(tag))}
                 variant={formData.selectedTags.includes(tag) ? 'filled' : 'outlined'}
                 sx={{
-                  backgroundColor: formData.selectedTags.includes(tag) 
-                    ? 'primary.main' 
+                  backgroundColor: formData.selectedTags.includes(tag)
+                    ? 'primary.main'
                     : 'transparent',
-                  color: formData.selectedTags.includes(tag) 
-                    ? 'white' 
+                  color: formData.selectedTags.includes(tag)
+                    ? 'white'
                     : 'text.primary',
                   borderColor: 'primary.main',
                   '&:hover': {
@@ -441,11 +439,11 @@ const BecomeCosplayerForm = ({ user, onSuccess }) => {
                 disabled={loading || (formData.specialties.length >= 5 && !formData.specialties.includes(specialty))}
                 variant={formData.specialties.includes(specialty) ? 'filled' : 'outlined'}
                 sx={{
-                  backgroundColor: formData.specialties.includes(specialty) 
-                    ? 'primary.main' 
+                  backgroundColor: formData.specialties.includes(specialty)
+                    ? 'primary.main'
                     : 'transparent',
-                  color: formData.specialties.includes(specialty) 
-                    ? 'white' 
+                  color: formData.specialties.includes(specialty)
+                    ? 'white'
                     : 'text.primary',
                   borderColor: 'primary.main',
                   '&:hover': {
@@ -486,7 +484,7 @@ const BecomeCosplayerForm = ({ user, onSuccess }) => {
         label={
           <Typography variant="body2" sx={{ fontSize: '14px' }}>
             Tôi đồng ý với{' '}
-            <Typography 
+            <Typography
               component="span"
               sx={{ color: 'primary.main', fontWeight: 600, cursor: 'pointer' }}
               onClick={() => navigate('/cosplayer-policy')}
@@ -496,12 +494,12 @@ const BecomeCosplayerForm = ({ user, onSuccess }) => {
             {' '}và cam kết cung cấp dịch vụ chuyên nghiệp.
           </Typography>
         }
-        sx={{ 
+        sx={{
           alignItems: 'flex-start',
           mb: 3
         }}
       />
-      
+
       {errors.acceptCosplayerTerms && (
         <Typography variant="body2" sx={{ color: 'error.main', fontSize: '12px', mb: 2 }}>
           {errors.acceptCosplayerTerms}
@@ -525,7 +523,7 @@ const BecomeCosplayerForm = ({ user, onSuccess }) => {
         >
           Hủy bỏ
         </Button>
-        
+
         <Button
           variant="contained"
           onClick={handleSubmit}

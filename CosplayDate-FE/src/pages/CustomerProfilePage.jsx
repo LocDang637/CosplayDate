@@ -1,6 +1,6 @@
 // Updated CustomerProfilePage.jsx with API integration
-import React, { useState, useEffect } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import React, { useState, useEffect, useCallback } from 'react';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import {
   Box,
   Container,
@@ -8,53 +8,59 @@ import {
   Alert,
   Button,
   Snackbar,
+  Menu, MenuItem, ListItemIcon, ListItemText,
+  Typography
 } from "@mui/material";
+import { CameraAlt, Delete } from '@mui/icons-material';
 import { ThemeProvider } from "@mui/material/styles";
 import { cosplayTheme } from "../theme/cosplayTheme";
 import {
   userAPI,
-  followAPI,
-  customerStatsAPI,
   enhancedWalletAPI,
-  customerReviewsAPI,
-  favoritesAPI,
-  customerMediaAPI,
+
 } from "../services/api";
-import { bookingAPI } from "../services/bookingAPI";
 
 // Import components
-import Header from "../components/layout/Header";
-import Footer from "../components/layout/Footer";
-import CustomerProfileHeader from "../components/profile/CustomerProfileHeader";
-import ProfileTabs from "../components/profile/ProfileTabs";
-import CustomerProfileOverview from "../components/profile/CustomerProfileOverview";
-import CustomerWallet from "../components/profile/CustomerWallet";
-import CustomerBookingHistory from "../components/profile/CustomerBookingHistory";
-import ProfileGallery from "../components/profile/ProfileGallery";
-import ProfileEditModal from "../components/profile/ProfileEditModal";
+import Header from '../components/layout/Header';
+import Footer from '../components/layout/Footer';
+import CustomerProfileHeader from '../components/profile/CustomerProfileHeader';
+import ProfileTabs from '../components/profile/ProfileTabs';
+import CustomerWallet from '../components/profile/CustomerWallet';
+
+import ProfileEditModal from '../components/profile/ProfileEditModal';
+import CustomerBookingOrders from '../components/profile/CustomerBookingOrders';
+import CustomerFollowing from '../components/profile/CustomerFollowing';
 
 const CustomerProfilePage = () => {
   const { userId } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
 
   const [user, setUser] = useState(null);
   const [profileUser, setProfileUser] = useState(null);
-  const [activeTab, setActiveTab] = useState("overview");
+  const [currentProfile, setCurrentProfile] = useState(null); // Add current profile state
+  const [activeTab, setActiveTab] = useState('wallet');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [isFollowing, setIsFollowing] = useState(false);
+  const [isOwnProfile, setIsOwnProfile] = useState(false); // Changed to state instead of computed
   const [editModalOpen, setEditModalOpen] = useState(false);
+  const [anchorEl, setAnchorEl] = useState(null);
+  const [userDataLoaded, setUserDataLoaded] = useState(false); // Add userDataLoaded state
   const [snackbar, setSnackbar] = useState({
     open: false,
     message: "",
     severity: "success",
   });
 
-  const isOwnProfile =
-    !userId || (user?.id && parseInt(userId) === parseInt(user.id));
-  console.log("userId:", userId, "isOwnProfile:", isOwnProfile);
+  console.log('userId:', userId, 'isOwnProfile:', isOwnProfile);
 
-  // Load current user
+  // ✅ FIXED: Stable user ID comparison logic
+  const getCurrentUserId = useCallback(() => {
+    if (!user) return null;
+    return user.id || user.userId;
+  }, [user?.id, user?.userId]);
+
+  // ✅ FIXED: Initialize user data only once
   useEffect(() => {
     const storedUser = localStorage.getItem("user");
     if (storedUser) {
@@ -62,85 +68,213 @@ const CustomerProfilePage = () => {
         const parsedUser = JSON.parse(storedUser);
         console.log("📱 Loaded user from localStorage:", parsedUser);
         setUser(parsedUser);
+        setUserDataLoaded(true);
+
+        console.log('👤 User loaded:', {
+          id: parsedUser.id || parsedUser.userId,
+          userType: parsedUser.userType,
+          urlUserId: userId
+        });
+
+        // Handle route corrections for own profile without userId
+        if (!userId && parsedUser.userType === 'Customer' && (parsedUser.id || parsedUser.userId)) {
+          const userIdValue = parsedUser.id || parsedUser.userId;
+          console.log('🔄 Redirecting to customer profile with user ID:', userIdValue);
+          navigate(`/customer-profile/${userIdValue}`, { replace: true });
+          return;
+        }
+
+        // Check for wrong URL corrections (cosplayer on customer route)
+        if (userId && parsedUser.userType === 'Cosplayer' &&
+          parseInt(userId) === parseInt(parsedUser.id || parsedUser.userId)) {
+          console.log('🔄 Cosplayer on customer route, redirecting to cosplayer profile');
+          navigate(`/profile/${userId}`, { replace: true });
+          return;
+        }
+
       } catch (error) {
         console.error("❌ Error parsing stored user:", error);
         localStorage.removeItem("user");
+        navigate('/login');
+        return;
       }
     } else {
       console.log("⚠️ No user found in localStorage");
+      setUserDataLoaded(true);
+    }
+
+    // Handle success messages from navigation state
+    if (location.state?.message) {
+      showSnackbar(location.state.message, 'success');
     }
   }, []);
 
-  // Load profile data using API
+  // Add this useEffect to handle URL query parameters:
   useEffect(() => {
-    const loadProfile = async () => {
-      // ✅ FIX: Don't load profile until we have current user data (for own profile)
-      if (isOwnProfile && !user) {
-        console.log("⏳ Waiting for current user data...");
-        return;
-      }
+    // Check for tab query parameter
+    const searchParams = new URLSearchParams(location.search);
+    const tabParam = searchParams.get('tab');
 
+    if (tabParam) {
+      // Map tab parameter to activeTab value
+      switch (tabParam) {
+        case 'bookings':
+          setActiveTab('bookings');
+          break;
+        case 'wallet':
+          setActiveTab('wallet');
+          break;
+        case 'following':
+          setActiveTab('following');
+          break;
+        default:
+          setActiveTab('wallet');
+      }
+    }
+  }, [location.search]);
+
+  // ✅ NEW: Load user profile first to get isOwnProfile value
+  useEffect(() => {
+    if (!userDataLoaded) {
+      return;
+    }
+
+    const loadUserProfile = async () => {
       try {
         setLoading(true);
         setError(null);
 
-        console.log("🔄 Loading profile...", {
-          isOwnProfile,
-          userId,
-          currentUser: user?.id,
+        const targetUserId = userId || getCurrentUserId();
+        if (!targetUserId) {
+          console.error('❌ No target user ID found');
+          setError('User ID not found');
+          setLoading(false);
+          return;
+        }
+
+        console.log('🔍 Loading user profile for:', targetUserId);
+
+        // First get user profile to determine isOwnProfile
+        const userProfileResult = await userAPI.getUserProfile(targetUserId);
+
+        console.log('👤 User Profile API Result:', {
+          success: userProfileResult.success,
+          isOwnProfile: userProfileResult.data?.isOwnProfile,
+          userType: userProfileResult.data?.userType,
         });
 
-        let result;
-        if (isOwnProfile) {
-          // Get current user's profile
-          console.log("📱 Fetching own profile");
-          result = await userAPI.getCurrentProfile();
-        } else {
-          // Get specific user's profile
-          console.log("👤 Fetching user profile for ID:", userId);
-          result = await userAPI.getUserProfile(userId);
-        }
+        if (userProfileResult.success && userProfileResult.data) {
+          const { isOwnProfile: apiIsOwnProfile, userType } = userProfileResult.data;
 
-        console.log("📊 Profile API result:", result);
+          // Set isOwnProfile from API response
+          setIsOwnProfile(apiIsOwnProfile);
 
-        if (result.success) {
-          // ✅ FIX: Ensure the profile data has both avatar fields
-          const profileData = {
-            ...result.data,
-            id: result.data.id || result.data.userId,
-            userId: result.data.userId || result.data.id,
-            // Ensure both avatar fields are available
-            avatar: result.data.avatar || result.data.avatarUrl,
-            avatarUrl: result.data.avatarUrl || result.data.avatar,
-          };
+          console.log('✅ States set from API:', {
+            isOwnProfile: apiIsOwnProfile,
+            userType: userType
+          });
 
-          setProfileUser(profileData);
-
-          // Update local storage if it's own profile
-          if (isOwnProfile && profileData) {
-            const currentUser = JSON.parse(
-              localStorage.getItem("user") || "{}"
-            );
-            const updatedUser = { ...currentUser, ...profileData };
-            localStorage.setItem("user", JSON.stringify(updatedUser));
-            setUser(updatedUser);
+          // Handle non-customer users
+          if (userType !== 'Customer') {
+            if (apiIsOwnProfile) {
+              console.log('🎭 Own profile but not customer, redirecting to cosplayer profile');
+              navigate(`/profile/${targetUserId}`, { replace: true });
+              return;
+            } else {
+              console.log('❌ Viewing non-customer profile');
+              setError('This user is not a customer');
+              setLoading(false);
+              return;
+            }
           }
+
+          // Continue with customer profile loading
+          await loadCustomerProfile(targetUserId, apiIsOwnProfile, userType);
+
         } else {
-          setError(result.message || "Failed to load profile");
+          console.log('❌ User profile loading failed:', userProfileResult.message);
+          setError(userProfileResult.message || 'User profile not found');
+          setLoading(false);
         }
+
       } catch (err) {
-        console.error("❌ Profile loading error:", err);
-        setError("Unable to load profile. Please try again.");
-      } finally {
+        console.error('💥 User profile loading error:', err);
+        setError('Unable to load profile. Please try again.');
         setLoading(false);
       }
     };
 
-    // ✅ FIX: Only load profile when we have necessary data
-    if (!isOwnProfile || user) {
-      loadProfile();
+    loadUserProfile();
+  }, [userDataLoaded, userId, getCurrentUserId, navigate]);
+
+  // ✅ NEW: Separate function to load customer-specific data
+  const loadCustomerProfile = async (targetUserId, apiIsOwnProfile, userType) => {
+    try {
+      console.log('👤 Loading customer profile for:', {
+        targetUserId,
+        isOwnProfile: apiIsOwnProfile,
+        userType
+      });
+
+      // Load customer details and current profile data in parallel
+      const promises = [
+        userAPI.getUserProfile(targetUserId)
+      ];
+
+      // Only load current profile data for own profile to get private info
+      if (apiIsOwnProfile) {
+        promises.push(userAPI.getCurrentProfile());
+      }
+
+      const [result, currentProfileResult] = await Promise.all(promises);
+
+      console.log('📊 Customer API Result:', {
+        success: result.success,
+        hasData: !!result.data,
+        error: result.message
+      });
+
+      if (result.success && result.data) {
+        // ✅ FIX: Ensure the profile data has both avatar fields
+        const profileData = {
+          ...result.data,
+          id: result.data.id || result.data.userId,
+          userId: result.data.userId || result.data.id,
+          // Ensure both avatar fields are available
+          avatar: result.data.avatar || result.data.avatarUrl,
+          avatarUrl: result.data.avatarUrl || result.data.avatar
+        };
+
+        setProfileUser(profileData);
+
+        // Set current profile data for private info (wallet, etc.)
+        if (currentProfileResult?.success && currentProfileResult.data) {
+          setCurrentProfile(currentProfileResult.data);
+          console.log('💼 Current profile loaded:', currentProfileResult.data);
+        }
+
+        // Update local storage if it's own profile
+        if (apiIsOwnProfile && profileData) {
+          const currentUser = JSON.parse(
+            localStorage.getItem("user") || "{}"
+          );
+          const updatedUser = { ...currentUser, ...profileData };
+          localStorage.setItem("user", JSON.stringify(updatedUser));
+          setUser(updatedUser);
+        }
+
+        console.log('✅ Customer profile loaded successfully');
+      } else {
+        console.log('❌ Customer profile loading failed:', result.message);
+        setError(result.message || "Failed to load customer profile");
+      }
+    } catch (err) {
+      console.error("❌ Customer profile loading error:", err);
+      setError("Unable to load customer profile. Please try again.");
+    } finally {
+      setLoading(false);
     }
-  }, [userId, user?.id, isOwnProfile]);
+  };
 
   const handleLogout = () => {
     setUser(null);
@@ -157,8 +291,8 @@ const CustomerProfilePage = () => {
     setEditModalOpen(true);
   };
 
-  const handleProfileUpdated = (updatedProfile) => {
-    setProfileUser((prev) => ({ ...prev, ...updatedProfile }));
+  const handleProfileUpdated = useCallback((updatedProfile) => {
+    setProfileUser(prev => ({ ...prev, ...updatedProfile }));
 
     // Update user state and localStorage if it's own profile
     if (isOwnProfile) {
@@ -167,13 +301,24 @@ const CustomerProfilePage = () => {
       localStorage.setItem("user", JSON.stringify(updatedUser));
     }
 
-    showSnackbar("Profile updated successfully!", "success");
+    showSnackbar('Profile updated successfully!', 'success');
+  }, [isOwnProfile, user]);
+
+  // Avatar menu handlers
+  const handleAvatarClick = (event) => {
+    setAnchorEl(event.currentTarget);
   };
 
-  const handleEditAvatar = async () => {
-    const input = document.createElement("input");
-    input.type = "file";
-    input.accept = "image/*";
+  const handleMenuClose = () => {
+    setAnchorEl(null);
+  };
+
+  const handleAvatarUpload = async () => {
+    handleMenuClose();
+
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'image/*';
     input.onchange = async (event) => {
       const file = event.target.files[0];
       if (file) {
@@ -184,31 +329,31 @@ const CustomerProfilePage = () => {
           if (result.success) {
             const newAvatarUrl = result.data.avatarUrl;
 
-            // ✅ FIX: Update profileUser state with both avatar and avatarUrl fields
-            setProfileUser((prev) => ({
+            // Update profileUser state
+            setProfileUser(prev => ({
               ...prev,
-              avatar: newAvatarUrl, // ← Add this for CustomerProfileHeader compatibility
-              avatarUrl: newAvatarUrl, // ← Keep this for API compatibility
+              avatar: newAvatarUrl,
+              avatarUrl: newAvatarUrl
             }));
 
-            // ✅ FIX: If it's own profile, also update the user state
+            // If it's own profile, also update the user state
             if (isOwnProfile) {
               const updatedUser = {
                 ...user,
-                avatar: newAvatarUrl, // ← Add this for header compatibility
-                avatarUrl: newAvatarUrl, // ← Keep this for API compatibility
+                avatar: newAvatarUrl,
+                avatarUrl: newAvatarUrl
               };
               setUser(updatedUser);
-              localStorage.setItem("user", JSON.stringify(updatedUser));
+              localStorage.setItem('user', JSON.stringify(updatedUser));
             }
 
-            showSnackbar("Avatar updated successfully!", "success");
+            showSnackbar('Avatar updated successfully!', 'success');
           } else {
-            showSnackbar(result.message || "Failed to upload avatar", "error");
+            showSnackbar(result.message || 'Failed to upload avatar', 'error');
           }
         } catch (error) {
-          console.error("Avatar upload error:", error);
-          showSnackbar("Error uploading avatar", "error");
+          console.error('Avatar upload error:', error);
+          showSnackbar('Error uploading avatar', 'error');
         } finally {
           setLoading(false);
         }
@@ -217,85 +362,48 @@ const CustomerProfilePage = () => {
     input.click();
   };
 
-  // ✅ UPDATED: Real follow toggle with API
-  const handleFollowToggle = async () => {
-    if (!profileUser?.cosplayerId) {
-      showSnackbar("Cannot follow this user", "error");
-      return;
-    }
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
 
+  const handleAvatarDelete = () => {
+    handleMenuClose();
+    setDeleteDialogOpen(true);
+  };
+
+  const handleConfirmDelete = async () => {
+    setDeleteDialogOpen(false);
     try {
       setLoading(true);
-
-      let result;
-      if (isFollowing) {
-        result = await followAPI.unfollowCosplayer(profileUser.cosplayerId);
-      } else {
-        result = await followAPI.followCosplayer(profileUser.cosplayerId);
-      }
+      const result = await userAPI.deleteAvatar();
 
       if (result.success) {
-        setIsFollowing(!isFollowing);
-        showSnackbar(result.message, "success");
+        // Update profileUser state
+        setProfileUser(prev => ({
+          ...prev,
+          avatar: null,
+          avatarUrl: null
+        }));
+
+        // If it's own profile, also update the user state
+        if (isOwnProfile) {
+          const updatedUser = {
+            ...user,
+            avatar: null,
+            avatarUrl: null
+          };
+          setUser(updatedUser);
+          localStorage.setItem('user', JSON.stringify(updatedUser));
+        }
+
+        showSnackbar('Avatar deleted successfully!', 'success');
       } else {
-        showSnackbar(
-          result.message || "Failed to update follow status",
-          "error"
-        );
+        showSnackbar(result.message || 'Failed to delete avatar', 'error');
       }
     } catch (error) {
-      console.error("Follow toggle error:", error);
-      showSnackbar("Error updating follow status", "error");
+      console.error('Avatar delete error:', error);
+      showSnackbar('Error deleting avatar', 'error');
     } finally {
       setLoading(false);
     }
-  };
-
-  // ✅ UPDATED: Real photo upload with API
-  const handleAddPhoto = async () => {
-    const input = document.createElement("input");
-    input.type = "file";
-    input.accept = "image/*";
-    input.multiple = true;
-
-    input.onchange = async (event) => {
-      const files = Array.from(event.target.files);
-      if (files.length === 0) return;
-
-      try {
-        setLoading(true);
-        const uploadPromises = files.map((file) =>
-          customerMediaAPI.uploadProfilePhoto({
-            file,
-            title: `Photo ${Date.now()}`,
-            description: "Customer profile photo",
-            category: "profile",
-          })
-        );
-
-        const results = await Promise.all(uploadPromises);
-        const successCount = results.filter((r) => r.success).length;
-        const failCount = results.length - successCount;
-
-        if (successCount > 0) {
-          showSnackbar(
-            `${successCount} photo(s) uploaded successfully!`,
-            "success"
-          );
-        }
-
-        if (failCount > 0) {
-          showSnackbar(`${failCount} photo(s) failed to upload`, "warning");
-        }
-      } catch (error) {
-        console.error("Photo upload error:", error);
-        showSnackbar("Error uploading photos", "error");
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    input.click();
   };
 
   const showSnackbar = (message, severity = "success") => {
@@ -357,34 +465,17 @@ const CustomerProfilePage = () => {
     },
   ];
 
-  const mockCustomerPhotos = Array.from({ length: 16 }, (_, index) => ({
-    id: index + 1,
-    url: `/src/assets/cosplayer${(index % 8) + 1}.png`,
-    title: `Event Photo ${index + 1}`,
-    description: `Amazing cosplay event experience #${index + 1}`,
-    category: ["event", "photoshoot", "convention", "meetup"][index % 4],
-    likes: Math.floor(Math.random() * 100) + 20,
-    tags: ["cosplay", "event", "memories", "community"],
-  }));
-
   const customerTabCounts = {
-    photos: mockCustomerPhotos.length,
-    videos: 0,
     reviews: mockStats.reviewsGiven,
     events: mockStats.totalBookings,
     achievements: 8,
     favorites: mockStats.favoriteCosplayers,
     bookings: mockStats.totalBookings,
+    following: profileUser?.followingCount || 0,
     wallet: 1,
   };
 
   const customerTabs = [
-    {
-      id: "overview",
-      label: "Overview",
-      icon: "Info",
-      show: true,
-    },
     {
       id: "wallet",
       label: "Wallet",
@@ -399,40 +490,21 @@ const CustomerProfilePage = () => {
       show: isOwnProfile,
     },
     {
-      id: "gallery",
-      label: "Gallery",
-      icon: "PhotoLibrary",
-      count: customerTabCounts.photos,
+      id: "following",
+      label: "Đang theo dõi",
+      icon: "PersonAdd",
+      count: customerTabCounts.following,
       show: true,
-    },
-    {
-      id: "favorites",
-      label: "Favorites",
-      icon: "Favorite",
-      count: customerTabCounts.favorites,
-      show: isOwnProfile,
     },
   ];
 
   const renderTabContent = () => {
     switch (activeTab) {
-      case "overview":
-        return (
-          <CustomerProfileOverview
-            user={profileUser}
-            stats={mockStats}
-            recentActivity={mockRecentActivity}
-            favoriteCategories={mockFavoriteCategories}
-            walletBalance={profileUser?.walletBalance}
-            loyaltyPoints={profileUser?.loyaltyPoints}
-            membershipTier={profileUser?.membershipTier}
-          />
-        );
       case "wallet":
         return (
           <CustomerWallet
-            balance={profileUser?.walletBalance}
-            loyaltyPoints={profileUser?.loyaltyPoints}
+            balance={currentProfile?.walletBalance || profileUser?.walletBalance}
+            loyaltyPoints={currentProfile?.loyaltyPoints || profileUser?.loyaltyPoints}
             // Pass API functions for real data loading
             onLoadWalletDetails={() => enhancedWalletAPI.getWalletDetails()}
             onLoadSpendingAnalytics={(timeRange) =>
@@ -443,48 +515,24 @@ const CustomerProfilePage = () => {
             }
           />
         );
-      case "bookings":
+      case 'bookings':
+        return <CustomerBookingOrders />;
+      case 'following':
         return (
-          <CustomerBookingHistory
-            // Pass API functions for real booking data
-            onLoadBookings={(status, page, pageSize) =>
-              bookingAPI.getCustomerBookings(status, page, pageSize)
-            }
-            onCancelBooking={(bookingId, reason) =>
-              bookingAPI.cancelCustomerBooking(bookingId, reason)
-            }
-            onRescheduleBooking={(bookingId, newDate, newTime) =>
-              bookingAPI.rescheduleBooking(bookingId, newDate, newTime)
-            }
-          />
-        );
-      case "gallery":
-        return (
-          <ProfileGallery
-            photos={mockCustomerPhotos}
+          <CustomerFollowing
+            customerId={profileUser?.id}
             isOwnProfile={isOwnProfile}
-            onAddPhoto={handleAddPhoto}
-            loading={false}
-            // Pass API functions for real gallery data
-            onLoadGallery={(category) =>
-              customerMediaAPI.getCustomerGallery(profileUser?.id, category)
-            }
-            onDeletePhoto={(photoId) =>
-              customerMediaAPI.deleteProfilePhoto(photoId)
-            }
           />
         );
       case "favorites":
         return (
-          <Box
-            sx={{
-              p: 4,
-              textAlign: "center",
-              backgroundColor: "rgba(255,255,255,0.95)",
-              borderRadius: "16px",
-              border: "1px solid rgba(233, 30, 99, 0.1)",
-            }}
-          >
+          <Box sx={{
+            p: 4,
+            textAlign: 'center',
+            backgroundColor: 'rgba(255,255,255,0.95)',
+            borderRadius: '16px',
+            border: '1px solid rgba(233, 30, 99, 0.1)',
+          }}>
             <h3>Favorite Cosplayers</h3>
             <p>Your favorite cosplayers will appear here!</p>
             {/* Future: Use favoritesAPI.getFavoriteCosplayers() */}
@@ -520,7 +568,7 @@ const CustomerProfilePage = () => {
           <Container maxWidth="lg" sx={{ py: 8 }}>
             <Alert
               severity="error"
-              sx={{ mb: 4, borderRadius: "12px" }}
+              sx={{ mb: 4, borderRadius: '12px' }}
               action={
                 <Button
                   color="inherit"
@@ -544,27 +592,84 @@ const CustomerProfilePage = () => {
       <Box sx={{ minHeight: "100vh", backgroundColor: "#FFE8F5" }}>
         <Header user={user} onLogout={handleLogout} />
 
+
         <Container maxWidth="lg" sx={{ py: 4 }}>
           <CustomerProfileHeader
             user={profileUser}
+            stats={mockStats}
+            recentActivity={mockRecentActivity}
+            favoriteCategories={mockFavoriteCategories}
             isOwnProfile={isOwnProfile}
             onEditProfile={handleEditProfile}
-            onEditAvatar={handleEditAvatar}
-            onFollowToggle={handleFollowToggle}
-            isFollowing={isFollowing}
-            walletBalance={profileUser?.walletBalance}
-            membershipTier={profileUser?.membershipTier}
+            onEditAvatar={handleAvatarClick}
+            deleteDialogOpen={deleteDialogOpen}
+            onDeleteDialogClose={() => setDeleteDialogOpen(false)}
+            onConfirmDelete={handleConfirmDelete}
           />
 
-          <ProfileTabs
-            activeTab={activeTab}
-            onTabChange={handleTabChange}
-            isOwnProfile={isOwnProfile}
-            counts={customerTabCounts}
-            customTabs={customerTabs}
-          />
+          {/* Avatar Menu */}
+          {isOwnProfile && (
+            <Menu
+              anchorEl={anchorEl}
+              open={Boolean(anchorEl)}
+              onClose={handleMenuClose}
+              anchorOrigin={{
+                vertical: 'bottom',
+                horizontal: 'center',
+              }}
+              transformOrigin={{
+                vertical: 'top',
+                horizontal: 'center',
+              }}
+              MenuListProps={{
+                'aria-labelledby': 'avatar-menu',
+              }}
+              // Click outside handling
+              ClickAwayListenerProps={{
+                onClickAway: handleMenuClose
+              }}
+              // Backdrop for better visibility
+              slotProps={{
+                backdrop: {
+                  sx: {
+                    backgroundColor: 'transparent',
+                  }
+                }
+              }}
+            >
+              <MenuItem onClick={handleAvatarUpload}>
+                <ListItemIcon>
+                  <CameraAlt fontSize="small" />
+                </ListItemIcon>
+                <ListItemText>
+                  {profileUser?.avatar || profileUser?.avatarUrl ? 'Change Avatar' : 'Upload Avatar'}
+                </ListItemText>
+              </MenuItem>
+              {(profileUser?.avatar || profileUser?.avatarUrl) && (
+                <MenuItem onClick={handleAvatarDelete}>
+                  <ListItemIcon>
+                    <Delete fontSize="small" color="error" />
+                  </ListItemIcon>
+                  <ListItemText>Delete Avatar</ListItemText>
+                </MenuItem>
+              )}
+            </Menu>
+          )}
 
-          <Box sx={{ minHeight: "400px" }}>{renderTabContent()}</Box>
+          {/* Only show profile tabs and content for own profile */}
+          {isOwnProfile && (
+            <>
+              <ProfileTabs
+                activeTab={activeTab}
+                onTabChange={handleTabChange}
+                isOwnProfile={isOwnProfile}
+                counts={customerTabCounts}
+                customTabs={customerTabs}
+              />
+
+              <Box sx={{ minHeight: "400px" }}>{renderTabContent()}</Box>
+            </>
+          )}
         </Container>
 
         <Footer />

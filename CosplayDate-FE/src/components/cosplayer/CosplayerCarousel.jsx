@@ -1,5 +1,5 @@
 // src/components/cosplayer/CosplayerCarousel.jsx
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Box,
@@ -11,10 +11,35 @@ import {
 import { ArrowForward, ArrowBack } from '@mui/icons-material';
 import CosplayerCard from './CosplayerCard';
 
-const CosplayerCarousel = ({ title = "Cosplayer nổi bật", cosplayers = [], onSeeAll, loading = false }) => {
+const CosplayerCarousel = ({ 
+  title = "Cosplayer nổi bật", 
+  cosplayers = [], 
+  onSeeAll, 
+  loading = false,
+  currentUser = null  // Add currentUser prop
+}) => {
   const navigate = useNavigate();
   const [currentIndex, setCurrentIndex] = useState(0);
+  const [favorites, setFavorites] = useState(new Set());
   const carouselRef = useRef(null);
+
+  // Get current user from props or localStorage
+  const user = currentUser || (() => {
+    const storedUser = localStorage.getItem('user');
+    if (storedUser) {
+      try {
+        return JSON.parse(storedUser);
+      } catch (error) {
+        console.error('Error parsing stored user:', error);
+        return null;
+      }
+    }
+    return null;
+  })();
+
+  useEffect(() => {
+    console.log('CosplayerCarousel - Current user:', user);
+  }, [user]);
 
   const handleNext = () => {
     const maxIndex = Math.max(0, cosplayers.length - 4);
@@ -22,7 +47,7 @@ const CosplayerCarousel = ({ title = "Cosplayer nổi bật", cosplayers = [], o
     setCurrentIndex(nextIndex);
     
     if (carouselRef.current) {
-      const cardWidth = 260;
+      const cardWidth = 300; // Adjusted for card width + gap
       carouselRef.current.scrollTo({
         left: nextIndex * cardWidth,
         behavior: 'smooth'
@@ -35,7 +60,7 @@ const CosplayerCarousel = ({ title = "Cosplayer nổi bật", cosplayers = [], o
     setCurrentIndex(prevIndex);
     
     if (carouselRef.current) {
-      const cardWidth = 260;
+      const cardWidth = 300; // Adjusted for card width + gap
       carouselRef.current.scrollTo({
         left: prevIndex * cardWidth,
         behavior: 'smooth'
@@ -51,6 +76,16 @@ const CosplayerCarousel = ({ title = "Cosplayer nổi bật", cosplayers = [], o
     navigate(`/messages/${cosplayer.id}`);
   };
 
+  const handleFavorite = (cosplayerId) => {
+    const newFavorites = new Set(favorites);
+    if (newFavorites.has(cosplayerId)) {
+      newFavorites.delete(cosplayerId);
+    } else {
+      newFavorites.add(cosplayerId);
+    }
+    setFavorites(newFavorites);
+  };
+
   const handleSeeAllClick = () => {
     if (onSeeAll) {
       onSeeAll();
@@ -63,8 +98,8 @@ const CosplayerCarousel = ({ title = "Cosplayer nổi bật", cosplayers = [], o
   const canScrollPrev = currentIndex > 0;
 
   const CosplayerSkeleton = () => (
-    <Box sx={{ width: 240, flexShrink: 0 }}>
-      <Skeleton variant="rectangular" height={200} sx={{ borderRadius: '16px' }} />
+    <Box sx={{ width: 280, flexShrink: 0 }}>
+      <Skeleton variant="rectangular" height={240} sx={{ borderRadius: '16px' }} />
       <Box sx={{ p: 2 }}>
         <Skeleton variant="text" sx={{ fontSize: '1rem', mb: 1 }} />
         <Skeleton variant="text" width="60%" sx={{ mb: 1 }} />
@@ -172,8 +207,11 @@ const CosplayerCarousel = ({ title = "Cosplayer nổi bật", cosplayers = [], o
             <CosplayerCard
               key={cosplayer.id}
               cosplayer={cosplayer}
+              currentUser={user}  // Pass the current user properly
+              isFavorite={favorites.has(cosplayer.id)}
               onBooking={handleBooking}
               onMessage={handleMessage}
+              onFavorite={handleFavorite}
             />
           ))
         ) : (

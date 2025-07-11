@@ -1,62 +1,97 @@
-// src/components/profile/CosplayerProfileHeader.jsx - Improved Version
+// src/components/profile/CosplayerProfileHeader.jsx - Improved Version with Avatar Upload
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Box,
   Typography,
   Avatar,
   Button,
   Chip,
-  IconButton,
-  Tooltip,
-  Stack,
   Paper,
   Divider,
   Badge,
-  Rating
+  Rating,
+  Fade,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogContentText,
+  DialogActions,
+  IconButton,
+  Menu,
+  MenuItem,
+  ListItemIcon,
+  ListItemText,
 } from '@mui/material';
 import {
   Edit,
   Share,
-  Favorite,
-  FavoriteBorder,
   LocationOn,
   AttachMoney,
   Schedule,
-  Star,
-  StarBorder,
   Check,
-  PersonAdd,
-  PersonRemove,
-  Message,
-  CalendarMonth,
   WorkspacePremium,
-  Visibility,
   Groups,
   PhotoLibrary,
-  VideoLibrary
+  Favorite,
+  CameraAlt,
+  Verified,
+  Event,
+  Warning,
+  PersonAdd, PersonRemove,
+  MoreVert
 } from '@mui/icons-material';
 import EditCosplayerDialog from './EditCosplayerDialog';
 
 const CosplayerProfileHeader = ({
-  user,  // Changed from cosplayer to user to match the parent component
-  isOwnProfile = false,
-  onEditProfile,
-  onFollow,
-  onUnfollow,
-  onFavorite,
-  onMessage,
-  onBooking,
-  currentUser,
-  onProfileUpdate
+  user,
+  currentProfile,
+  onEditAvatar,
+  onProfileUpdate,
+  isOwnProfile,
+  deleteDialogOpen,
+  onDeleteDialogClose,
+  onConfirmDelete,
+  onFollowToggle,
+  isFollowing,
+  onEditClick = () => { },
+  currentUser = null, // Add currentUser prop
 }) => {
-  const [isFollowing, setIsFollowing] = useState(user?.isFollowing || false);
-  const [isFavorite, setIsFavorite] = useState(user?.isFavorite || false);
+  const navigate = useNavigate();
   const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [avatarHovered, setAvatarHovered] = useState(false);
+  const [anchorEl, setAnchorEl] = useState(null);
+  const [showPopup, setShowPopup] = useState(false);
+  const [popupMessage, setPopupMessage] = useState('');
 
   if (!user) return null;
 
   // Create cosplayer alias for easier refactoring
   const cosplayer = user;
+
+  // Get current user with fallback logic similar to CosplayerCard
+  const getCurrentUser = () => {
+    if (currentUser) return currentUser;
+
+    const storedUser = localStorage.getItem('user');
+    if (storedUser) {
+      try {
+        return JSON.parse(storedUser);
+      } catch (error) {
+        console.error('Error parsing stored user:', error);
+        return null;
+      }
+    }
+    return null;
+  };
+
+  const loggedInUser = getCurrentUser();
+
+  // Debug log
+  console.log('CosplayerProfileHeader - Current user:', loggedInUser);
+
+  // Check if current user is a customer (not a cosplayer)
+  const isCustomer = loggedInUser && loggedInUser.userType === 'Customer';
 
   const handleEditClick = () => {
     setEditDialogOpen(true);
@@ -71,26 +106,74 @@ const CosplayerProfileHeader = ({
     setEditDialogOpen(false);
   };
 
-  const handleFollowToggle = async () => {
-    if (isFollowing) {
-      await onUnfollow?.(cosplayer.userId);
-      setIsFollowing(false);
-    } else {
-      await onFollow?.(cosplayer.userId);
-      setIsFollowing(true);
-    }
+  const handleDeleteCancel = () => {
+    onDeleteDialogClose?.();
   };
 
-  const handleFavoriteToggle = async () => {
-    await onFavorite?.(cosplayer.id);
-    setIsFavorite(!isFavorite);
+  const handleDeleteConfirm = () => {
+    onDeleteDialogClose?.();
+    onConfirmDelete?.();
+  };
+
+  const handleMenuOpen = (event) => {
+    setAnchorEl(event.currentTarget);
+  };
+
+  const handleMenuClose = () => {
+    setAnchorEl(null);
   };
 
   const formatPrice = (price) => {
     return new Intl.NumberFormat('vi-VN').format(price) + 'đ/giờ';
   };
 
-  const isCustomer = currentUser && currentUser.userRole === 'Customer';
+  const handleShare = () => {
+    if (navigator.share) {
+      navigator.share({
+        title: `${user.firstName} ${user.lastName} - Cosplayer CosplayDate`,
+        url: window.location.href,
+      });
+    } else {
+      navigator.clipboard.writeText(window.location.href);
+    }
+    handleMenuClose();
+  };
+
+  const handleBookingClick = () => {
+    console.log('Booking clicked - User:', loggedInUser, 'Is Customer:', isCustomer);
+
+    if (!loggedInUser) {
+      // Navigate to login page with redirect message
+      navigate('/login', {
+        state: {
+          message: 'Vui lòng đăng nhập để đặt lịch với cosplayer',
+          redirectUrl: `/cosplayer/${cosplayer.id}`
+        }
+      });
+    } else if (isCustomer) {
+      // Clear any existing booking state for a fresh start
+      try {
+        sessionStorage.removeItem(`booking_${cosplayer.id}`);
+      } catch (e) {
+        console.warn('Failed to clear booking state:', e);
+      }
+      navigate(`/booking/${cosplayer.id}`);
+    } else {
+      // Show popup for cosplayers trying to book
+      setPopupMessage('Chỉ khách hàng mới có thể đặt lịch với cosplayer');
+      setShowPopup(true);
+    }
+    handleMenuClose();
+  };
+
+  const handleFollowClick = () => {
+    onFollowToggle();
+    handleMenuClose();
+  };
+
+  const handleClosePopup = () => {
+    setShowPopup(false);
+  };
 
   return (
     <>
@@ -126,55 +209,72 @@ const CosplayerProfileHeader = ({
       >
         <Box sx={{ position: 'relative', zIndex: 1 }}>
           {/* Top Section with Avatar and Basic Info */}
-          <Box sx={{ display: 'flex', gap: 3, flexWrap: 'wrap', alignItems: 'flex-start' }}>
+          <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 3, mb: 3 }}>
             {/* Avatar Section */}
-            <Box sx={{ position: 'relative' }}>
+            <Box
+              sx={{ position: 'relative' }}
+              onMouseEnter={() => setAvatarHovered(true)}
+              onMouseLeave={() => setAvatarHovered(false)}
+            >
               <Badge
                 overlap="circular"
                 anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
                 badgeContent={
-                  cosplayer.isAvailable && (
-                    <Box
+                  cosplayer.isVerified && (
+                    <Verified
                       sx={{
-                        width: 20,
-                        height: 20,
+                        color: '#4CAF50',
+                        fontSize: 28,
+                        backgroundColor: 'white',
                         borderRadius: '50%',
-                        bgcolor: '#4CAF50',
-                        border: '3px solid white',
+                        p: '2px'
                       }}
                     />
                   )
                 }
               >
                 <Avatar
-                  src={cosplayer.avatarUrl || cosplayer.featuredPhotoUrl}
+                  src={cosplayer.avatar || cosplayer.avatarUrl}
                   sx={{
                     width: 120,
                     height: 120,
-                    fontSize: '3rem',
-                    bgcolor: 'primary.main',
-                    boxShadow: '0 8px 24px rgba(0,0,0,0.12)',
                     border: '4px solid white',
+                    boxShadow: '0 8px 24px rgba(0,0,0,0.2)',
+                    cursor: isOwnProfile ? 'pointer' : 'default',
+                    transition: 'all 0.3s ease',
+                    '&:hover': isOwnProfile ? {
+                      transform: 'scale(1.05)',
+                    } : {},
                   }}
+                  onClick={isOwnProfile ? onEditAvatar : undefined}
                 >
-                  {cosplayer.displayName?.[0] || 'C'}
+                  {cosplayer.firstName?.[0]}{cosplayer.lastName?.[0]}
                 </Avatar>
               </Badge>
 
-              {/* Photo Icon */}
-              <IconButton
-                size="small"
-                sx={{
-                  position: 'absolute',
-                  bottom: 0,
-                  right: 0,
-                  bgcolor: 'white',
-                  boxShadow: 2,
-                  '&:hover': { bgcolor: 'grey.100' }
-                }}
-              >
-                <PhotoLibrary sx={{ fontSize: 20 }} />
-              </IconButton>
+              {/* Camera Overlay for Own Profile */}
+              {isOwnProfile && (
+                <Fade in={avatarHovered}>
+                  <Box
+                    sx={{
+                      position: 'absolute',
+                      top: 0,
+                      left: 0,
+                      right: 0,
+                      bottom: 0,
+                      borderRadius: '50%',
+                      background: 'rgba(0,0,0,0.5)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      cursor: 'pointer',
+                      pointerEvents: 'none',
+                    }}
+                  >
+                    <CameraAlt sx={{ color: 'white', fontSize: 32 }} />
+                  </Box>
+                </Fade>
+              )}
             </Box>
 
             {/* Main Info Section */}
@@ -199,6 +299,44 @@ const CosplayerProfileHeader = ({
                     icon={<Check sx={{ fontSize: 16 }} />}
                     sx={{
                       bgcolor: '#4CAF50',
+                      color: 'white',
+                      fontWeight: 600,
+                      '& .MuiChip-icon': { color: 'white' }
+                    }}
+                  />
+                )}
+
+                {!cosplayer.isAvailable && (
+                  <Chip
+                    label="Chưa sẵn sàng"
+                    size="small"
+                    icon={<Schedule sx={{ fontSize: 16 }} />}
+                    sx={{
+                      bgcolor: '#757575',
+                      color: 'white',
+                      fontWeight: 600,
+                      '& .MuiChip-icon': { color: 'white' }
+                    }}
+                  />
+                )}
+
+                {/* Membership Tier */}
+                {(cosplayer.membershipTier || currentProfile?.membershipTier) && (
+                  <Chip
+                    label={
+                      (cosplayer.membershipTier || currentProfile?.membershipTier) === 'Gold' ? 'Thành viên Vàng' :
+                      (cosplayer.membershipTier || currentProfile?.membershipTier) === 'Silver' ? 'Thành viên Bạc' :
+                      (cosplayer.membershipTier || currentProfile?.membershipTier) === 'Platinum' ? 'Thành viên Bạch kim' :
+                      'Thành viên Đồng'
+                    }
+                    size="small"
+                    icon={<WorkspacePremium sx={{ fontSize: 16 }} />}
+                    sx={{
+                      bgcolor: 
+                        (cosplayer.membershipTier || currentProfile?.membershipTier) === 'Gold' ? '#FFD700' :
+                        (cosplayer.membershipTier || currentProfile?.membershipTier) === 'Silver' ? '#C0C0C0' :
+                        (cosplayer.membershipTier || currentProfile?.membershipTier) === 'Platinum' ? '#E5E4E2' :
+                        '#CD7F32', // Bronze
                       color: 'white',
                       fontWeight: 600,
                       '& .MuiChip-icon': { color: 'white' }
@@ -238,14 +376,6 @@ const CosplayerProfileHeader = ({
                   </Typography>
                   <Typography variant="body2" sx={{ color: 'text.secondary' }}>
                     ({cosplayer.totalReviews} đánh giá)
-                  </Typography>
-                </Box>
-
-                {/* Followers */}
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                  <Groups sx={{ fontSize: 18, color: 'text.secondary' }} />
-                  <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-                    {cosplayer.followersCount} người theo dõi
                   </Typography>
                 </Box>
               </Box>
@@ -295,121 +425,41 @@ const CosplayerProfileHeader = ({
                   ))}
                 </Box>
               )}
+
+              {/* Bio Introduction */}
+              {(cosplayer.bio || cosplayer.description) && (
+                <Box sx={{ mt: 2 }}>
+                  <Typography 
+                    variant="body2" 
+                    sx={{ 
+                      color: 'text.secondary', 
+                      lineHeight: 1.6,
+                      fontStyle: 'italic',
+                      maxWidth: '100%',
+                      display: '-webkit-box',
+                      WebkitLineClamp: 3,
+                      WebkitBoxOrient: 'vertical',
+                      overflow: 'hidden'
+                    }}
+                  >
+                    "{cosplayer.bio || cosplayer.description}"
+                  </Typography>
+                </Box>
+              )}
             </Box>
 
             {/* Action Buttons */}
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5, minWidth: 200 }}>
-              {isOwnProfile ? (
-                <Button
-                  variant="contained"
-                  startIcon={<Edit />}
-                  onClick={handleEditClick}
-                  sx={{
-                    background: 'linear-gradient(45deg, #E91E63, #9C27B0)',
-                    textTransform: 'none',
-                    fontWeight: 600,
-                    borderRadius: '12px',
-                    py: 1.5,
-                    '&:hover': {
-                      background: 'linear-gradient(45deg, #AD1457, #7B1FA2)',
-                    }
-                  }}
-                >
-                  Chỉnh sửa hồ sơ
-                </Button>
-              ) : (
-                <>
-                  {isCustomer && (
-                    <Button
-                      variant="contained"
-                      startIcon={<CalendarMonth />}
-                      onClick={() => onBooking?.(cosplayer)}
-                      sx={{
-                        background: 'linear-gradient(45deg, #E91E63, #9C27B0)',
-                        textTransform: 'none',
-                        fontWeight: 600,
-                        borderRadius: '12px',
-                        py: 1.5,
-                        '&:hover': {
-                          background: 'linear-gradient(45deg, #AD1457, #7B1FA2)',
-                        }
-                      }}
-                    >
-                      Đặt lịch ngay
-                    </Button>
-                  )}
-
-                  <Stack direction="row" spacing={1}>
-                    <Button
-                      variant={isFollowing ? "outlined" : "contained"}
-                      startIcon={isFollowing ? <PersonRemove /> : <PersonAdd />}
-                      onClick={handleFollowToggle}
-                      sx={{
-                        flex: 1,
-                        textTransform: 'none',
-                        fontWeight: 600,
-                        borderRadius: '12px',
-                        py: 1,
-                        ...(isFollowing ? {
-                          borderColor: 'primary.main',
-                          color: 'primary.main',
-                          '&:hover': {
-                            borderColor: 'primary.dark',
-                            bgcolor: 'rgba(233, 30, 99, 0.05)'
-                          }
-                        } : {
-                          bgcolor: 'primary.main',
-                          color: 'white',
-                          '&:hover': { bgcolor: 'primary.dark' }
-                        })
-                      }}
-                    >
-                      {isFollowing ? 'Đang theo dõi' : 'Theo dõi'}
-                    </Button>
-
-                    <IconButton
-                      onClick={handleFavoriteToggle}
-                      sx={{
-                        border: '1px solid',
-                        borderColor: isFavorite ? 'primary.main' : 'divider',
-                        color: isFavorite ? 'primary.main' : 'text.secondary',
-                        '&:hover': {
-                          bgcolor: 'rgba(233, 30, 99, 0.05)',
-                          borderColor: 'primary.main'
-                        }
-                      }}
-                    >
-                      {isFavorite ? <Favorite /> : <FavoriteBorder />}
-                    </IconButton>
-
-                    <IconButton
-                      onClick={() => onMessage?.(cosplayer)}
-                      sx={{
-                        border: '1px solid',
-                        borderColor: 'divider',
-                        '&:hover': {
-                          bgcolor: 'rgba(0, 0, 0, 0.05)',
-                          borderColor: 'text.secondary'
-                        }
-                      }}
-                    >
-                      <Message />
-                    </IconButton>
-                  </Stack>
-                </>
-              )}
-
-              <Button
-                variant="text"
-                startIcon={<Share />}
+              <IconButton
+                onClick={handleMenuOpen}
                 sx={{
-                  textTransform: 'none',
-                  color: 'text.secondary',
-                  '&:hover': { bgcolor: 'rgba(0, 0, 0, 0.05)' }
+                  backgroundColor: 'rgba(255,255,255,0.8)',
+                  '&:hover': { backgroundColor: 'rgba(255,255,255,1)' },
+                  alignSelf: 'flex-end',
                 }}
               >
-                Chia sẻ
-              </Button>
+                <MoreVert />
+              </IconButton>
             </Box>
           </Box>
 
@@ -459,29 +509,160 @@ const CosplayerProfileHeader = ({
                   label="Đơn hoàn thành"
                 />
                 <StatItem
-                  icon={<PhotoLibrary sx={{ color: 'info.main' }} />}
-                  value={cosplayer.stats.totalPhotos}
-                  label="Ảnh"
-                />
-                <StatItem
-                  icon={<VideoLibrary sx={{ color: 'success.main' }} />}
-                  value={cosplayer.stats.totalVideos}
-                  label="Video"
+                  icon={<Groups sx={{ fontSize: 20, color: 'primary.main' }} />}
+                  value={
+                    ((cosplayer.stats?.totalFollowers ?? cosplayer.followersCount) || 0).toLocaleString()
+                  }
+                  label="Người theo dõi"
                 />
                 <StatItem
                   icon={<Favorite sx={{ color: 'error.main' }} />}
-                  value={cosplayer.stats.totalLikes}
+                  value={(cosplayer.stats.totalLikes || 0).toLocaleString()}
                   label="Lượt thích"
                 />
                 <StatItem
-                  icon={<Star sx={{ color: 'warning.main' }} />}
-                  value={`${cosplayer.stats.successRate || 0}%`}
-                  label="Tỉ lệ thành công"
+                  icon={<PhotoLibrary sx={{ fontSize: 20, color: 'primary.main' }} />}
+                  value={(cosplayer.stats.totalPosts || 0).toLocaleString()}
+                  label="Bài viết"
                 />
               </Box>
             </>
           )}
         </Box>
+
+        {/* Menu */}
+        <Menu
+          anchorEl={anchorEl}
+          open={Boolean(anchorEl)}
+          onClose={handleMenuClose}
+          transformOrigin={{ horizontal: 'right', vertical: 'top' }}
+          anchorOrigin={{ horizontal: 'right', vertical: 'bottom' }}
+          PaperProps={{
+            sx: {
+              borderRadius: '12px',
+              minWidth: 160,
+              boxShadow: '0 8px 24px rgba(0,0,0,0.15)',
+            }
+          }}
+        >
+          <MenuItem onClick={handleShare}>
+            <ListItemIcon>
+              <Share fontSize="small" />
+            </ListItemIcon>
+            <ListItemText primary="Chia sẻ hồ sơ" />
+          </MenuItem>
+          
+          {/* Only show these options for own profile */}
+          {isOwnProfile ? (
+            <MenuItem onClick={() => { handleMenuClose(); handleEditClick(); }}>
+              <ListItemIcon>
+                <Edit fontSize="small" />
+              </ListItemIcon>
+              <ListItemText primary="Chỉnh sửa hồ sơ" />
+            </MenuItem>
+          ) : (
+            <>
+              <MenuItem onClick={handleFollowClick} disabled={!loggedInUser}>
+                <ListItemIcon>
+                  {isFollowing ? <PersonRemove fontSize="small" /> : <PersonAdd fontSize="small" />}
+                </ListItemIcon>
+                <ListItemText primary={isFollowing ? 'Bỏ theo dõi' : 'Theo dõi'} />
+              </MenuItem>
+              
+              <MenuItem onClick={handleBookingClick}>
+                <ListItemIcon>
+                  <Event fontSize="small" />
+                </ListItemIcon>
+                <ListItemText primary="Đặt lịch ngay" />
+              </MenuItem>
+            </>
+          )}
+        </Menu>
+
+        {/* Popup Dialog */}
+        <Dialog
+          open={showPopup}
+          onClose={handleClosePopup}
+          PaperProps={{
+            sx: {
+              borderRadius: '12px',
+              padding: 2,
+              minWidth: '300px'
+            }
+          }}
+        >
+          <DialogContent sx={{ textAlign: 'center' }}>
+            <Typography variant="body1" sx={{ mb: 2 }}>
+              {popupMessage}
+            </Typography>
+          </DialogContent>
+          <DialogActions sx={{ justifyContent: 'center' }}>
+            <Button
+              onClick={handleClosePopup}
+              variant="contained"
+              sx={{
+                background: 'linear-gradient(45deg, #E91E63, #9C27B0)',
+                color: 'white',
+                px: 4,
+                py: 1,
+                textTransform: 'none',
+                '&:hover': {
+                  background: 'linear-gradient(45deg, #AD1457, #7B1FA2)',
+                }
+              }}
+            >
+              OK
+            </Button>
+          </DialogActions>
+        </Dialog>
+
+        {/* Delete Confirmation Dialog */}
+        <Dialog
+          open={deleteDialogOpen}
+          onClose={handleDeleteCancel}
+          aria-labelledby="delete-dialog-title"
+          aria-describedby="delete-dialog-description"
+          PaperProps={{
+            sx: {
+              borderRadius: 2,
+              minWidth: 320
+            }
+          }}
+        >
+          <DialogTitle id="delete-dialog-title" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <Warning color="error" />
+            Delete Avatar
+          </DialogTitle>
+          <DialogContent>
+            <DialogContentText id="delete-dialog-description">
+              Are you sure you want to delete your profile avatar? This action cannot be undone.
+            </DialogContentText>
+          </DialogContent>
+          <DialogActions sx={{ px: 3, pb: 2 }}>
+            <Button
+              onClick={handleDeleteCancel}
+              variant="outlined"
+              sx={{
+                borderColor: '#ccc',
+                color: '#666',
+                '&:hover': {
+                  borderColor: '#999',
+                  backgroundColor: '#f5f5f5'
+                }
+              }}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleDeleteConfirm}
+              variant="contained"
+              color="error"
+              autoFocus
+            >
+              Delete
+            </Button>
+          </DialogActions>
+        </Dialog>
       </Paper>
 
       {/* Edit Dialog */}

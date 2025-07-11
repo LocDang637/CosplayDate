@@ -55,6 +55,7 @@ import {
   Close,
 } from "@mui/icons-material";
 import { paymentAPI } from "../../services/paymentAPI";
+import escrowAPI from "../../services/escrowAPI";
 
 const CustomerWallet = ({
   balance = 0,
@@ -66,8 +67,6 @@ const CustomerWallet = ({
   const [topUpDialog, setTopUpDialog] = useState(false);
   const [withdrawDialog, setWithdrawDialog] = useState(false);
   const [withdrawAmount, setWithdrawAmount] = useState("");
-  const [filterType, setFilterType] = useState("all");
-  const [sortOrder, setSortOrder] = useState("newest");
   const [currentPage, setCurrentPage] = useState(1);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -77,11 +76,31 @@ const CustomerWallet = ({
     severity: "success",
   });
 
+  // Enhanced filter state for all escrow API parameters
+  const [filters, setFilters] = useState({
+    status: "all", // all, held, released, refunded, etc.
+    fromDate: "",
+    toDate: "",
+    minAmount: "",
+    maxAmount: "",
+    searchTerm: "",
+    sortBy: "createdAt", // createdAt, amount, status
+    sortDirection: "desc", // desc, asc
+  });
+  const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
+
   // Top-up specific state
   const [packages, setPackages] = useState([]);
   const [selectedPackage, setSelectedPackage] = useState(null);
   const [processingPayment, setProcessingPayment] = useState(false);
   const [walletBalance, setWalletBalance] = useState(balance);
+
+  // Real transaction data from escrow API
+  const [escrowTransactions, setEscrowTransactions] = useState([]);
+  const [transactionLoading, setTransactionLoading] = useState(false);
+  const [escrowSummary, setEscrowSummary] = useState(null);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalCount, setTotalCount] = useState(0);
 
   const transactionsPerPage = 10;
 
@@ -170,85 +189,53 @@ const CustomerWallet = ({
     }
   };
 
-  // Mock transaction data with Vietnamese descriptions
-  const mockTransactions = [
-    {
-      id: 1,
-      type: "booking_payment",
-      amount: -450000,
-      description: "Cosplay A - Buổi chụp hình",
-      date: "2024-01-15T10:30:00",
-      status: "completed",
-      cosplayer: "Cosplay A",
-      reference: "BK2024001",
-    },
-    {
-      id: 2,
-      type: "top_up",
-      amount: 1000000,
-      description: "Nạp tiền ví - PayOS",
-      date: "2024-01-14T14:20:00",
-      status: "completed",
-      reference: "TP2024001",
-    },
-    {
-      id: 3,
-      type: "refund",
-      amount: 350000,
-      description: "Hoàn tiền hủy đặt lịch",
-      date: "2024-01-13T09:15:00",
-      status: "completed",
-      cosplayer: "Cosplay B",
-      reference: "RF2024001",
-    },
-    {
-      id: 4,
-      type: "booking_payment",
-      amount: -380000,
-      description: "Cosplay C - Tham dự sự kiện",
-      date: "2024-01-12T16:45:00",
-      status: "completed",
-      cosplayer: "Cosplay C",
-      reference: "BK2024002",
-    },
-    {
-      id: 5,
-      type: "loyalty_cashback",
-      amount: 25000,
-      description: "Hoàn tiền điểm thưởng",
-      date: "2024-01-11T11:00:00",
-      status: "completed",
-      reference: "LC2024001",
-    },
-    {
-      id: 6,
-      type: "booking_payment",
-      amount: -500000,
-      description: "Cosplay D - Tham dự hội chợ",
-      date: "2024-01-10T13:30:00",
-      status: "completed",
-      cosplayer: "Cosplay D",
-      reference: "BK2024003",
-    },
-    {
-      id: 7,
-      type: "top_up",
-      amount: 2000000,
-      description: "Nạp tiền ví - PayOS",
-      date: "2024-01-09T08:00:00",
-      status: "completed",
-      reference: "TP2024002",
-    },
-    {
-      id: 8,
-      type: "gift_received",
-      amount: 100000,
-      description: "Quà từ bạn bè - Sinh nhật",
-      date: "2024-01-08T12:00:00",
-      status: "completed",
-      reference: "GF2024001",
-    },
-  ];
+  // Load escrow transaction history
+  const loadTransactions = async (params = {}) => {
+    setTransactionLoading(true);
+    setError('');
+
+    try {
+      console.log('📊 Loading escrow history with params:', params);
+
+      const result = await escrowAPI.getEscrowHistory({
+        page: currentPage,
+        pageSize: transactionsPerPage,
+        status: filters.status !== 'all' ? filters.status : undefined,
+        fromDate: filters.fromDate || undefined,
+        toDate: filters.toDate || undefined,
+        minAmount: filters.minAmount ? parseFloat(filters.minAmount) : undefined,
+        maxAmount: filters.maxAmount ? parseFloat(filters.maxAmount) : undefined,
+        searchTerm: filters.searchTerm || undefined,
+        sortBy: filters.sortBy,
+        sortDirection: filters.sortDirection,
+        ...params
+      });
+
+      if (result.success && result.data) {
+        const transformedTransactions = escrowAPI.transformEscrowsToTransactions(result.data.escrows || []);
+        setEscrowTransactions(transformedTransactions);
+        setTotalPages(result.data.totalPages || 1);
+        setTotalCount(result.data.totalCount || 0);
+        setEscrowSummary(result.data.summary);
+
+        console.log('✅ Transactions loaded:', transformedTransactions.length);
+      } else {
+        setError(result.message || 'Failed to load transaction history');
+        setEscrowTransactions([]);
+      }
+    } catch (err) {
+      console.error('❌ Error loading transactions:', err);
+      setError('Unable to load transaction history. Please try again.');
+      setEscrowTransactions([]);
+    } finally {
+      setTransactionLoading(false);
+    }
+  };
+
+  // Load transactions on component mount and when filters change
+  useEffect(() => {
+    loadTransactions();
+  }, [currentPage, filters.status, filters.fromDate, filters.toDate, filters.minAmount, filters.maxAmount, filters.searchTerm, filters.sortBy, filters.sortDirection]);
 
   // ===== FIXED: Null-safe currency formatting =====
   const formatCurrency = (amount) => {
@@ -297,39 +284,25 @@ const CustomerWallet = ({
 
   const getStatusLabel = (status) => {
     switch (status) {
-      case "completed":
+      case "released":
         return "Hoàn thành";
-      case "pending":
-        return "Đang xử lý";
-      case "failed":
-        return "Thất bại";
+      case "held":
+        return "Đang giữ";
+      case "refunded":
+        return "Đã hoàn tiền";
       default:
         return status;
     }
   };
 
   const filterTransactions = () => {
-    let filtered = mockTransactions;
-
-    // Filter by type
-    if (filterType !== "all") {
-      filtered = filtered.filter((t) => t.type === filterType);
-    }
-
-    // Sort
-    filtered.sort((a, b) => {
-      const dateA = new Date(a.date);
-      const dateB = new Date(b.date);
-      return sortOrder === "newest" ? dateB - dateA : dateA - dateB;
-    });
-
-    return filtered;
+    // Note: Filtering is now done server-side via the escrow API
+    // This function just returns the transactions as-is since filtering is handled by the API
+    return escrowTransactions;
   };
 
   const filteredTransactions = filterTransactions();
-  const totalPages = Math.ceil(
-    filteredTransactions.length / transactionsPerPage
-  );
+  // Use state totalPages instead of calculating locally
   const startIndex = (currentPage - 1) * transactionsPerPage;
   const currentTransactions = filteredTransactions.slice(
     startIndex,
@@ -485,6 +458,45 @@ const CustomerWallet = ({
     setSnackbar({ ...snackbar, open: false });
   };
 
+  // Filter management functions
+  const handleFilterChange = (field, value) => {
+    setFilters(prev => ({
+      ...prev,
+      [field]: value
+    }));
+    setCurrentPage(1); // Reset to first page when filters change
+  };
+
+  const resetFilters = () => {
+    setFilters({
+      status: "all",
+      fromDate: "",
+      toDate: "",
+      minAmount: "",
+      maxAmount: "",
+      searchTerm: "",
+      sortBy: "createdAt",
+      sortDirection: "desc",
+    });
+    setCurrentPage(1);
+  };
+
+  const hasActiveFilters = () => {
+    return filters.status !== "all" ||
+      filters.fromDate ||
+      filters.toDate ||
+      filters.minAmount ||
+      filters.maxAmount ||
+      filters.searchTerm;
+  };
+
+  // Format date for input fields
+  const formatDateForInput = (dateString) => {
+    if (!dateString) return '';
+    const date = new Date(dateString);
+    return date.toISOString().split('T')[0];
+  };
+
   // ===== FIXED: Enhanced PackageCard component =====
   const PackageCard = ({ pkg, isSelected, onSelect }) => {
     // Add validation to prevent NaN issues
@@ -606,20 +618,116 @@ const CustomerWallet = ({
     );
   };
 
+  // Export transactions as CSV
+  const exportTransactions = () => {
+    // Helper function to escape CSV values
+    const escapeCSV = (value) => {
+      if (value === null || value === undefined) return '';
+      const stringValue = String(value);
+      // If the value contains comma, double quote, or newline, wrap it in quotes and escape quotes
+      if (stringValue.includes(',') || stringValue.includes('"') || stringValue.includes('\n') || stringValue.includes('\r')) {
+        return `"${stringValue.replace(/"/g, '""')}"`;
+      }
+      return stringValue;
+    };
+
+    // Define headers in Vietnamese
+    const headers = [
+      'Ngày giao dịch',
+      'Mô tả',
+      'Số tiền (VND)',
+      'Trạng thái',
+      'Mã tham chiếu',
+      'Cosplayer',
+      'Loại giao dịch'
+    ];
+
+    // Create CSV rows
+    const csvRows = [
+      headers.map(escapeCSV).join(','),
+      ...filteredTransactions.map(transaction => {
+        const row = [
+          new Date(transaction.date).toLocaleDateString('vi-VN', {
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit',
+            hour: '2-digit',
+            minute: '2-digit'
+          }),
+          transaction.description || '',
+          transaction.amount ? transaction.amount.toLocaleString('vi-VN') : '0',
+          getStatusLabel(transaction.status) || '',
+          transaction.reference || '',
+          transaction.cosplayer || '',
+          transaction.type || ''
+        ];
+        return row.map(escapeCSV).join(',');
+      })
+    ];
+
+    // Join all rows with newline
+    const csvContent = csvRows.join('\n');
+    
+    // Add BOM for proper Unicode support in Excel
+    const BOM = '\uFEFF';
+    const csvWithBOM = BOM + csvContent;
+
+    // Create blob with proper encoding
+    const blob = new Blob([csvWithBOM], { 
+      type: 'text/csv;charset=utf-8;' 
+    });
+    
+    // Create download link
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    
+    // Generate filename with current date
+    const today = new Date();
+    const dateStr = today.toISOString().split('T')[0];
+    const timeStr = today.toTimeString().split(' ')[0].replace(/:/g, '-');
+    const filename = `Lich_su_giao_dich_${dateStr}_${timeStr}.csv`;
+    
+    link.setAttribute('download', filename);
+    link.style.visibility = 'hidden';
+    
+    // Trigger download
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    
+    // Clean up
+    URL.revokeObjectURL(url);
+    
+    // Show success message
+    showSnackbar(`Đã xuất ${filteredTransactions.length} giao dịch thành công!`, 'success');
+  };
+
   return (
-    <Box>
-      {/* Wallet Overview */}
-      <Grid container spacing={3} sx={{ mb: 4 }}>
-        {/* Main Balance Card */}
-        <Grid item xs={12} md={8}>
+    <Box sx={{ p: { xs: 2, md: 3 } }}>
+      {/* Top Section: Wallet Card + Filter Controls */}
+      <Grid
+        container
+        spacing={3}
+        sx={{
+          mb: 10,
+          display: 'flex',
+          justifyContent: 'space-around',
+        }}
+      >
+        {/* Wallet Card */}
+        <Grid item xs={12} lg={6}>
           <Card
             sx={{
+              display: "flex",
+              alignItems: "center",
               background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
               color: "white",
               borderRadius: "24px",
               p: 3,
               position: "relative",
               overflow: "hidden",
+              height: "100%",
               "&::before": {
                 content: '""',
                 position: "absolute",
@@ -648,7 +756,7 @@ const CustomerWallet = ({
                 Số dư khả dụng
               </Typography>
 
-              <Box sx={{ display: "flex", gap: 2 }}>
+              <Box sx={{ display: "flex", gap: 2, flexWrap: "wrap" }}>
                 <Button
                   variant="contained"
                   startIcon={<Add />}
@@ -657,6 +765,8 @@ const CustomerWallet = ({
                     backgroundColor: "rgba(255,255,255,0.2)",
                     color: "white",
                     borderRadius: "12px",
+                    flex: 1,
+                    minWidth: "120px",
                     "&:hover": {
                       backgroundColor: "rgba(255,255,255,0.3)",
                     },
@@ -664,7 +774,7 @@ const CustomerWallet = ({
                 >
                   Nạp tiền
                 </Button>
-                <Button
+                {/* <Button
                   variant="outlined"
                   startIcon={<Download />}
                   onClick={() => setWithdrawDialog(true)}
@@ -672,6 +782,8 @@ const CustomerWallet = ({
                     borderColor: "rgba(255,255,255,0.5)",
                     color: "white",
                     borderRadius: "12px",
+                    flex: 1,
+                    minWidth: "120px",
                     "&:hover": {
                       borderColor: "white",
                       backgroundColor: "rgba(255,255,255,0.1)",
@@ -679,244 +791,458 @@ const CustomerWallet = ({
                   }}
                 >
                   Rút tiền
-                </Button>
+                </Button> */}
               </Box>
             </CardContent>
           </Card>
         </Grid>
 
-        {/* Loyalty Points Card */}
-        <Grid item xs={12} md={4}>
+        {/* Filter Controls Card */}
+        <Grid item xs={12} lg={6}>
           <Card
             sx={{
-              background: "linear-gradient(135deg, #f093fb 0%, #f5576c 100%)",
-              color: "white",
+              display: "flex",
+              alignItems: "center",
               borderRadius: "24px",
               p: 3,
               height: "100%",
+              background: "linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%)",
+              border: "1px solid rgba(233, 30, 99, 0.1)",
+              position: "relative",
+              overflow: "hidden",
+              "&::before": {
+                content: '""',
+                position: "absolute",
+                bottom: -30,
+                left: -30,
+                width: 150,
+                height: 150,
+                borderRadius: "50%",
+                background: "rgba(233, 30, 99, 0.05)",
+              },
             }}
           >
-            <CardContent>
-              <Box sx={{ display: "flex", alignItems: "center", mb: 2 }}>
-                <LocalOffer sx={{ fontSize: 28, mr: 1 }} />
-                <Typography variant="h6" sx={{ fontWeight: 600 }}>
-                  Điểm thưởng
+            <CardContent sx={{ position: "relative", zIndex: 1 }}>
+              <Box sx={{ display: "flex", alignItems: "center", mb: 3 }}>
+                <FilterList sx={{ fontSize: 28, mr: 2, color: "primary.main" }} />
+                <Typography variant="h6" sx={{ fontWeight: 600, color: "text.primary" }}>
+                  Bộ lọc giao dịch
                 </Typography>
               </Box>
 
-              <Typography variant="h4" sx={{ fontWeight: 700, mb: 1 }}>
-                {loyaltyPoints.toLocaleString()}
-              </Typography>
+              {/* Quick Filter Controls */}
+              <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
+                {/* Status and Sort Row */}
+                <Box sx={{ display: "flex", gap: 2, flexWrap: "wrap" }}>
+                  <FormControl size="small" sx={{ flex: 1, minWidth: 120 }}>
+                    <InputLabel>Trạng thái</InputLabel>
+                    <Select
+                      value={filters.status}
+                      onChange={(e) => handleFilterChange('status', e.target.value)}
+                      label="Trạng thái"
+                      sx={{
+                        borderRadius: "12px",
+                        backgroundColor: 'white',
+                      }}
+                    >
+                      <MenuItem value="all">Tất cả</MenuItem>
+                      <MenuItem value="Held">Đang giữ</MenuItem>
+                      <MenuItem value="Released">Hoàn thành</MenuItem>
+                      <MenuItem value="Refunded">Đã hoàn tiền</MenuItem>
+                    </Select>
+                  </FormControl>
 
-              <Typography variant="body2" sx={{ opacity: 0.8, mb: 2 }}>
-                ≈ {formatCurrency(loyaltyPoints * 10)}
-              </Typography>
+                  <Button
+                    variant="outlined"
+                    startIcon={<SwapVert />}
+                    onClick={() => handleFilterChange('sortDirection', filters.sortDirection === 'desc' ? 'asc' : 'desc')}
+                    sx={{
+                      borderColor: "primary.main",
+                      color: "primary.main",
+                      borderRadius: "12px",
+                      textTransform: "none",
+                      backgroundColor: 'white',
+                      minWidth: "100px",
+                    }}
+                  >
+                    {filters.sortDirection === 'desc' ? "Mới nhất" : "Cũ nhất"}
+                  </Button>
+                </Box>
 
-              <LinearProgress
-                variant="determinate"
-                value={75}
-                sx={{
-                  height: 8,
-                  borderRadius: 4,
-                  backgroundColor: "rgba(255,255,255,0.3)",
-                  "& .MuiLinearProgress-bar": {
-                    backgroundColor: "white",
-                    borderRadius: 4,
-                  },
-                }}
-              />
-              <Typography
-                variant="body2"
-                sx={{ opacity: 0.8, mt: 1, fontSize: "12px" }}
-              >
-                Còn 750 điểm để lên hạng Vàng
-              </Typography>
+                {/* Action Buttons */}
+                <Box sx={{ display: "flex", gap: 1, flexWrap: "wrap" }}>
+                  <Button
+                    variant={showAdvancedFilters ? "contained" : "outlined"}
+                    onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
+                    size="small"
+                    sx={{
+                      borderRadius: "12px",
+                      textTransform: "none",
+                      backgroundColor: showAdvancedFilters ? 'primary.main' : 'white',
+                    }}
+                  >
+                    Nâng cao
+                  </Button>
+
+                  {totalCount > 0 && (
+                    <Button
+                      variant="outlined"
+                      onClick={exportTransactions}
+                      startIcon={<Download />}
+                      size="small"
+                      sx={{
+                        borderColor: "success.main",
+                        color: "success.main",
+                        borderRadius: "12px",
+                        textTransform: "none",
+                        backgroundColor: 'white',
+                        "&:hover": {
+                          borderColor: "success.dark",
+                          backgroundColor: "success.light",
+                        }
+                      }}
+                    >
+                      Excel
+                    </Button>
+                  )}
+                </Box>
+              </Box>
             </CardContent>
           </Card>
         </Grid>
       </Grid>
 
-      {/* Transaction History */}
-      <Paper
-        sx={{
-          borderRadius: "16px",
-          p: 3,
-          background: "rgba(255,255,255,0.95)",
-          border: "1px solid rgba(233, 30, 99, 0.1)",
-        }}
-      >
-        {/* Header */}
-        <Box
+      {/* Advanced Filters Panel */}
+      {showAdvancedFilters && (
+        <Paper
           sx={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
+            p: 3,
+            borderRadius: '16px',
+            background: "linear-gradient(135deg, #ffeef7 0%, #f3e5f5 100%)",
+            border: '1px solid rgba(233, 30, 99, 0.2)',
             mb: 3,
           }}
         >
-          <Typography
-            variant="h6"
-            sx={{ fontWeight: 700, color: "text.primary" }}
-          >
-            Lịch sử giao dịch
-          </Typography>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+            <Typography variant="h6" sx={{ mb: 2, fontWeight: 600, color: "primary.main" }}>
+              Bộ lọc nâng cao
+            </Typography>
 
-          <Box sx={{ display: "flex", gap: 2, alignItems: "center" }}>
-            {/* Filter */}
-            <FormControl size="small" sx={{ minWidth: 120 }}>
-              <InputLabel>Lọc</InputLabel>
-              <Select
-                value={filterType}
-                onChange={(e) => setFilterType(e.target.value)}
-                label="Lọc"
-                sx={{ borderRadius: "12px" }}
-              >
-                <MenuItem value="all">Tất cả</MenuItem>
-                <MenuItem value="booking_payment">Đặt lịch</MenuItem>
-                <MenuItem value="top_up">Nạp tiền</MenuItem>
-                <MenuItem value="refund">Hoàn tiền</MenuItem>
-                <MenuItem value="loyalty_cashback">Hoàn điểm</MenuItem>
-                <MenuItem value="gift_received">Quà tặng</MenuItem>
-              </Select>
-            </FormControl>
-
-            {/* Sort */}
             <Button
-              variant="outlined"
-              startIcon={<SwapVert />}
-              onClick={() =>
-                setSortOrder(sortOrder === "newest" ? "oldest" : "newest")
-              }
+              variant="text"
+              onClick={resetFilters}
+              size="small"
               sx={{
-                borderColor: "primary.main",
-                color: "primary.main",
+                color: "error.main",
                 borderRadius: "12px",
                 textTransform: "none",
               }}
             >
-              {sortOrder === "newest" ? "Mới nhất" : "Cũ nhất"}
+              Xóa
             </Button>
+          </Box>
+          <Grid container spacing={3}>
+            {/* Date Range */}
+            <Grid item xs={12} md={6}>
+              <Typography variant="subtitle2" sx={{ mb: 2, fontWeight: 600 }}>
+                Khoảng thời gian
+              </Typography>
+              <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
+                <TextField
+                  size="small"
+                  type="date"
+                  label="Từ ngày"
+                  value={formatDateForInput(filters.fromDate)}
+                  onChange={(e) => handleFilterChange('fromDate', e.target.value)}
+                  InputLabelProps={{ shrink: true }}
+                  sx={{
+                    flex: 1,
+                    '& .MuiOutlinedInput-root': {
+                      borderRadius: '12px',
+                      backgroundColor: 'white',
+                    }
+                  }}
+                />
+                <Typography variant="body2" color="text.secondary">đến</Typography>
+                <TextField
+                  size="small"
+                  type="date"
+                  label="Đến ngày"
+                  value={formatDateForInput(filters.toDate)}
+                  onChange={(e) => handleFilterChange('toDate', e.target.value)}
+                  InputLabelProps={{ shrink: true }}
+                  sx={{
+                    flex: 1,
+                    '& .MuiOutlinedInput-root': {
+                      borderRadius: '12px',
+                      backgroundColor: 'white',
+                    }
+                  }}
+                />
+              </Box>
+            </Grid>
+
+            {/* Amount Range */}
+            <Grid item xs={12} md={6}>
+              <Typography variant="subtitle2" sx={{ mb: 2, fontWeight: 600 }}>
+                Khoảng số tiền (VND)
+              </Typography>
+              <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
+                <TextField
+                  size="small"
+                  type="number"
+                  placeholder="Từ"
+                  value={filters.minAmount}
+                  onChange={(e) => handleFilterChange('minAmount', e.target.value)}
+                  sx={{
+                    flex: 1,
+                    '& .MuiOutlinedInput-root': {
+                      borderRadius: '12px',
+                      backgroundColor: 'white',
+                    }
+                  }}
+                />
+                <Typography variant="body2" color="text.secondary">-</Typography>
+                <TextField
+                  size="small"
+                  type="number"
+                  placeholder="Đến"
+                  value={filters.maxAmount}
+                  onChange={(e) => handleFilterChange('maxAmount', e.target.value)}
+                  sx={{
+                    flex: 1,
+                    '& .MuiOutlinedInput-root': {
+                      borderRadius: '12px',
+                      backgroundColor: 'white',
+                    }
+                  }}
+                />
+              </Box>
+            </Grid>
+          </Grid>
+        </Paper>
+      )}
+
+      {/* Transaction History Section */}
+      <Paper
+        sx={{
+          borderRadius: "20px",
+          p: 0,
+          background: "linear-gradient(135deg, #ffffff 0%, #f8f9ff 100%)",
+          border: "1px solid rgba(233, 30, 99, 0.1)",
+          boxShadow: "0 8px 32px rgba(233, 30, 99, 0.08)",
+          overflow: "hidden",
+        }}
+      >
+        {/* Enhanced Header */}
+        <Box
+          sx={{
+            background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+            color: "white",
+            p: 3,
+            position: "relative",
+            "&::after": {
+              content: '""',
+              position: "absolute",
+              bottom: 0,
+              left: 0,
+              right: 0,
+              height: "4px",
+              background: "linear-gradient(90deg, #E91E63 0%, #9C27B0 100%)",
+            },
+          }}
+        >
+          <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
+            <Receipt sx={{ fontSize: 28 }} />
+            <Typography variant="h5" sx={{ fontWeight: 700 }}>
+              Lịch sử giao dịch
+            </Typography>
           </Box>
         </Box>
 
-        {/* Transaction List */}
-        <List sx={{ p: 0 }}>
-          {currentTransactions.map((transaction, index) => (
-            <React.Fragment key={transaction.id}>
-              <ListItem
+        <Box sx={{ px: { xs: 3, md: 4 }, py: 3 }}>
+          {/* Loading State */}
+          {transactionLoading && (
+            <Box sx={{ display: 'flex', justifyContent: 'center', py: 6 }}>
+              <Box sx={{ textAlign: 'center' }}>
+                <CircularProgress size={50} sx={{ color: 'primary.main', mb: 2 }} />
+                <Typography variant="body1" color="text.secondary">
+                  Đang tải giao dịch...
+                </Typography>
+              </Box>
+            </Box>
+          )}
+
+          {/* Enhanced Transaction List */}
+          {!transactionLoading && (
+            <List sx={{ p: 0 }}>
+              {currentTransactions.map((transaction, index) => (
+                <React.Fragment key={transaction.id}>
+                  <ListItem
+                    sx={{
+                      px: 0,
+                      py: 3,
+                      borderRadius: "16px",
+                      transition: "all 0.2s ease",
+                      "&:hover": {
+                        backgroundColor: "rgba(233, 30, 99, 0.03)",
+                        transform: "translateX(4px)",
+                        boxShadow: "0 4px 20px rgba(233, 30, 99, 0.1)",
+                      },
+                    }}
+                  >
+                    <ListItemIcon
+                      sx={{
+                        pr: 4,
+                        pl: 1
+                      }}
+                    >
+                      <Avatar
+                        sx={{
+                          background: "linear-gradient(135deg, #fce4ec 0%, #f3e5f5 100%)",
+                          width: 56,
+                          height: 56,
+                          boxShadow: "0 4px 12px rgba(233, 30, 99, 0.08)",
+                        }}
+                      >
+                        {getTransactionIcon(transaction.type)}
+                      </Avatar>
+                    </ListItemIcon>
+
+                    <ListItemText
+                      primary={
+                        <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 1 }}>
+                          <Typography variant="h6" sx={{ fontWeight: 600, color: "text.primary" }}>
+                            {transaction.description}
+                          </Typography>
+                          <Chip
+                            label={getStatusLabel(transaction.status)}
+                            size="small"
+                            sx={{
+                              backgroundColor: transaction.status === 'completed' || transaction.status === 'released'
+                                ? "#4CAF50"
+                                : transaction.status === 'held'
+                                  ? "#FF9800"
+                                  : "#2196F3",
+                              color: "white",
+                              fontSize: "11px",
+                              height: "24px",
+                              fontWeight: 600,
+                            }}
+                          />
+                        </Box>
+                      }
+                      secondary={
+                        <Box>
+                          <Typography
+                            variant="body1"
+                            sx={{ color: "text.secondary", mb: 0.5 }}
+                          >
+                            📅 {new Date(transaction.date).toLocaleString("vi-VN")}
+                          </Typography>
+                          {transaction.cosplayer && (
+                            <Typography
+                              variant="body2"
+                              sx={{ color: "primary.main", fontSize: "13px", mb: 0.5 }}
+                            >
+                              👤 {transaction.cosplayer}
+                            </Typography>
+                          )}
+                          <Typography
+                            variant="body2"
+                            sx={{ color: "text.secondary", fontSize: "12px" }}
+                          >
+                            🏷️ Mã: {transaction.reference}
+                          </Typography>
+                        </Box>
+                      }
+                    />
+
+                    <ListItemSecondaryAction>
+                      <Box sx={{ textAlign: "right" }}>
+                        <Typography
+                          variant="h5"
+                          sx={{
+                            fontWeight: 700,
+                            color: getTransactionColor(transaction.amount),
+                            mb: 0.5,
+                          }}
+                        >
+                          {transaction.amount >= 0 ? "+" : ""}
+                          {formatCurrency(Math.abs(transaction.amount))}
+                        </Typography>
+                        <Typography
+                          variant="caption"
+                          sx={{
+                            color: "text.secondary",
+                            fontSize: "11px",
+                          }}
+                        >
+                          {transaction.amount >= 0 ? "Nhận" : "Chi"}
+                        </Typography>
+                      </Box>
+                    </ListItemSecondaryAction>
+                  </ListItem>
+                  {index < currentTransactions.length - 1 && (
+                    <Divider
+                      sx={{
+                        mx: 2,
+                        borderColor: "rgba(233, 30, 99, 0.1)",
+                      }}
+                    />
+                  )}
+                </React.Fragment>
+              ))}
+            </List>
+          )}
+
+          {/* Pagination and Results Info */}
+          {!transactionLoading && totalPages > 1 && (
+            <Box sx={{
+              display: "flex",
+              flexDirection: { xs: 'column', sm: 'row' },
+              justifyContent: "space-between",
+              alignItems: "center",
+              gap: 2
+            }}>
+              {/* Results Info */}
+              <Typography variant="body2" color="text.secondary">
+                Hiển thị {((currentPage - 1) * transactionsPerPage) + 1} - {Math.min(currentPage * transactionsPerPage, totalCount)}
+                {' '}trong tổng số {totalCount} giao dịch
+                {hasActiveFilters() && ` (đã lọc từ tổng số giao dịch)`}
+              </Typography>
+
+              {/* Pagination */}
+              <Pagination
+                count={totalPages}
+                page={currentPage}
+                onChange={(e, page) => setCurrentPage(page)}
+                color="primary"
+                size="medium"
+                showFirstButton
+                showLastButton
                 sx={{
-                  px: 0,
-                  py: 2,
-                  "&:hover": {
-                    backgroundColor: "rgba(233, 30, 99, 0.02)",
-                    borderRadius: "12px",
+                  "& .MuiPaginationItem-root": {
+                    borderRadius: "8px",
                   },
                 }}
-              >
-                <ListItemIcon>
-                  <Avatar
-                    sx={{
-                      backgroundColor: "rgba(233, 30, 99, 0.1)",
-                      width: 48,
-                      height: 48,
-                    }}
-                  >
-                    {getTransactionIcon(transaction.type)}
-                  </Avatar>
-                </ListItemIcon>
+              />
+            </Box>
+          )}
 
-                <ListItemText
-                  primary={
-                    <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-                      <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
-                        {transaction.description}
-                      </Typography>
-                      <Chip
-                        label={getStatusLabel(transaction.status)}
-                        size="small"
-                        sx={{
-                          backgroundColor: "#4CAF50",
-                          color: "white",
-                          fontSize: "10px",
-                          height: "20px",
-                        }}
-                      />
-                    </Box>
-                  }
-                  secondary={
-                    <Box>
-                      <Typography
-                        variant="body2"
-                        sx={{ color: "text.secondary" }}
-                      >
-                        {new Date(transaction.date).toLocaleString("vi-VN")}
-                      </Typography>
-                      {transaction.cosplayer && (
-                        <Typography
-                          variant="body2"
-                          sx={{ color: "primary.main", fontSize: "12px" }}
-                        >
-                          👤 {transaction.cosplayer}
-                        </Typography>
-                      )}
-                      <Typography
-                        variant="body2"
-                        sx={{ color: "text.secondary", fontSize: "11px" }}
-                      >
-                        Mã GD: {transaction.reference}
-                      </Typography>
-                    </Box>
-                  }
-                />
-
-                <ListItemSecondaryAction>
-                  <Typography
-                    variant="h6"
-                    sx={{
-                      fontWeight: 700,
-                      color: getTransactionColor(transaction.amount),
-                      textAlign: "right",
-                    }}
-                  >
-                    {transaction.amount >= 0 ? "+" : ""}
-                    {formatCurrency(transaction.amount)}
-                  </Typography>
-                </ListItemSecondaryAction>
-              </ListItem>
-              {index < currentTransactions.length - 1 && <Divider />}
-            </React.Fragment>
-          ))}
-        </List>
-
-        {/* Pagination */}
-        {totalPages > 1 && (
-          <Box sx={{ display: "flex", justifyContent: "center", mt: 3 }}>
-            <Pagination
-              count={totalPages}
-              page={currentPage}
-              onChange={(e, page) => setCurrentPage(page)}
-              color="primary"
-              sx={{
-                "& .MuiPaginationItem-root": {
-                  borderRadius: "8px",
-                },
-              }}
-            />
-          </Box>
-        )}
-
-        {/* Empty State */}
-        {currentTransactions.length === 0 && (
-          <Box sx={{ textAlign: "center", py: 6 }}>
-            <Receipt sx={{ fontSize: 64, color: "text.secondary", mb: 2 }} />
-            <Typography variant="h6" sx={{ color: "text.secondary", mb: 1 }}>
-              Không tìm thấy giao dịch
-            </Typography>
-            <Typography variant="body2" sx={{ color: "text.secondary" }}>
-              Thử điều chỉnh bộ lọc hoặc thực hiện giao dịch đầu tiên của bạn
-            </Typography>
-          </Box>
-        )}
+          {/* Empty State */}
+          {!transactionLoading && currentTransactions.length === 0 && (
+            <Box sx={{ textAlign: "center", py: 6 }}>
+              <Receipt sx={{ fontSize: 64, color: "text.secondary", mb: 2 }} />
+              <Typography variant="h6" sx={{ color: "text.secondary", mb: 1 }}>
+                Không tìm thấy giao dịch
+              </Typography>
+              <Typography variant="body2" sx={{ color: "text.secondary" }}>
+                Thử điều chỉnh bộ lọc hoặc thực hiện giao dịch đầu tiên của bạn
+              </Typography>
+            </Box>
+          )}
+        </Box>
       </Paper>
 
       {/* Top Up Dialog */}

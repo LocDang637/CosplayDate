@@ -148,42 +148,44 @@ namespace CosplayDate.Application.Services.Implementations
                 throw;
             }
         }
-        public async Task<bool> RefundEscrowAsync(int escrowId, string reason)
+        public async Task<(bool Success, string? ErrorMessage)> RefundEscrowAsync(int escrowId, string reason)
         {
             try
             {
                 var escrow = await _unitOfWork.EscrowTransactions.GetByIdAsync(escrowId);
                 if (escrow == null || escrow.Status != "Held")
                 {
-                    _logger.LogWarning("Cannot refund escrow {EscrowId} - not found or not held", escrowId);
-                    return false;
+                    var msg = $"Cannot refund escrow {escrowId} - not found or not held";
+                    _logger.LogWarning(msg);
+                    return (false, msg);
                 }
 
                 var booking = await _unitOfWork.Bookings.GetByIdAsync(escrow.BookingId);
                 if (booking == null)
                 {
-                    _logger.LogError("Booking not found for escrow {EscrowId}", escrowId);
-                    return false;
+                    var msg = $"Booking not found for escrow {escrowId}";
+                    _logger.LogError(msg);
+                    return (false, msg);
                 }
 
                 // Refund money to customer's wallet
                 var refundResult = await _walletService.RefundEscrowAsync(
                     escrow.CustomerId,
                     escrow.Amount,
-                    escrow.Id,
-                    escrow.TransactionCode);
+                    escrow.Id);
 
                 if (!refundResult.IsSuccess)
                 {
                     // Nếu lỗi là "đã refund rồi" thì bỏ qua
                     if (refundResult.Message?.Contains("already processed") == true)
                     {
-                        _logger.LogWarning("Refund already processed for escrow {EscrowId}. Continuing.", escrowId);
+                        _logger.LogWarning($"Refund already processed for escrow {escrowId}. Continuing.");
                     }
                     else
                     {
-                        _logger.LogError("Failed to refund escrow {EscrowId}: {Error}", escrowId, refundResult.Message ?? string.Join(", ", refundResult.Errors));
-                        return false;
+                        var msg = $"Failed to refund escrow {escrowId}: {refundResult.Message ?? string.Join(", ", refundResult.Errors)}";
+                        _logger.LogError(msg);
+                        return (false, msg);
                     }
                 }
 
@@ -193,9 +195,7 @@ namespace CosplayDate.Application.Services.Implementations
                 _unitOfWork.EscrowTransactions.Update(escrow);
 
                 // Update booking status
-                booking.Status = "Cancelled";
                 booking.PaymentStatus = "Refunded";
-                booking.CancellationReason = reason;
                 _unitOfWork.Bookings.Update(booking);
 
                 await _unitOfWork.SaveChangesAsync();
@@ -218,12 +218,12 @@ namespace CosplayDate.Application.Services.Implementations
                 _logger.LogInformation("Escrow refunded: {TransactionCode} for booking {BookingCode}",
                     escrow.TransactionCode, booking.BookingCode);
 
-                return true;
+                return (true, null);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error refunding escrow {EscrowId}", escrowId);
-                throw;
+                _logger.LogError(ex, "[ESCROW] Error refunding escrow {EscrowId}", escrowId);
+                return (false, ex.Message);
             }
         }
         public async Task<EscrowTransaction?> GetEscrowByBookingAsync(int bookingId)

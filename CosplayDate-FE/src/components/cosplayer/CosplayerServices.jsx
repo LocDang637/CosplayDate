@@ -14,13 +14,11 @@ import {
   DialogContent,
   DialogActions,
   TextField,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem,
   Alert,
   CircularProgress,
-  Chip
+  Chip,
+  Tooltip,
+  Fade
 } from '@mui/material';
 import {
   Add,
@@ -29,34 +27,24 @@ import {
   AttachMoney,
   Schedule,
   Description,
-  Close
+  Close,
+  CheckCircle
 } from '@mui/icons-material';
 import { cosplayerAPI } from '../../services/cosplayerAPI';
 
-const CosplayerServices = ({ cosplayerId, isOwnProfile = false }) => {
+const CosplayerServices = ({ cosplayerId, isOwnProfile }) => {
   const [services, setServices] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [editDialog, setEditDialog] = useState(false);
   const [selectedService, setSelectedService] = useState(null);
   const [formData, setFormData] = useState({
-    name: '',
-    description: '',
-    price: '',
-    duration: '',
-    category: '',
-    isActive: true
+    serviceName: '',
+    serviceDescription: ''
   });
   const [formErrors, setFormErrors] = useState({});
   const [submitLoading, setSubmitLoading] = useState(false);
-
-  const serviceCategories = [
-    { value: 'photoshoot', label: 'Chụp ảnh' },
-    { value: 'event', label: 'Tham dự sự kiện' },
-    { value: 'meetup', label: 'Gặp gỡ' },
-    { value: 'convention', label: 'Convention' },
-    { value: 'custom', label: 'Tùy chỉnh' }
-  ];
+  const [deleteConfirm, setDeleteConfirm] = useState(null);
 
   useEffect(() => {
     if (cosplayerId) {
@@ -68,9 +56,9 @@ const CosplayerServices = ({ cosplayerId, isOwnProfile = false }) => {
     try {
       setLoading(true);
       setError(null);
-      
+
       const result = await cosplayerAPI.getServices(cosplayerId);
-      
+
       if (result.success) {
         setServices(result.data || []);
       } else {
@@ -86,12 +74,8 @@ const CosplayerServices = ({ cosplayerId, isOwnProfile = false }) => {
   const handleAddService = () => {
     setSelectedService(null);
     setFormData({
-      name: '',
-      description: '',
-      price: '',
-      duration: '',
-      category: '',
-      isActive: true
+      serviceName: '',
+      serviceDescription: ''
     });
     setFormErrors({});
     setEditDialog(true);
@@ -100,25 +84,20 @@ const CosplayerServices = ({ cosplayerId, isOwnProfile = false }) => {
   const handleEditService = (service) => {
     setSelectedService(service);
     setFormData({
-      name: service.name,
-      description: service.description,
-      price: service.price.toString(),
-      duration: service.duration.toString(),
-      category: service.category,
-      isActive: service.isActive
+      serviceName: service.serviceName,
+      serviceDescription: service.serviceDescription
     });
     setFormErrors({});
     setEditDialog(true);
   };
 
   const handleDeleteService = async (serviceId) => {
-    if (!window.confirm('Bạn có chắc chắn muốn xóa dịch vụ này?')) return;
-
     try {
       const result = await cosplayerAPI.deleteService(serviceId);
-      
+
       if (result.success) {
         setServices(services.filter(s => s.id !== serviceId));
+        setDeleteConfirm(null);
       } else {
         setError(result.message);
       }
@@ -130,7 +109,7 @@ const CosplayerServices = ({ cosplayerId, isOwnProfile = false }) => {
   const handleInputChange = (field) => (e) => {
     const value = e.target.value;
     setFormData(prev => ({ ...prev, [field]: value }));
-    
+
     if (formErrors[field]) {
       setFormErrors(prev => ({ ...prev, [field]: '' }));
     }
@@ -138,27 +117,15 @@ const CosplayerServices = ({ cosplayerId, isOwnProfile = false }) => {
 
   const validateForm = () => {
     const errors = {};
-    
-    if (!formData.name.trim()) {
-      errors.name = 'Tên dịch vụ là bắt buộc';
+
+    if (!formData.serviceName.trim()) {
+      errors.serviceName = 'Tên dịch vụ là bắt buộc';
     }
-    
-    if (!formData.description.trim()) {
-      errors.description = 'Mô tả là bắt buộc';
+
+    if (!formData.serviceDescription.trim()) {
+      errors.serviceDescription = 'Mô tả là bắt buộc';
     }
-    
-    if (!formData.price || parseFloat(formData.price) <= 0) {
-      errors.price = 'Giá phải lớn hơn 0';
-    }
-    
-    if (!formData.duration || parseInt(formData.duration) <= 0) {
-      errors.duration = 'Thời gian phải lớn hơn 0';
-    }
-    
-    if (!formData.category) {
-      errors.category = 'Vui lòng chọn danh mục';
-    }
-    
+
     setFormErrors(errors);
     return Object.keys(errors).length === 0;
   };
@@ -167,15 +134,12 @@ const CosplayerServices = ({ cosplayerId, isOwnProfile = false }) => {
     if (!validateForm()) return;
 
     setSubmitLoading(true);
-    
+
     try {
+      // FIXED: Use correct field names for API
       const serviceData = {
-        name: formData.name.trim(),
-        description: formData.description.trim(),
-        price: parseFloat(formData.price),
-        duration: parseInt(formData.duration),
-        category: formData.category,
-        isActive: formData.isActive
+        serviceName: formData.serviceName.trim(),
+        serviceDescription: formData.serviceDescription.trim()
       };
 
       let result;
@@ -210,11 +174,6 @@ const CosplayerServices = ({ cosplayerId, isOwnProfile = false }) => {
     return new Intl.NumberFormat('vi-VN').format(price) + 'đ';
   };
 
-  const getCategoryLabel = (category) => {
-    const cat = serviceCategories.find(c => c.value === category);
-    return cat ? cat.label : category;
-  };
-
   if (loading) {
     return (
       <Box sx={{ textAlign: 'center', py: 4 }}>
@@ -229,7 +188,7 @@ const CosplayerServices = ({ cosplayerId, isOwnProfile = false }) => {
   return (
     <Box>
       {error && (
-        <Alert severity="error" sx={{ mb: 3, borderRadius: '12px' }}>
+        <Alert severity="error" sx={{ mb: 3, borderRadius: '12px' }} onClose={() => setError(null)}>
           {error}
         </Alert>
       )}
@@ -240,15 +199,18 @@ const CosplayerServices = ({ cosplayerId, isOwnProfile = false }) => {
           p: 3,
           mb: 3,
           background: 'rgba(255,255,255,0.95)',
+          backdropFilter: 'blur(10px)',
           border: '1px solid rgba(233, 30, 99, 0.1)',
+          boxShadow: '0 4px 20px rgba(0, 0, 0, 0.05)',
         }}
       >
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-          <Typography variant="h6" sx={{ fontWeight: 700, color: 'text.primary' }}>
-            Dịch vụ ({services.length})
-          </Typography>
-          
-          {isOwnProfile && (
+        {isOwnProfile && (
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+            <Typography variant="h6" sx={{ fontWeight: 700, color: 'text.primary' }}>
+              Dịch vụ ({services.length})
+            </Typography>
+
+
             <Button
               variant="contained"
               startIcon={<Add />}
@@ -258,12 +220,20 @@ const CosplayerServices = ({ cosplayerId, isOwnProfile = false }) => {
                 borderRadius: '12px',
                 textTransform: 'none',
                 fontWeight: 600,
+                px: 3,
+                py: 1,
+                boxShadow: '0 4px 12px rgba(233, 30, 99, 0.3)',
+                '&:hover': {
+                  background: 'linear-gradient(45deg, #D81B60, #8E24AA)',
+                  boxShadow: '0 6px 16px rgba(233, 30, 99, 0.4)',
+                }
               }}
             >
               Thêm dịch vụ
             </Button>
-          )}
-        </Box>
+
+          </Box>
+        )}
 
         {services.length > 0 ? (
           <Grid container spacing={3}>
@@ -272,281 +242,280 @@ const CosplayerServices = ({ cosplayerId, isOwnProfile = false }) => {
                 <Card
                   sx={{
                     height: '100%',
-                    borderRadius: '12px',
+                    borderRadius: '16px',
                     border: '1px solid rgba(233, 30, 99, 0.1)',
                     transition: 'all 0.3s ease',
+                    position: 'relative',
+                    overflow: 'visible',
                     '&:hover': {
                       transform: 'translateY(-4px)',
-                      boxShadow: '0 8px 24px rgba(233, 30, 99, 0.15)',
+                      boxShadow: '0 12px 28px rgba(233, 30, 99, 0.15)',
+                      borderColor: 'rgba(233, 30, 99, 0.3)',
                     },
                   }}
                 >
-                  <CardContent sx={{ p: 3 }}>
+                  <CardContent sx={{ p: 3, pb: 2 }}>
                     <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
-                      <Typography variant="h6" sx={{ fontWeight: 600, fontSize: '16px' }}>
-                        {service.name}
+                      <Typography
+                        variant="h6"
+                        sx={{
+                          fontWeight: 600,
+                          fontSize: '18px',
+                          color: '#333',
+                          lineHeight: 1.3,
+                          pr: 1
+                        }}
+                      >
+                        {service.serviceName}
                       </Typography>
-                      
+
                       {isOwnProfile && (
-                        <Box>
-                          <IconButton 
-                            size="small" 
-                            onClick={() => handleEditService(service)}
-                            sx={{ mr: 0.5 }}
-                          >
-                            <Edit fontSize="small" />
-                          </IconButton>
-                          <IconButton 
-                            size="small" 
-                            onClick={() => handleDeleteService(service.id)}
-                            sx={{ color: 'error.main' }}
-                          >
-                            <Delete fontSize="small" />
-                          </IconButton>
+                        <Box sx={{ display: 'flex', gap: 0.5 }}>
+                          <Tooltip title="Chỉnh sửa" arrow>
+                            <IconButton
+                              size="small"
+                              onClick={() => handleEditService(service)}
+                              sx={{
+                                color: '#9C27B0',
+                                '&:hover': { backgroundColor: 'rgba(156, 39, 176, 0.08)' }
+                              }}
+                            >
+                              <Edit fontSize="small" />
+                            </IconButton>
+                          </Tooltip>
+                          <Tooltip title="Xóa" arrow>
+                            <IconButton
+                              size="small"
+                              onClick={() => setDeleteConfirm(service.id)}
+                              sx={{
+                                color: 'error.main',
+                                '&:hover': { backgroundColor: 'rgba(244, 67, 54, 0.08)' }
+                              }}
+                            >
+                              <Delete fontSize="small" />
+                            </IconButton>
+                          </Tooltip>
                         </Box>
                       )}
                     </Box>
 
-                    <Chip
-                      label={getCategoryLabel(service.category)}
-                      size="small"
+                    <Typography
+                      variant="body2"
                       sx={{
-                        backgroundColor: 'rgba(233, 30, 99, 0.1)',
-                        color: 'primary.main',
-                        mb: 2
+                        color: 'text.secondary',
+                        mb: 2,
+                        lineHeight: 1.5,
+                        minHeight: '3em',
+                        display: '-webkit-box',
+                        WebkitLineClamp: 3,
+                        WebkitBoxOrient: 'vertical',
+                        overflow: 'hidden'
                       }}
-                    />
-
-                    <Typography variant="body2" sx={{ color: 'text.secondary', mb: 2, lineHeight: 1.5 }}>
-                      {service.description}
+                    >
+                      {service.serviceDescription}
                     </Typography>
-
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
-                      <AttachMoney sx={{ fontSize: 16, color: 'success.main' }} />
-                      <Typography variant="body2" sx={{ fontWeight: 600, color: 'success.main' }}>
-                        {formatPrice(service.price)}
-                      </Typography>
-                    </Box>
-
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                      <Schedule sx={{ fontSize: 16, color: 'text.secondary' }} />
-                      <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-                        {service.duration} giờ
-                      </Typography>
-                    </Box>
-
-                    {!service.isActive && (
-                      <Chip
-                        label="Không hoạt động"
-                        size="small"
-                        sx={{
-                          backgroundColor: 'error.main',
-                          color: 'white',
-                          mt: 2
-                        }}
-                      />
-                    )}
                   </CardContent>
                 </Card>
               </Grid>
             ))}
           </Grid>
         ) : (
-          <Box sx={{ textAlign: 'center', py: 6 }}>
-            <Typography variant="h6" sx={{ color: 'text.secondary', mb: 2 }}>
+          <Box
+            sx={{
+              textAlign: 'center',
+              py: 8,
+              px: 3,
+              backgroundColor: 'rgba(0,0,0,0.02)',
+              borderRadius: '12px',
+              border: '2px dashed rgba(0,0,0,0.1)'
+            }}
+          >
+            <Description sx={{ fontSize: 48, color: 'text.disabled', mb: 2 }} />
+            <Typography variant="h6" sx={{ color: 'text.secondary', mb: 1 }}>
               Chưa có dịch vụ nào
             </Typography>
-            {isOwnProfile && (
-              <Button
-                variant="contained"
-                startIcon={<Add />}
-                onClick={handleAddService}
-                sx={{
-                  background: 'linear-gradient(45deg, #E91E63, #9C27B0)',
-                  borderRadius: '12px',
-                  textTransform: 'none',
-                }}
-              >
-                Thêm dịch vụ đầu tiên
-              </Button>
-            )}
+
+            <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+              Nhấn "Thêm dịch vụ" để tạo dịch vụ đầu tiên của bạn
+            </Typography>
+
           </Box>
         )}
       </Paper>
 
-      {/* Add/Edit Service Dialog */}
+      {/* Edit/Add Dialog */}
       <Dialog
         open={editDialog}
-        onClose={() => !submitLoading && setEditDialog(false)}
+        onClose={() => setEditDialog(false)}
         maxWidth="sm"
         fullWidth
+        TransitionComponent={Fade}
         PaperProps={{
-          sx: { borderRadius: '16px' }
+          sx: {
+            borderRadius: '16px',
+            boxShadow: '0 8px 32px rgba(0,0,0,0.12)'
+          }
         }}
       >
-        <DialogTitle sx={{ pb: 1, pr: 6 }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-            <Description sx={{ color: 'primary.main' }} />
-            <Typography variant="h6" sx={{ fontWeight: 700 }}>
-              {selectedService ? 'Chỉnh sửa dịch vụ' : 'Thêm dịch vụ mới'}
-            </Typography>
-          </Box>
-          <IconButton
-            onClick={() => setEditDialog(false)}
-            disabled={submitLoading}
-            sx={{
-              position: 'absolute',
-              right: 8,
-              top: 8,
-              color: 'text.secondary',
-            }}
-          >
+        <DialogTitle sx={{
+          pb: 2,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between'
+        }}>
+          <Typography variant="h6" sx={{ fontWeight: 600 }}>
+            {selectedService ? 'Chỉnh sửa dịch vụ' : 'Thêm dịch vụ mới'}
+          </Typography>
+          <IconButton onClick={() => setEditDialog(false)} size="small">
             <Close />
           </IconButton>
         </DialogTitle>
 
-        <DialogContent>
-          <Grid container spacing={3}>
-            <Grid item xs={12}>
-              <TextField
-                fullWidth
-                label="Tên dịch vụ"
-                value={formData.name}
-                onChange={handleInputChange('name')}
-                error={!!formErrors.name}
-                helperText={formErrors.name}
-                disabled={submitLoading}
-                sx={{
-                  '& .MuiOutlinedInput-root': {
-                    borderRadius: '12px',
-                  }
-                }}
-              />
-            </Grid>
+        <DialogContent dividers sx={{ py: 3 }}>
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+            <TextField
+              fullWidth
+              label="Tên dịch vụ"
+              value={formData.serviceName}
+              onChange={handleInputChange('serviceName')}
+              error={!!formErrors.serviceName}
+              helperText={formErrors.serviceName}
+              variant="outlined"
+              sx={{
+                '& .MuiOutlinedInput-root': {
+                  borderRadius: '12px',
+                  '&:hover fieldset': {
+                    borderColor: '#E91E63',
+                  },
+                  '&.Mui-focused fieldset': {
+                    borderColor: '#E91E63',
+                  },
+                },
+                '& .MuiInputLabel-root.Mui-focused': {
+                  color: '#E91E63',
+                }
+              }}
+            />
 
-            <Grid item xs={12}>
-              <TextField
-                fullWidth
-                label="Mô tả"
-                multiline
-                rows={3}
-                value={formData.description}
-                onChange={handleInputChange('description')}
-                error={!!formErrors.description}
-                helperText={formErrors.description}
-                disabled={submitLoading}
-                sx={{
-                  '& .MuiOutlinedInput-root': {
-                    borderRadius: '12px',
-                  }
-                }}
-              />
-            </Grid>
-
-            <Grid item xs={12} sm={6}>
-              <TextField
-                fullWidth
-                label="Giá (VNĐ)"
-                type="number"
-                value={formData.price}
-                onChange={handleInputChange('price')}
-                error={!!formErrors.price}
-                helperText={formErrors.price}
-                disabled={submitLoading}
-                sx={{
-                  '& .MuiOutlinedInput-root': {
-                    borderRadius: '12px',
-                  }
-                }}
-              />
-            </Grid>
-
-            <Grid item xs={12} sm={6}>
-              <TextField
-                fullWidth
-                label="Thời gian (giờ)"
-                type="number"
-                value={formData.duration}
-                onChange={handleInputChange('duration')}
-                error={!!formErrors.duration}
-                helperText={formErrors.duration}
-                disabled={submitLoading}
-                sx={{
-                  '& .MuiOutlinedInput-root': {
-                    borderRadius: '12px',
-                  }
-                }}
-              />
-            </Grid>
-
-            <Grid item xs={12}>
-              <FormControl fullWidth error={!!formErrors.category}>
-                <InputLabel>Danh mục</InputLabel>
-                <Select
-                  value={formData.category}
-                  onChange={handleInputChange('category')}
-                  label="Danh mục"
-                  disabled={submitLoading}
-                  sx={{ borderRadius: '12px' }}
-                >
-                  {serviceCategories.map((category) => (
-                    <MenuItem key={category.value} value={category.value}>
-                      {category.label}
-                    </MenuItem>
-                  ))}
-                </Select>
-                {formErrors.category && (
-                  <Typography variant="caption" sx={{ color: 'error.main', ml: 2, mt: 0.5 }}>
-                    {formErrors.category}
-                  </Typography>
-                )}
-              </FormControl>
-            </Grid>
-          </Grid>
+            <TextField
+              fullWidth
+              label="Mô tả dịch vụ"
+              value={formData.serviceDescription}
+              onChange={handleInputChange('serviceDescription')}
+              error={!!formErrors.serviceDescription}
+              helperText={formErrors.serviceDescription}
+              multiline
+              rows={4}
+              variant="outlined"
+              sx={{
+                '& .MuiOutlinedInput-root': {
+                  borderRadius: '12px',
+                  '&:hover fieldset': {
+                    borderColor: '#E91E63',
+                  },
+                  '&.Mui-focused fieldset': {
+                    borderColor: '#E91E63',
+                  },
+                },
+                '& .MuiInputLabel-root.Mui-focused': {
+                  color: '#E91E63',
+                }
+              }}
+            />
+          </Box>
         </DialogContent>
 
-        <DialogActions sx={{ p: 3, pt: 1 }}>
-          <Button 
+        <DialogActions sx={{ p: 3, gap: 2 }}>
+          <Button
             onClick={() => setEditDialog(false)}
-            disabled={submitLoading}
-            sx={{ 
+            variant="outlined"
+            sx={{
               borderRadius: '12px',
-              textTransform: 'none'
+              textTransform: 'none',
+              px: 3,
+              borderColor: 'rgba(0,0,0,0.23)',
+              color: 'text.secondary',
+              '&:hover': {
+                borderColor: 'rgba(0,0,0,0.4)',
+                backgroundColor: 'rgba(0,0,0,0.04)'
+              }
             }}
           >
             Hủy
           </Button>
           <Button
-            variant="contained"
             onClick={handleSubmit}
+            variant="contained"
             disabled={submitLoading}
             sx={{
               background: 'linear-gradient(45deg, #E91E63, #9C27B0)',
               borderRadius: '12px',
-              px: 3,
               textTransform: 'none',
-              position: 'relative',
+              px: 4,
+              boxShadow: '0 4px 12px rgba(233, 30, 99, 0.3)',
               '&:hover': {
-                background: 'linear-gradient(45deg, #AD1457, #7B1FA2)',
+                background: 'linear-gradient(45deg, #D81B60, #8E24AA)',
+                boxShadow: '0 6px 16px rgba(233, 30, 99, 0.4)',
               },
+              '&:disabled': {
+                background: 'rgba(0,0,0,0.12)'
+              }
             }}
           >
-            {submitLoading && (
-              <CircularProgress
-                size={20}
-                sx={{
-                  color: 'white',
-                  position: 'absolute',
-                  left: '50%',
-                  top: '50%',
-                  marginLeft: '-10px',
-                  marginTop: '-10px',
-                }}
-              />
+            {submitLoading ? (
+              <CircularProgress size={24} sx={{ color: 'white' }} />
+            ) : (
+              selectedService ? 'Cập nhật' : 'Thêm mới'
             )}
-            <span style={{ opacity: submitLoading ? 0 : 1 }}>
-              {submitLoading ? 'Đang lưu...' : selectedService ? 'Cập nhật' : 'Thêm dịch vụ'}
-            </span>
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog
+        open={!!deleteConfirm}
+        onClose={() => setDeleteConfirm(null)}
+        maxWidth="xs"
+        TransitionComponent={Fade}
+        PaperProps={{
+          sx: {
+            borderRadius: '16px',
+            boxShadow: '0 8px 32px rgba(0,0,0,0.12)'
+          }
+        }}
+      >
+        <DialogContent sx={{ p: 3, textAlign: 'center' }}>
+          <Delete sx={{ fontSize: 48, color: 'error.main', mb: 2 }} />
+          <Typography variant="h6" sx={{ mb: 1 }}>
+            Xác nhận xóa dịch vụ
+          </Typography>
+          <Typography variant="body2" color="text.secondary">
+            Bạn có chắc chắn muốn xóa dịch vụ này không?
+          </Typography>
+        </DialogContent>
+        <DialogActions sx={{ p: 3, pt: 0, gap: 2, justifyContent: 'center' }}>
+          <Button
+            onClick={() => setDeleteConfirm(null)}
+            variant="outlined"
+            sx={{
+              borderRadius: '12px',
+              textTransform: 'none',
+              px: 3
+            }}
+          >
+            Hủy
+          </Button>
+          <Button
+            onClick={() => handleDeleteService(deleteConfirm)}
+            variant="contained"
+            color="error"
+            sx={{
+              borderRadius: '12px',
+              textTransform: 'none',
+              px: 3
+            }}
+          >
+            Xóa
           </Button>
         </DialogActions>
       </Dialog>

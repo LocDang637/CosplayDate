@@ -45,13 +45,13 @@ import {
   ExpandLess,
   Warning
 } from '@mui/icons-material';
-import { format, parseISO, differenceInDays } from 'date-fns';
+import { format, parseISO, differenceInDays, isValid, isBefore, addDays } from 'date-fns';
 import { vi } from 'date-fns/locale';
 import { bookingAPI } from '../../services/bookingAPI';
 import { LocalizationProvider, DatePicker, TimePicker } from '@mui/x-date-pickers';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 
-const CosplayerBookingOrders = () => {
+const CosplayerBookingOrders = ({ isOwnProfile }) => {
   const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -93,17 +93,45 @@ const CosplayerBookingOrders = () => {
     }
   });
 
+  // Error handling states for edit dialog
+  const [editErrors, setEditErrors] = useState({
+    dateError: '',
+    startTimeError: '',
+    endTimeError: '',
+    locationError: '',
+    generalError: ''
+  });
+
+  if (!isOwnProfile) {
+    return (
+      <Box sx={{ py: 4, textAlign: 'center' }}>
+        <Typography variant="h6" color="text.secondary">
+          Bạn không có quyền xem thông tin này
+        </Typography>
+      </Box>
+    );
+  }
+
   // Add this function to handle opening edit dialog
   const handleEditBooking = (booking) => {
+    // Parse the date properly
+    let bookingDate;
+    try {
+      bookingDate = parseISO(booking.bookingDate);
+    } catch (e) {
+      console.error('Error parsing booking date:', e);
+      bookingDate = new Date();
+    }
+
     setEditDialog({
       open: true,
       booking,
       formData: {
-        bookingDate: parseISO(booking.bookingDate),
-        startTime: booking.startTime,
-        endTime: booking.endTime,
+        bookingDate: bookingDate,
+        startTime: booking.startTime || '', // Should be in "HH:mm" format
+        endTime: booking.endTime || '', // Should be in "HH:mm" format
         location: booking.location || '',
-        specialNotes: booking.notes || ''
+        specialNotes: booking.specialNotes || booking.notes || ''
       }
     });
   };
@@ -112,27 +140,200 @@ const CosplayerBookingOrders = () => {
   const handleUpdateBooking = async () => {
     if (!editDialog.booking) return;
 
+    // Clear previous errors
+    clearEditErrors();
+
+    // Validate all fields
+    let hasErrors = false;
+
+    if (!validateEditDate(editDialog.formData.bookingDate)) {
+      hasErrors = true;
+    }
+
+    if (!validateEditTime(editDialog.formData.startTime, true)) {
+      hasErrors = true;
+    }
+
+    if (!validateEditTime(editDialog.formData.endTime, false)) {
+      hasErrors = true;
+    }
+
+    if (!validateEditLocation(editDialog.formData.location)) {
+      hasErrors = true;
+    }
+
+    // Additional business hours validation
+    if (editDialog.formData.startTime && editDialog.formData.endTime) {
+      const startHour = parseInt(editDialog.formData.startTime.split(':')[0]);
+      const endHour = parseInt(editDialog.formData.endTime.split(':')[0]);
+      
+      if (startHour < 8 || endHour > 22) {
+        setEditErrors(prev => ({ ...prev, generalError: 'Thời gian hoạt động từ 8:00 đến 22:00' }));
+        hasErrors = true;
+      }
+    }
+
+    if (hasErrors) {
+      return;
+    }
+
     try {
+      // Validate date before formatting
+      if (!editDialog.formData.bookingDate || !isValid(editDialog.formData.bookingDate)) {
+        setEditErrors(prev => ({ ...prev, generalError: 'Ngày không hợp lệ' }));
+        return;
+      }
+
+      // Format the data according to API requirements
       const updateData = {
-        bookingDate: format(editDialog.formData.bookingDate, 'yyyy-MM-dd'),
-        startTime: editDialog.formData.startTime,
-        endTime: editDialog.formData.endTime,
-        location: editDialog.formData.location,
-        specialNotes: editDialog.formData.specialNotes
+        bookingDate: format(editDialog.formData.bookingDate, 'yyyy-MM-dd'), // "2025-06-25" format
+        startTime: editDialog.formData.startTime, // Should already be in "HH:mm" format
+        endTime: editDialog.formData.endTime, // Should already be in "HH:mm" format
+        location: editDialog.formData.location.trim(),
+        specialNotes: editDialog.formData.specialNotes.trim() || ''
       };
+
+      console.log('Updating booking with data:', updateData);
 
       const result = await bookingAPI.updateBooking(editDialog.booking.id, updateData);
 
       if (result.success) {
         await loadBookings();
         setEditDialog({ open: false, booking: null, formData: {} });
+        clearEditErrors();
         // Optional: Show success message
+        console.log('Booking updated successfully');
       } else {
         console.error('Failed to update booking:', result.message);
-        // Optional: Show error message
+        setEditErrors(prev => ({ ...prev, generalError: result.message || 'Failed to update booking' }));
       }
     } catch (err) {
       console.error('Error updating booking:', err);
+      setEditErrors(prev => ({ ...prev, generalError: 'An error occurred while updating the booking' }));
+    }
+  };
+
+  // Add validation functions for edit dialog
+  const validateEditDate = (date) => {
+    if (!date || !isValid(date)) {
+      setEditErrors(prev => ({ ...prev, dateError: 'Vui lòng chọn ngày hợp lệ' }));
+      return false;
+    }
+    
+    if (isBefore(date, new Date())) {
+      setEditErrors(prev => ({ ...prev, dateError: 'Ngày đặt không thể trong quá khứ' }));
+      return false;
+    }
+    
+    const maxDate = addDays(new Date(), 30);
+    if (date > maxDate) {
+      setEditErrors(prev => ({ ...prev, dateError: 'Chỉ có thể đặt lịch trong vòng 30 ngày' }));
+      return false;
+    }
+    
+    setEditErrors(prev => ({ ...prev, dateError: '' }));
+    return true;
+  };
+
+  const validateEditTime = (time, isStartTime) => {
+    if (!time) {
+      const errorField = isStartTime ? 'startTimeError' : 'endTimeError';
+      const errorMessage = isStartTime ? 'Vui lòng chọn giờ bắt đầu' : 'Vui lòng chọn giờ kết thúc';
+      setEditErrors(prev => ({ ...prev, [errorField]: errorMessage }));
+      return false;
+    }
+
+    const hour = parseInt(time.split(':')[0]);
+    if (hour < 8 || hour > 22) {
+      const errorField = isStartTime ? 'startTimeError' : 'endTimeError';
+      setEditErrors(prev => ({ ...prev, [errorField]: 'Thời gian hoạt động từ 8:00 đến 22:00' }));
+      return false;
+    }
+
+    // If both times are set, validate that end time is after start time
+    if (!isStartTime && editDialog.formData.startTime) {
+      const startTime = editDialog.formData.startTime;
+      if (time <= startTime) {
+        setEditErrors(prev => ({ ...prev, endTimeError: 'Giờ kết thúc phải sau giờ bắt đầu' }));
+        return false;
+      }
+    }
+
+    const errorField = isStartTime ? 'startTimeError' : 'endTimeError';
+    setEditErrors(prev => ({ ...prev, [errorField]: '' }));
+    return true;
+  };
+
+  const validateEditLocation = (location) => {
+    if (!location || location.trim().length < 3) {
+      setEditErrors(prev => ({ ...prev, locationError: 'Địa điểm phải có ít nhất 3 ký tự' }));
+      return false;
+    }
+    
+    setEditErrors(prev => ({ ...prev, locationError: '' }));
+    return true;
+  };
+
+  const clearEditErrors = () => {
+    setEditErrors({
+      dateError: '',
+      startTimeError: '',
+      endTimeError: '',
+      locationError: '',
+      generalError: ''
+    });
+  };
+
+  // Handler functions for edit dialog
+  const handleEditDateChange = (newDate) => {
+    setEditDialog({
+      ...editDialog,
+      formData: { ...editDialog.formData, bookingDate: newDate }
+    });
+    
+    if (newDate) {
+      validateEditDate(newDate);
+    }
+  };
+
+  const handleEditStartTimeChange = (e) => {
+    const newStartTime = e.target.value;
+    setEditDialog({
+      ...editDialog,
+      formData: { ...editDialog.formData, startTime: newStartTime }
+    });
+    
+    if (newStartTime) {
+      validateEditTime(newStartTime, true);
+      
+      // Re-validate end time if it's already set
+      if (editDialog.formData.endTime) {
+        validateEditTime(editDialog.formData.endTime, false);
+      }
+    }
+  };
+
+  const handleEditEndTimeChange = (e) => {
+    const newEndTime = e.target.value;
+    setEditDialog({
+      ...editDialog,
+      formData: { ...editDialog.formData, endTime: newEndTime }
+    });
+    
+    if (newEndTime) {
+      validateEditTime(newEndTime, false);
+    }
+  };
+
+  const handleEditLocationChange = (e) => {
+    const newLocation = e.target.value;
+    setEditDialog({
+      ...editDialog,
+      formData: { ...editDialog.formData, location: newLocation }
+    });
+    
+    if (newLocation) {
+      validateEditLocation(newLocation);
     }
   };
 
@@ -188,33 +389,37 @@ const CosplayerBookingOrders = () => {
       let result;
       const bookingId = statusDialog.booking.id;
 
+      console.log(`Updating status for booking ${bookingId} to ${statusDialog.newStatus}`);
+
       // Call appropriate API based on new status
       switch (statusDialog.newStatus) {
         case 'Confirmed':
           result = await bookingAPI.confirmBooking(bookingId);
           break;
         case 'Cancelled':
-          // You might want to add a reason field in the dialog for cancellations
+          // Pass the cancellation reason properly
           result = await bookingAPI.cancelBooking(bookingId, statusDialog.cancellationReason || '');
           break;
         case 'Completed':
           result = await bookingAPI.completeBooking(bookingId);
           break;
         default:
-          // Fallback to generic update if needed
-          result = await bookingAPI.updateBooking(bookingId, { status: statusDialog.newStatus });
+          console.error('Unknown status:', statusDialog.newStatus);
+          return;
       }
 
       if (result.success) {
         await loadBookings();
-        setStatusDialog({ open: false, booking: null, newStatus: '', showConfirm: false });
+        setStatusDialog({ open: false, booking: null, newStatus: '', showConfirm: false, cancellationReason: '' });
         // Optionally show success message
+        console.log(`Booking status updated to ${statusDialog.newStatus} successfully`);
       } else {
         console.error('Failed to update status:', result.message);
-        // Optionally show error message
+        setError(result.message || 'Failed to update booking status');
       }
     } catch (err) {
       console.error('Error updating status:', err);
+      setError('An error occurred while updating the booking status');
     }
   };
 
@@ -238,8 +443,32 @@ const CosplayerBookingOrders = () => {
     }
   };
 
+  const getStatusLabel = (status) => {
+    const statusMap = {
+      Pending: 'Chờ xác nhận',
+      Confirmed: 'Đã xác nhận',
+      Completed: 'Hoàn thành',
+      Cancelled: 'Đã hủy'
+    };
+    return statusMap[status] || status;
+  };
+
   const getPaymentStatusColor = (status) => {
-    return status === 'Paid' ? 'success' : 'error';
+    switch (status) {
+      case 'Held': return 'warning';
+      case 'Completed': return 'success';
+      case 'Refunded': return 'success';
+      default: return 'default';
+    }
+  };
+
+  const getPaymentStatusLabel = (status) => {
+    switch (status) {
+      case 'Held': return 'Đang tạm giữ';
+      case 'Completed': return 'Đã thanh toán';
+      case 'Refunded': return 'Đã hoàn tiền';
+      default: return status;
+    }
   };
 
   const canUpdateStatus = (booking) => {
@@ -402,13 +631,13 @@ const CosplayerBookingOrders = () => {
                 {/* Line 4: Status • Payment Status • Total Price */}
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
                   <Chip
-                    label={booking.status}
+                    label={getStatusLabel(booking.status)}
                     size="small"
                     color={getStatusColor(booking.status)}
                   />
                   <Typography variant="body2" color="text.secondary">•</Typography>
                   <Chip
-                    label={booking.paymentStatus === 'Paid' ? 'Đã thanh toán' : 'Chưa thanh toán'}
+                    label={getPaymentStatusLabel(booking.paymentStatus)}
                     size="small"
                     color={getPaymentStatusColor(booking.paymentStatus)}
                   />
@@ -584,6 +813,7 @@ const CosplayerBookingOrders = () => {
         </CardContent>
       </Card>
     );
+
   };
 
   if (loading) {
@@ -665,7 +895,7 @@ const CosplayerBookingOrders = () => {
         <Grid container spacing={2}>
           <Grid item xs={12} md={4}>
             <TextField
-              fullWidth
+              sx={{ width: 320 }}
               placeholder="Tìm kiếm theo tên, email, mã đặt..."
               variant="outlined"
               size="small"
@@ -687,6 +917,7 @@ const CosplayerBookingOrders = () => {
               <Select
                 value={filterStatus}
                 onChange={(e) => setFilterStatus(e.target.value)}
+                sx={{ width: 150 }}
                 label="Trạng thái"
               >
                 <MenuItem value="">Tất cả</MenuItem>
@@ -719,18 +950,24 @@ const CosplayerBookingOrders = () => {
               <InputLabel>Thanh toán</InputLabel>
               <Select
                 value={filterPaymentStatus}
+                sx={{ width: 150 }}
                 onChange={(e) => setFilterPaymentStatus(e.target.value)}
                 label="Thanh toán"
               >
                 <MenuItem value="">Tất cả</MenuItem>
-                <MenuItem value="Paid">
+                <MenuItem value="Completed">
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                     <Chip size="small" label="Đã thanh toán" color="success" />
                   </Box>
                 </MenuItem>
-                <MenuItem value="Unpaid">
+                <MenuItem value="Held">
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <Chip size="small" label="Chưa thanh toán" color="error" />
+                    <Chip size="small" label="Đang tạm giữ" color="warning" />
+                  </Box>
+                </MenuItem>
+                <MenuItem value="Refunded">
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <Chip size="small" label="Đã hoàn tiền" color="success" />
                   </Box>
                 </MenuItem>
               </Select>
@@ -784,7 +1021,7 @@ const CosplayerBookingOrders = () => {
             {filterStatus && (
               <Chip
                 size="small"
-                label={`Trạng thái: ${filterStatus}`}
+                label={`Trạng thái: ${getStatusLabel(filterStatus)}`}
                 onDelete={() => setFilterStatus('')}
                 color={getStatusColor(filterStatus)}
               />
@@ -792,7 +1029,7 @@ const CosplayerBookingOrders = () => {
             {filterPaymentStatus && (
               <Chip
                 size="small"
-                label={`Thanh toán: ${filterPaymentStatus === 'Paid' ? 'Đã thanh toán' : 'Chưa thanh toán'}`}
+                label={`Thanh toán: ${getPaymentStatusLabel(filterPaymentStatus)}`}
                 onDelete={() => setFilterPaymentStatus('')}
                 color={getPaymentStatusColor(filterPaymentStatus)}
               />
@@ -1089,6 +1326,26 @@ const CosplayerBookingOrders = () => {
         </DialogTitle>
         <DialogContent>
           <Box sx={{ mt: 3 }}>
+            {/* Show validation errors if they exist */}
+            {(editErrors.dateError || editErrors.startTimeError || editErrors.endTimeError || editErrors.locationError || editErrors.generalError) && (
+              <Alert
+                severity="error"
+                sx={{ mb: 2, borderRadius: '8px' }}
+                onClose={clearEditErrors}
+              >
+                <Typography variant="body2" sx={{ fontWeight: 600, mb: 1 }}>
+                  Vui lòng kiểm tra lại thông tin:
+                </Typography>
+                <Box component="ul" sx={{ m: 0, pl: 2 }}>
+                  {editErrors.dateError && <li>{editErrors.dateError}</li>}
+                  {editErrors.startTimeError && <li>{editErrors.startTimeError}</li>}
+                  {editErrors.endTimeError && <li>{editErrors.endTimeError}</li>}
+                  {editErrors.locationError && <li>{editErrors.locationError}</li>}
+                  {editErrors.generalError && <li>{editErrors.generalError}</li>}
+                </Box>
+              </Alert>
+            )}
+
             <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={vi}>
               <Grid container spacing={2}>
                 {/* Date and Time Row */}
@@ -1096,22 +1353,21 @@ const CosplayerBookingOrders = () => {
                   <DatePicker
                     label="Ngày đặt"
                     value={editDialog.formData.bookingDate}
-                    onChange={(newValue) => {
-                      setEditDialog({
-                        ...editDialog,
-                        formData: { ...editDialog.formData, bookingDate: newValue }
-                      });
-                    }}
+                    onChange={handleEditDateChange}
                     slotProps={{
                       textField: {
                         fullWidth: true,
                         variant: 'outlined',
                         size: 'small',
-                        error: !editDialog.formData.bookingDate,
-                        helperText: !editDialog.formData.bookingDate ? 'Vui lòng chọn ngày' : ''
+                        error: !!editErrors.dateError,
+                        helperText: editErrors.dateError || '',
+                        FormHelperTextProps: {
+                          sx: { ml: 0 }
+                        }
                       }
                     }}
                     minDate={new Date()}
+                    maxDate={addDays(new Date(), 30)}
                   />
                 </Grid>
 
@@ -1123,16 +1379,14 @@ const CosplayerBookingOrders = () => {
                     label="Giờ bắt đầu"
                     type="time"
                     value={editDialog.formData.startTime || ''}
-                    onChange={(e) => {
-                      setEditDialog({
-                        ...editDialog,
-                        formData: { ...editDialog.formData, startTime: e.target.value }
-                      });
-                    }}
+                    onChange={handleEditStartTimeChange}
                     InputLabelProps={{ shrink: true }}
                     inputProps={{ step: 300 }}
-                    error={!editDialog.formData.startTime}
-                    helperText={!editDialog.formData.startTime ? 'Bắt buộc' : ''}
+                    error={!!editErrors.startTimeError}
+                    helperText={editErrors.startTimeError || ''}
+                    FormHelperTextProps={{
+                      sx: { ml: 0 }
+                    }}
                   />
                 </Grid>
 
@@ -1144,16 +1398,14 @@ const CosplayerBookingOrders = () => {
                     label="Giờ kết thúc"
                     type="time"
                     value={editDialog.formData.endTime || ''}
-                    onChange={(e) => {
-                      setEditDialog({
-                        ...editDialog,
-                        formData: { ...editDialog.formData, endTime: e.target.value }
-                      });
-                    }}
+                    onChange={handleEditEndTimeChange}
                     InputLabelProps={{ shrink: true }}
                     inputProps={{ step: 300 }}
-                    error={!editDialog.formData.endTime}
-                    helperText={!editDialog.formData.endTime ? 'Bắt buộc' : ''}
+                    error={!!editErrors.endTimeError}
+                    helperText={editErrors.endTimeError || ''}
+                    FormHelperTextProps={{
+                      sx: { ml: 0 }
+                    }}
                   />
                 </Grid>
 
@@ -1164,15 +1416,13 @@ const CosplayerBookingOrders = () => {
                     size="small"
                     label="Địa điểm"
                     value={editDialog.formData.location}
-                    onChange={(e) => {
-                      setEditDialog({
-                        ...editDialog,
-                        formData: { ...editDialog.formData, location: e.target.value }
-                      });
-                    }}
+                    onChange={handleEditLocationChange}
                     placeholder="Nhập địa điểm..."
-                    error={!editDialog.formData.location}
-                    helperText={!editDialog.formData.location ? 'Vui lòng nhập địa điểm' : ''}
+                    error={!!editErrors.locationError}
+                    helperText={editErrors.locationError || ''}
+                    FormHelperTextProps={{
+                      sx: { ml: 0 }
+                    }}
                   />
                 </Grid>
 
@@ -1203,7 +1453,10 @@ const CosplayerBookingOrders = () => {
           p: 2
         }}>
           <Button
-            onClick={() => setEditDialog({ open: false, booking: null, formData: {} })}
+            onClick={() => {
+              setEditDialog({ open: false, booking: null, formData: {} });
+              clearEditErrors();
+            }}
             sx={{ color: '#666' }}
           >
             Hủy
@@ -1215,12 +1468,21 @@ const CosplayerBookingOrders = () => {
               !editDialog.formData.bookingDate ||
               !editDialog.formData.startTime ||
               !editDialog.formData.endTime ||
-              !editDialog.formData.location
+              !editDialog.formData.location ||
+              !!editErrors.dateError ||
+              !!editErrors.startTimeError ||
+              !!editErrors.endTimeError ||
+              !!editErrors.locationError ||
+              !!editErrors.generalError
             }
             sx={{
               backgroundColor: '#e91e63',
               '&:hover': {
                 backgroundColor: '#d81b60'
+              },
+              '&:disabled': {
+                backgroundColor: 'rgba(0, 0, 0, 0.12)',
+                color: 'rgba(0, 0, 0, 0.26)'
               }
             }}
           >
