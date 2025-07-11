@@ -22,8 +22,8 @@ EMAIL_USERNAME=locdang637@gmail.com
 EMAIL_PASSWORD=klrr wfbk qkgt iebj
 
 # App URLs (Update these with your production URLs)
-BACKEND_URL=https://your-backend-url.railway.app
-FRONTEND_URL=https://your-frontend.vercel.app
+BACKEND_URL=https://cosplaydate-production-aa2c.up.railway.app/api
+FRONTEND_URL=cosplay-date.vercel.app
 
 # PayOS Configuration
 PAYOS_CLIENT_ID=99341a1e-20ad-4c6b-9b2b-7640bfeb1669
