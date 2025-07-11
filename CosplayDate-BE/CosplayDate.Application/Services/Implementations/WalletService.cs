@@ -594,9 +594,10 @@ namespace CosplayDate.Application.Services.Implementations
 
         private static string GenerateTransactionCode()
         {
-            var timestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
-            var random = new Random().Next(1000, 9999);
-            return $"TXN{timestamp}{random}";
+            // Đảm bảo TransactionCode luôn <= 100 ký tự
+            // ESC + 17 (datetime) + '-' + 32 (guid) = 53 ký tự
+            // Nếu format thay đổi, vẫn không vượt quá 100
+            return $"ESC{DateTime.UtcNow:yyyyMMddHHmmssfff}-{Guid.NewGuid().ToString("N").Substring(0, 8)}";
         }
 
         private static string CalculateMembershipTier(int loyaltyPoints)
@@ -666,6 +667,7 @@ namespace CosplayDate.Application.Services.Implementations
                 return ApiResponse<string>.Error("Failed to hold escrow");
             }
         }
+
    
         public async Task<ApiResponse<string>> ReleaseEscrowAsync(int cosplayerId, decimal amount, int escrowId)
         {
@@ -699,6 +701,7 @@ namespace CosplayDate.Application.Services.Implementations
 
                 await _unitOfWork.WalletTransactions.AddAsync(transaction);
                 await _unitOfWork.SaveChangesAsync();
+                _unitOfWork.Clear();
 
                 _logger.LogInformation("Escrow release processed: Cosplayer={CosplayerId}, Amount={Amount}, EscrowId={EscrowId}, NewBalance={NewBalance}",
                     cosplayerId, amount, escrowId, cosplayer.WalletBalance);
@@ -712,76 +715,109 @@ namespace CosplayDate.Application.Services.Implementations
             }
         }
 
-        public async Task<ApiResponse<string>> RefundEscrowAsync(int userId, decimal amount, int escrowId, string transactionCode)
+        // Refactored: RefundEscrowAsync always generates a unique transactionCode internally and retries if duplicate
+        public async Task<ApiResponse<string>> RefundEscrowAsync(int userId, decimal amount, int escrowId)
         {
-            try
+            int retry = 0;
+            while (retry < 3)
             {
-                // Check if escrow was already refunded
-                var escrow = await _unitOfWork.EscrowTransactions.GetByIdAsync(escrowId);
-                if (escrow == null)
+                // Always generate a new, unique transaction code
+                var transactionCode = GenerateTransactionCode();
+
+                try
                 {
-                    return ApiResponse<string>.Error("Escrow not found");
+                    _logger.LogInformation("Attempting to refund escrow #{EscrowId} for user #{UserId}, amount: {Amount}, transactionCode: {TransactionCode}",
+                        escrowId, userId, amount, transactionCode);
+
+                    // Check if escrow was already refunded
+                    var escrow = await _unitOfWork.EscrowTransactions.GetByIdAsync(escrowId);
+                    if (escrow == null)
+                    {
+                        _logger.LogError("Escrow #{EscrowId} not found", escrowId);
+                        return ApiResponse<string>.Error("Escrow not found");
+                    }
+
+                    if (escrow.Status == "Refunded")
+                    {
+                        _logger.LogWarning("Escrow #{EscrowId} was already refunded.", escrowId);
+                        return ApiResponse<string>.Error("Escrow already refunded");
+                    }
+
+                    // Check if a WalletTransaction with this code already exists
+                    var existingTransaction = await _unitOfWork.WalletTransactions
+                        .FirstOrDefaultAsync(wt => wt.TransactionCode == transactionCode && wt.Type == "EscrowRefund");
+
+                    if (existingTransaction != null)
+                    {
+                        _logger.LogWarning("Refund transaction with code {TransactionCode} already exists, retrying...", transactionCode);
+                        retry++;
+                        continue; // Generate new code and retry
+                    }
+
+                    // Fetch user
+                    var user = await _unitOfWork.Users.GetByIdAsync(userId);
+                    if (user == null)
+                    {
+                        _logger.LogError("User #{UserId} not found for escrow #{EscrowId}", userId, escrowId);
+                        return ApiResponse<string>.Error("User not found");
+                    }
+
+                    // TEST MODE: Always add refund to wallet
+                    var currentBalance = user.WalletBalance ?? 0;
+                    _logger.LogInformation("[REFUND] Before refund: UserId={UserId}, Balance={Balance}", userId, user.WalletBalance);
+                    user.WalletBalance = currentBalance + amount;
+                    user.UpdatedAt = DateTime.UtcNow;
+                    _logger.LogInformation("[REFUND] After refund: UserId={UserId}, Balance={Balance}", userId, user.WalletBalance);
+
+                    // Create new WalletTransaction
+                    var transaction = new WalletTransaction
+                    {
+                        UserId = userId,
+                        TransactionCode = transactionCode,
+                        Type = "EscrowRefund",
+                        Amount = amount,
+                        Description = $"Refund from escrow #{escrowId}",
+                        ReferenceId = escrowId.ToString(),
+                        Status = "Completed",
+                        BalanceAfter = user.WalletBalance ?? 0,
+                        CreatedAt = DateTime.UtcNow
+                    };
+
+                    // Log độ dài TransactionCode trước khi insert
+                    _logger.LogInformation("[DEBUG] TransactionCode: {Code}, Length: {Length}", transactionCode, transactionCode.Length);
+
+                    // Apply updates
+                    _unitOfWork.Users.Update(user);
+                    await _unitOfWork.WalletTransactions.AddAsync(transaction);
+
+                    await _unitOfWork.SaveChangesAsync();
+                    _logger.LogInformation("Saved refund transaction for escrow #{EscrowId}, UserId: {UserId}, Amount: {Amount}, NewBalance: {NewBalance}",
+                        escrowId, userId, amount, user.WalletBalance);
+
+                    _unitOfWork.Clear();
+
+                    _logger.LogInformation("Refunded escrow #{EscrowId} to user #{UserId} amount {Amount}, new balance: {Balance}",
+                        escrowId, userId, amount, user.WalletBalance);
+
+                    return ApiResponse<string>.Success(transaction.TransactionCode, "Escrow refund processed successfully");
                 }
-
-                if (escrow.Status == "Refunded")
+                catch (Exception ex)
                 {
-                    _logger.LogWarning("Escrow #{EscrowId} was already refunded.", escrowId);
-                    return ApiResponse<string>.Error("Escrow already refunded");
+                    // If duplicate key, retry
+                    if (ex.InnerException?.Message.Contains("UNIQUE KEY constraint") == true ||
+                        ex.Message.Contains("UNIQUE KEY constraint"))
+                    {
+                        _logger.LogWarning("Duplicate TransactionCode detected: {TransactionCode}, retrying... (attempt {Retry})", transactionCode, retry + 1);
+                        retry++;
+                        continue;
+                    }
+
+                    _logger.LogError(ex, "[WALLET] Error processing escrow refund #{EscrowId} for user #{UserId}", escrowId, userId);
+                    return ApiResponse<string>.Error($"Exception: {ex.Message}");
                 }
-
-                // Check if a WalletTransaction with this code already exists
-                var transactionExists = await _unitOfWork.WalletTransactions
-                    .AnyAsync(wt => wt.TransactionCode == transactionCode);
-
-                if (transactionExists)
-                {
-                    _logger.LogWarning("Transaction with code {TransactionCode} already exists", transactionCode);
-                    return ApiResponse<string>.Error("Refund transaction already processed");
-                }
-
-                // Fetch user
-                var user = await _unitOfWork.Users.GetByIdAsync(userId);
-                if (user == null)
-                {
-                    return ApiResponse<string>.Error("User not found");
-                }
-
-                // Update user's wallet balance
-                var currentBalance = user.WalletBalance ?? 0;
-                user.WalletBalance = currentBalance + amount;
-                user.UpdatedAt = DateTime.UtcNow;
-
-                // Create new WalletTransaction
-                var transaction = new WalletTransaction
-                {
-                    UserId = userId,
-                    TransactionCode = transactionCode,
-                    Type = "EscrowRefund",
-                    Amount = amount,
-                    Description = $"Refund from escrow #{escrowId}",
-                    ReferenceId = escrowId.ToString(),
-                    Status = "Completed",
-                    BalanceAfter = user.WalletBalance ?? 0,
-                    CreatedAt = DateTime.UtcNow
-                };
-
-                // Apply updates
-                _unitOfWork.Users.Update(user);
-                await _unitOfWork.WalletTransactions.AddAsync(transaction);
-
-                await _unitOfWork.SaveChangesAsync();
-                _unitOfWork.Clear();
-
-                _logger.LogInformation("Refunded escrow #{EscrowId} to user #{UserId} amount {Amount}, new balance: {Balance}",
-                    escrowId, userId, amount, user.WalletBalance);
-
-                return ApiResponse<string>.Success(transaction.TransactionCode, "Escrow refund processed successfully");
             }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error processing escrow refund #{EscrowId} for user #{UserId}", escrowId, userId);
-                return ApiResponse<string>.Error("An error occurred while processing the refund");
-            }
+
+            return ApiResponse<string>.Error("Failed to create unique refund transaction after 3 attempts.");
         }
 
     }

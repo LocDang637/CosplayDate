@@ -31,12 +31,33 @@ const SignUpPage = () => {
   const validateEmail = (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
   
   const validateAge = (dateOfBirth) => {
-    const today = new Date();
-    const birthDate = new Date(dateOfBirth);
-    const age = today.getFullYear() - birthDate.getFullYear();
-    const monthDiff = today.getMonth() - birthDate.getMonth();
-    return monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate()) 
-      ? age - 1 >= 18 : age >= 18;
+    if (!dateOfBirth) return false;
+    
+    try {
+      const today = new Date();
+      const birthDate = new Date(dateOfBirth);
+      
+      // Check if date is valid
+      if (isNaN(birthDate.getTime())) {
+        return false;
+      }
+      
+      // Check if date is not in the future
+      if (birthDate > today) {
+        return false;
+      }
+      
+      // Check minimum age (18 years)
+      const age = today.getFullYear() - birthDate.getFullYear();
+      const monthDiff = today.getMonth() - birthDate.getMonth();
+      const calculatedAge = monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate()) 
+        ? age - 1 : age;
+      
+      return calculatedAge >= 18 && calculatedAge <= 120; // Also check maximum reasonable age
+    } catch (error) {
+      console.error('Error validating date of birth:', error);
+      return false;
+    }
   };
 
   // Debounced email availability check
@@ -116,8 +137,22 @@ const SignUpPage = () => {
     
     if (!formData.dateOfBirth) {
       newErrors.dateOfBirth = 'Ngày sinh là bắt buộc';
-    } else if (!validateAge(formData.dateOfBirth)) {
-      newErrors.dateOfBirth = 'Bạn phải ít nhất 18 tuổi';
+    } else {
+      const birthDate = new Date(formData.dateOfBirth);
+      const today = new Date();
+      
+      if (isNaN(birthDate.getTime())) {
+        newErrors.dateOfBirth = 'Ngày sinh không hợp lệ';
+      } else if (birthDate > today) {
+        newErrors.dateOfBirth = 'Ngày sinh không thể là ngày trong tương lai';
+      } else if (!validateAge(formData.dateOfBirth)) {
+        const age = today.getFullYear() - birthDate.getFullYear();
+        if (age > 120) {
+          newErrors.dateOfBirth = 'Ngày sinh không hợp lệ';
+        } else {
+          newErrors.dateOfBirth = 'Bạn phải ít nhất 18 tuổi';
+        }
+      }
     }
     
     if (!formData.email) {
@@ -316,6 +351,10 @@ const SignUpPage = () => {
             sx={{ mt: 2 }}
             InputLabelProps={{ shrink: true }}
             helperText="Bạn phải ít nhất 18 tuổi để đăng ký"
+            inputProps={{
+              min: new Date(new Date().getFullYear() - 120, 0, 1).toISOString().split('T')[0], // 120 years ago
+              max: new Date(new Date().getFullYear() - 18, new Date().getMonth(), new Date().getDate()).toISOString().split('T')[0] // 18 years ago
+            }}
           />
 
           <CosplayInput

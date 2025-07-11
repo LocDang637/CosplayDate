@@ -61,7 +61,13 @@ export const cosplayerAPI = {
         hasData: !!response.data,
         hasDataData: !!response.data?.data,
         hasCosplayers: !!response.data?.data?.cosplayers,
-        cosplayersCount: response.data?.data?.cosplayers?.length || 0
+        cosplayersCount: response.data?.data?.cosplayers?.length || 0,
+        hasAvailableCategories: !!response.data?.data?.availableCategories,
+        hasAvailableSpecialties: !!response.data?.data?.availableSpecialties,
+        hasAvailableTags: !!response.data?.data?.availableTags,
+        categoriesCount: response.data?.data?.availableCategories?.length || 0,
+        specialtiesCount: response.data?.data?.availableSpecialties?.length || 0,
+        tagsCount: response.data?.data?.availableTags?.length || 0
       });
 
       // Fixed: Extract cosplayers from the nested structure
@@ -85,7 +91,19 @@ export const cosplayerAPI = {
 
       return {
         success: true,
-        data: cosplayersArray, // Return the array directly
+        data: {
+          cosplayers: cosplayersArray,
+          totalCount: response.data.data.totalCount || 0,
+          currentPage: response.data.data.currentPage || 1,
+          pageSize: response.data.data.pageSize || 12,
+          totalPages: response.data.data.totalPages || 1,
+          hasNextPage: response.data.data.hasNextPage || false,
+          hasPreviousPage: response.data.data.hasPreviousPage || false,
+          // Include filter options for frontend
+          availableCategories: response.data.data.availableCategories || [],
+          availableSpecialties: response.data.data.availableSpecialties || [],
+          availableTags: response.data.data.availableTags || []
+        },
         pagination: paginationData,
         message: response.data?.message || 'Cosplayers loaded successfully'
       };
@@ -93,7 +111,18 @@ export const cosplayerAPI = {
       console.error('Failed to load cosplayers:', error);
       return {
         success: false,
-        data: [],
+        data: {
+          cosplayers: [],
+          totalCount: 0,
+          currentPage: 1,
+          pageSize: 12,
+          totalPages: 0,
+          hasNextPage: false,
+          hasPreviousPage: false,
+          availableCategories: [],
+          availableSpecialties: [],
+          availableTags: []
+        },
         pagination: {},
         message: error.response?.data?.message || 'Failed to load cosplayers',
         errors: error.response?.data?.errors || {}
@@ -316,119 +345,43 @@ export const cosplayerAPI = {
         isSuccess: response.data?.isSuccess
       });
 
-      // FIXED: Handle different response formats properly
       if (response.status === 200 || response.status === 201) {
-        // Check if response indicates success
         if (response.data?.isSuccess === true) {
-          // Success case - update local storage
-          const user = JSON.parse(localStorage.getItem('user') || '{}');
-          const updatedUser = {
-            ...user,
-            userType: 'Cosplayer',
-            cosplayerId: response.data.data?.cosplayerId || response.data.data?.id
-          };
-          localStorage.setItem('user', JSON.stringify(updatedUser));
-          console.log('✅ Updated user type in localStorage:', updatedUser);
+          // Success case - clear old token and session
+          console.log('✅ Successfully became a cosplayer, clearing old session...');
+
+          // Clear the old token and user data
+          localStorage.removeItem('token');
+          localStorage.removeItem('user');
 
           return {
             success: true,
             data: response.data.data || response.data,
-            message: response.data.message || 'Successfully became a cosplayer'
+            message: response.data.message || 'Successfully became a cosplayer',
+            requiresRelogin: true // Flag to indicate re-login is needed
           };
         }
-        // Handle explicit failure response
         else if (response.data?.isSuccess === false) {
           console.log('❌ API: Backend returned failure:', response.data);
           return {
             success: false,
-            message: response.data.message || 'Failed to become cosplayer',
+            message: response.data.message || 'Failed to become a cosplayer',
             errors: response.data.errors || {}
           };
         }
-        // Handle response without explicit isSuccess field
-        else if (response.data?.data || response.data?.cosplayerId) {
-          const user = JSON.parse(localStorage.getItem('user') || '{}');
-          const updatedUser = {
-            ...user,
-            userType: 'Cosplayer',
-            cosplayerId: response.data.data?.cosplayerId || response.data.cosplayerId
-          };
-          localStorage.setItem('user', JSON.stringify(updatedUser));
-
-          return {
-            success: true,
-            data: response.data.data || response.data,
-            message: response.data.message || 'Successfully became a cosplayer'
-          };
-        }
       }
 
-      // Fallback for unexpected response
       return {
         success: false,
-        message: 'Unexpected response format',
-        errors: {}
+        message: 'Unexpected response from server'
       };
-
     } catch (error) {
-      console.error('❌ API: Error becoming cosplayer:', {
-        status: error.response?.status,
-        statusText: error.response?.statusText,
-        data: error.response?.data,
-        message: error.response?.data?.message,
-        errors: error.response?.data?.errors
-      });
-
-      // FIXED: Better error handling for different status codes
-      if (error.response?.status === 400) {
-        // Handle validation errors
-        const errorData = error.response.data;
-
-        if (errorData?.errors && typeof errorData.errors === 'object') {
-          // Handle ModelState validation errors
-          const validationErrors = {};
-          Object.keys(errorData.errors).forEach(key => {
-            const errorValue = errorData.errors[key];
-            validationErrors[key] = Array.isArray(errorValue) ? errorValue[0] : errorValue;
-          });
-
-          return {
-            success: false,
-            message: errorData.message || 'Validation failed',
-            errors: validationErrors
-          };
-        } else {
-          return {
-            success: false,
-            message: errorData?.message || 'Invalid data provided. Please check your input.',
-            errors: errorData?.errors || { validation: 'Bad request' }
-          };
-        }
-      } else if (error.response?.status === 401) {
-        return {
-          success: false,
-          message: 'Authentication required. Please login again.',
-          errors: { unauthorized: true }
-        };
-      } else if (error.response?.status === 403) {
-        return {
-          success: false,
-          message: 'You do not have permission to perform this action.',
-          errors: { forbidden: true }
-        };
-      } else if (error.response?.status === 409) {
-        return {
-          success: false,
-          message: 'You are already a cosplayer.',
-          errors: { conflict: true }
-        };
-      } else {
-        return {
-          success: false,
-          message: error.response?.data?.message || 'Failed to become cosplayer. Please try again.',
-          errors: error.response?.data?.errors || { network: true }
-        };
-      }
+      console.error('❌ API: Error in becomeCosplayer:', error);
+      return {
+        success: false,
+        message: error.response?.data?.message || 'Failed to become a cosplayer',
+        errors: error.response?.data?.errors || {}
+      };
     }
   },
 
@@ -445,16 +398,17 @@ export const cosplayerAPI = {
         services = response.data.data.services || [];
         cosplayerName = response.data.data.cosplayerName || '';
 
-        // Transform services to match expected structure
+        // FIXED: Keep the original field names instead of transforming them
         services = services.map(service => ({
           id: service.id,
-          name: service.serviceName,
-          description: service.serviceDescription,
+          serviceName: service.serviceName,  // Keep original field name
+          serviceDescription: service.serviceDescription,  // Keep original field name
           // Price and duration will need to be added from another source or set as defaults
           price: service.price || service.pricePerSlot || 500000, // Default price
           duration: service.duration || 60, // Default 60 minutes
           category: service.category || 'General',
-          includedItems: service.includedItems || []
+          includedItems: service.includedItems || [],
+          isActive: service.isActive !== undefined ? service.isActive : true
         }));
       }
 
@@ -536,21 +490,35 @@ export const cosplayerMediaAPI = {
   uploadPhoto: async (photoData) => {
     try {
       const formData = new FormData();
+
+      // Required field - must match backend exactly
       formData.append('File', photoData.file);
+
+      // Optional fields with proper casing and defaults
       formData.append('Title', photoData.title || '');
       formData.append('Description', photoData.description || '');
-      formData.append('Category', photoData.category || '');
-      formData.append('IsPrivate', photoData.isPrivate || false);
+      formData.append('Category', photoData.category || 'Other'); // Default to 'Other' if not provided
+      formData.append('IsPortfolio', photoData.isPortfolio || false);
+      formData.append('DisplayOrder', photoData.displayOrder || 0);
+
+      // Handle tags if provided
+      if (photoData.tags && Array.isArray(photoData.tags)) {
+        photoData.tags.forEach(tag => {
+          formData.append('Tags', tag);
+        });
+      }
 
       const response = await api.post('/cosplayers/photos', formData, {
         headers: { 'Content-Type': 'multipart/form-data' }
       });
+
       return {
         success: true,
         data: response.data.data || response.data,
         message: response.data.message || 'Photo uploaded successfully'
       };
     } catch (error) {
+      console.error('Upload photo error:', error.response?.data);
       return {
         success: false,
         message: error.response?.data?.message || 'Failed to upload photo',
@@ -626,7 +594,8 @@ export const cosplayerMediaAPI = {
       formData.append('Title', videoData.title || '');
       formData.append('Description', videoData.description || '');
       formData.append('Category', videoData.category || '');
-      formData.append('IsPrivate', videoData.isPrivate || false);
+      formData.append('Duration', videoData.duration || 0);
+      formData.append('DisplayOrder', videoData.displayOrder || 0);
 
       const response = await api.post('/cosplayers/videos', formData, {
         headers: { 'Content-Type': 'multipart/form-data' }

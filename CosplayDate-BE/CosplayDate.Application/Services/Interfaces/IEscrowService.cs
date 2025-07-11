@@ -12,7 +12,7 @@ namespace CosplayDate.Application.Services.Interfaces
     {
         Task<EscrowTransaction> CreateEscrowAsync(int bookingId, int paymentId, decimal amount);
         Task<bool> ReleaseEscrowAsync(int bookingId);
-        Task<bool> RefundEscrowAsync(int escrowId, string reason);
+        Task<(bool Success, string? ErrorMessage)> RefundEscrowAsync(int escrowId, string reason);
         Task<EscrowTransaction?> GetEscrowByBookingAsync(int bookingId);
         Task<EscrowTransaction?> GetEscrowByIdAsync(int escrowId);
         Task<List<EscrowTransaction>> GetPendingEscrowsAsync(int cosplayerId);

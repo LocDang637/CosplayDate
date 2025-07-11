@@ -78,7 +78,7 @@ namespace CosplayDate.API.Controllers
 
             try
             {
-                var success = await _escrowService.RefundEscrowAsync(escrowId, request.Reason);
+                var (success, errorMessage) = await _escrowService.RefundEscrowAsync(escrowId, request.Reason);
 
                 if (!success)
                 {
