@@ -220,10 +220,10 @@ const MediaUploadDialog = ({
       return;
     }
 
-    // Validate file size
-    const maxSize = type === 'photo' ? 10 * 1024 * 1024 : 100 * 1024 * 1024;
+    // Validate file size - Server limit is 30MB for all files
+    const maxSize = type === 'photo' ? 10 * 1024 * 1024 : 25 * 1024 * 1024; // 25MB for videos to leave room for other form data
     if (file.size > maxSize) {
-      const maxSizeText = type === 'photo' ? '10MB' : '100MB';
+      const maxSizeText = type === 'photo' ? '10MB' : '25MB';
       setErrors(prev => ({ ...prev, file: `Kích thước file không được vượt quá ${maxSizeText}` }));
       return;
     }
@@ -269,6 +269,29 @@ const MediaUploadDialog = ({
     if (uploadSuccess) {
       setApiError('File này đã được tải lên thành công.');
       return;
+    }
+
+    // Pre-upload validation for file size
+    if (selectedFile) {
+      const maxSize = type === 'photo' ? 10 * 1024 * 1024 : 25 * 1024 * 1024;
+      if (selectedFile.size > maxSize) {
+        const maxSizeText = type === 'photo' ? '10MB' : '25MB';
+        setApiError(`File quá lớn! Kích thước file ${type === 'photo' ? 'ảnh' : 'video'} không được vượt quá ${maxSizeText}.`);
+        return;
+      }
+      
+      // Check if total payload might be too large (including thumbnail and form data)
+      let totalSize = selectedFile.size;
+      if (thumbnailFile) {
+        totalSize += thumbnailFile.size;
+      }
+      // Add estimated size for form data (JSON, strings, etc.)
+      totalSize += 1024 * 50; // 50KB buffer for form data
+      
+      if (totalSize > 30 * 1024 * 1024) { // 30MB server limit
+        setApiError('Tổng dung lượng file quá lớn. Vui lòng chọn file nhỏ hơn hoặc bỏ ảnh thumbnail.');
+        return;
+      }
     }
 
     setLoading(true);
@@ -328,8 +351,20 @@ const MediaUploadDialog = ({
           handleClose();
         }, 500);
       } else {
+        // Handle specific server errors
         if (result.errors && Object.keys(result.errors).length > 0) {
-          setErrors(result.errors);
+          // Check for file size error
+          const errorMessages = Object.values(result.errors).flat();
+          const hasFileSizeError = errorMessages.some(msg => 
+            msg.includes('Request body too large') || 
+            msg.includes('max request body size')
+          );
+          
+          if (hasFileSizeError) {
+            setApiError(`File quá lớn! Kích thước file ${type === 'photo' ? 'ảnh' : 'video'} không được vượt quá ${type === 'photo' ? '10MB' : '25MB'}.`);
+          } else {
+            setErrors(result.errors);
+          }
         } else {
           setApiError(result.message || 'Tải lên thất bại');
         }
@@ -339,7 +374,24 @@ const MediaUploadDialog = ({
     } catch (error) {
       console.error('Upload error for ID:', uploadId, error);
       clearInterval(progressInterval);
-      setApiError('Lỗi kết nối. Vui lòng thử lại.');
+      
+      // Handle specific error types
+      if (error.response && error.response.status === 400) {
+        const errorData = error.response.data;
+        if (errorData.errors && Object.values(errorData.errors).flat().some(msg => 
+          msg.includes('Request body too large') || msg.includes('max request body size')
+        )) {
+          setApiError(`File quá lớn! Kích thước file ${type === 'photo' ? 'ảnh' : 'video'} không được vượt quá ${type === 'photo' ? '10MB' : '25MB'}.`);
+        } else {
+          setApiError(errorData.title || 'Lỗi xác thực. Vui lòng kiểm tra lại thông tin.');
+        }
+      } else if (error.code === 'ECONNABORTED' || error.message.includes('timeout')) {
+        setApiError('Tải lên bị hết thời gian. File có thể quá lớn hoặc kết nối mạng chậm.');
+      } else if (error.code === 'ERR_NETWORK') {
+        setApiError('Lỗi kết nối mạng. Vui lòng kiểm tra kết nối internet.');
+      } else {
+        setApiError('Lỗi kết nối. Vui lòng thử lại.');
+      }
       setUploadProgress(0);
     } finally {
       setLoading(false);
@@ -410,17 +462,22 @@ const MediaUploadDialog = ({
                   <Typography variant="body1" color="text.secondary" sx={{ mb: 2 }}>
                     Kéo và thả hoặc nhấp để chọn file
                   </Typography>
-                  <Chip 
-                    label={type === 'photo' 
-                      ? 'JPEG, PNG, WebP • Tối đa 10MB'
-                      : 'MP4, AVI, MOV, WMV, WebM • Tối đa 100MB'
-                    }
-                    sx={{ 
-                      backgroundColor: 'background.paper',
-                      fontWeight: 500,
-                      fontSize: '0.85rem'
-                    }}
-                  />
+                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, alignItems: 'center' }}>
+                    <Chip 
+                      label={type === 'photo' 
+                        ? 'JPEG, PNG, WebP • Tối đa 10MB'
+                        : 'MP4, AVI, MOV, WMV, WebM • Tối đa 25MB'
+                      }
+                      sx={{ 
+                        backgroundColor: 'background.paper',
+                        fontWeight: 500,
+                        fontSize: '0.85rem'
+                      }}
+                    />
+                    <Typography variant="caption" color="text.secondary" sx={{ textAlign: 'center' }}>
+                      💡 Lưu ý: Server chỉ chấp nhận file có tổng dung lượng dưới 30MB
+                    </Typography>
+                  </Box>
                 </>
               ) : (
                 <Box sx={{ width: '100%', textAlign: 'center' }}>
@@ -520,6 +577,19 @@ const MediaUploadDialog = ({
                       <Typography variant="caption" color="text.secondary">
                         Tiếp tục để thêm chi tiết và đăng
                       </Typography>
+                      {/* File size warning */}
+                      {(() => {
+                        const maxSize = type === 'photo' ? 10 * 1024 * 1024 : 25 * 1024 * 1024;
+                        const sizeRatio = selectedFile.size / maxSize;
+                        if (sizeRatio > 0.8) {
+                          return (
+                            <Typography variant="caption" color="warning.main" sx={{ display: 'block', mt: 0.5 }}>
+                              ⚠️ File khá lớn ({formatFileSize(selectedFile.size)}/{type === 'photo' ? '10MB' : '25MB'})
+                            </Typography>
+                          );
+                        }
+                        return null;
+                      })()}
                     </Box>
                   </Box>
                 </CardContent>

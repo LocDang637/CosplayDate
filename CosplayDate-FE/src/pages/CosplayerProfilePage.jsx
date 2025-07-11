@@ -609,14 +609,12 @@ const CosplayerProfilePage = () => {
       id: 'gallery',
       label: 'Thư viện',
       icon: 'PhotoLibrary',
-      count: photos.length + videos.length,
       show: true
     },
     {
       id: 'followers',
       label: 'Người theo dõi',
       icon: 'People',
-      count: profileUser?.followersCount || profileUser?.stats?.totalFollowers || 0,
       show: isOwnProfile
     }
   ];

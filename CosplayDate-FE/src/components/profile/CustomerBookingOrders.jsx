@@ -74,6 +74,36 @@ const CustomerBookingOrders = () => {
     loadBookings();
   }, [page]); // Only reload when page changes, not filters
 
+  // Recalculate stats whenever bookings change
+  useEffect(() => {
+    if (bookings.length > 0) {
+      const calculatedStats = calculateStatsFromBookings(bookings);
+      console.log('Recalculating stats from bookings:', calculatedStats);
+      setStats(calculatedStats);
+    }
+  }, [bookings]);
+
+  // Calculate stats from bookings data
+  const calculateStatsFromBookings = (bookingsData) => {
+    if (!Array.isArray(bookingsData) || bookingsData.length === 0) {
+      return {
+        total: 0,
+        pending: 0,
+        confirmed: 0,
+        completed: 0,
+        cancelled: 0
+      };
+    }
+
+    return {
+      total: bookingsData.length,
+      pending: bookingsData.filter(b => b.status === 'Pending').length,
+      confirmed: bookingsData.filter(b => b.status === 'Confirmed').length,
+      completed: bookingsData.filter(b => b.status === 'Completed').length,
+      cancelled: bookingsData.filter(b => b.status === 'Cancelled').length
+    };
+  };
+
   const loadBookings = async () => {
     try {
       setLoading(true);
@@ -124,19 +154,32 @@ const CustomerBookingOrders = () => {
         }
 
         console.log('Processed bookings data:', bookingsData);
-        console.log('Stats data:', statsData);
+        console.log('Stats data from API:', statsData);
+        console.log('Pagination data:', paginationData);
 
         // Set the data
         setBookings(bookingsData || []);
 
-        // Set stats with fallback values
-        setStats({
-          totalBookings: statsData.totalBookings || statsData.total || bookingsData.length || 0,
-          pendingBookings: statsData.pendingBookings || statsData.pending || 0,
-          confirmedBookings: statsData.confirmedBookings || statsData.confirmed || 0,
-          completedBookings: statsData.completedBookings || statsData.completed || 0,
-          cancelledBookings: statsData.cancelledBookings || statsData.cancelled || 0
-        });
+        // Calculate stats if not provided by API
+        let calculatedStats = {};
+        if (Object.keys(statsData).length === 0) {
+          // Calculate from bookings data
+          calculatedStats = calculateStatsFromBookings(bookingsData);
+          console.log('Stats calculated from bookings:', calculatedStats);
+        } else {
+          // Use API stats with proper property names
+          calculatedStats = {
+            total: statsData.totalBookings || statsData.total || bookingsData.length || 0,
+            pending: statsData.pendingBookings || statsData.pending || 0,
+            confirmed: statsData.confirmedBookings || statsData.confirmed || 0,
+            completed: statsData.completedBookings || statsData.completed || 0,
+            cancelled: statsData.cancelledBookings || statsData.cancelled || 0
+          };
+          console.log('Stats used from API:', calculatedStats);
+        }
+
+        console.log('Final calculated stats:', calculatedStats);
+        setStats(calculatedStats);
 
         // Set pagination
         setTotalPages(paginationData.totalPages || 1);
@@ -146,10 +189,14 @@ const CustomerBookingOrders = () => {
       } else {
         console.warn('API response structure unexpected:', result);
         setError(result.message || 'Không thể tải danh sách đặt lịch');
+        // Set empty stats as fallback
+        setStats(calculateStatsFromBookings([]));
       }
     } catch (err) {
       console.error('Error loading bookings:', err);
       setError('Không thể tải danh sách đặt lịch. Vui lòng thử lại.');
+      // Set empty stats as fallback
+      setStats(calculateStatsFromBookings([]));
     } finally {
       setLoading(false);
     }
@@ -162,6 +209,7 @@ const CustomerBookingOrders = () => {
       const result = await bookingAPI.cancelBooking(cancelDialog.booking.id, cancelDialog.reason);
 
       if (result.success) {
+        // Reload bookings to get updated data and stats
         await loadBookings();
         setCancelDialog({ open: false, booking: null, reason: '' });
       } else {
@@ -452,7 +500,7 @@ const CustomerBookingOrders = () => {
 
             {/* Actions */}
             <Box sx={{ display: 'flex', gap: 1, justifyContent: 'flex-end' }}>
-              {booking.status === 'Completed' && !booking.review && (
+              {/* {booking.status === 'Completed' && !booking.review && (
                 <Button
                   variant="contained"
                   size="small"
@@ -461,7 +509,7 @@ const CustomerBookingOrders = () => {
                 >
                   Đánh giá
                 </Button>
-              )}
+              )} */}
 
               {canCancel && (
                 <Button
@@ -497,15 +545,6 @@ const CustomerBookingOrders = () => {
                   Xem tiến trình
                 </Button>
               )}
-
-              <Button
-                variant="outlined"
-                size="small"
-                startIcon={<Message />}
-                onClick={() => navigate(`/messages?userId=${booking.cosplayer?.id}`)}
-              >
-                Nhắn tin
-              </Button>
             </Box>
           </Collapse>
         </CardContent>
@@ -513,7 +552,6 @@ const CustomerBookingOrders = () => {
     );
   };
 
-  // Rest of the component remains the same...
   if (loading) {
     return (
       <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
@@ -607,6 +645,7 @@ const CustomerBookingOrders = () => {
               size="small"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
+              sx={{ width: 320 }}
               InputProps={{
                 startAdornment: (
                   <InputAdornment position="start">
@@ -623,6 +662,7 @@ const CustomerBookingOrders = () => {
               <Select
                 value={filterStatus}
                 onChange={(e) => setFilterStatus(e.target.value)}
+                sx={{ width: 150 }}
                 label="Trạng thái"
               >
                 <MenuItem value="">Tất cả</MenuItem>
@@ -656,6 +696,7 @@ const CustomerBookingOrders = () => {
               <Select
                 value={filterPaymentStatus}
                 onChange={(e) => setFilterPaymentStatus(e.target.value)}
+                sx={{ width: 150 }}
                 label="Thanh toán"
               >
                 <MenuItem value="">Tất cả</MenuItem>

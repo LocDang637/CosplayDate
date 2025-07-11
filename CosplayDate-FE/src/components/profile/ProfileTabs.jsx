@@ -23,7 +23,6 @@ import {
 const ProfileTabs = ({ 
   activeTab, 
   onTabChange, 
-  counts = {},
   customTabs = null // Allow custom tab configuration
 }) => {
   const theme = useTheme();
@@ -41,42 +40,36 @@ const ProfileTabs = ({
       id: 'gallery',
       label: 'Gallery',
       icon: <PhotoLibrary />,
-      count: counts.photos,
       show: true
     },
     {
       id: 'videos',
       label: 'Videos',
       icon: <VideoLibrary />,
-      count: counts.videos,
       show: true
     },
     {
       id: 'reviews',
       label: 'Reviews',
       icon: <Star />,
-      count: counts.reviews,
       show: true
     },
     {
       id: 'events',
       label: 'Events',
       icon: <Event />,
-      count: counts.events,
       show: true
     },
     {
       id: 'achievements',
       label: 'Awards',
       icon: <EmojiEvents />,
-      count: counts.achievements,
       show: true
     },
     {
       id: 'favorites',
       label: 'Favorites',
       icon: <Favorite />,
-      count: counts.favorites,
     }
   ];
 

@@ -25,6 +25,12 @@ const BookingServiceSelect = ({
   const navigate = useNavigate();
   const [selectedId, setSelectedId] = React.useState(selectedService?.id?.toString() || '');
 
+  // Debug logging
+  React.useEffect(() => {
+    console.log('BookingServiceSelect - Cosplayer data:', cosplayer);
+    console.log('BookingServiceSelect - Services data:', services);
+  }, [cosplayer, services]);
+
   // Ensure services is always an array
   const servicesList = Array.isArray(services) ? services : [];
 
@@ -84,27 +90,27 @@ const BookingServiceSelect = ({
         <CardContent>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
             <Avatar
-              src={cosplayer?.avatar}
+              src={cosplayer?.avatarUrl || cosplayer?.avatar}
               sx={{
                 width: 64,
                 height: 64,
                 border: '3px solid rgba(233, 30, 99, 0.2)'
               }}
             >
-              {cosplayer?.displayName?.[0]}
+              {cosplayer?.displayName?.[0] || cosplayer?.firstName?.[0] || 'C'}
             </Avatar>
             <Box>
               <Typography variant="h6" sx={{ fontWeight: 600 }}>
-                {cosplayer?.displayName}
+                {cosplayer?.displayName || `${cosplayer?.firstName || ''} ${cosplayer?.lastName || ''}`.trim() || 'Cosplayer'}
               </Typography>
               <Box sx={{ display: 'flex', gap: 1, mt: 0.5 }}>
                 <Chip
-                  label={`⭐ ${cosplayer?.rating || 5.0}`}
+                  label={`⭐ ${cosplayer?.rating || 0}`}
                   size="small"
                   sx={{ backgroundColor: 'rgba(255, 193, 7, 0.1)' }}
                 />
                 <Chip
-                  label={`${cosplayer?.completedBookings || 0} lần đặt`}
+                  label={`${cosplayer?.stats?.completedBookings || cosplayer?.completedBookings || 0} lần đặt`}
                   size="small"
                   variant="outlined"
                 />

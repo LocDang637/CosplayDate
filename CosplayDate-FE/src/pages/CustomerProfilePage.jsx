@@ -465,16 +465,6 @@ const CustomerProfilePage = () => {
     },
   ];
 
-  const customerTabCounts = {
-    reviews: mockStats.reviewsGiven,
-    events: mockStats.totalBookings,
-    achievements: 8,
-    favorites: mockStats.favoriteCosplayers,
-    bookings: mockStats.totalBookings,
-    following: profileUser?.followingCount || 0,
-    wallet: 1,
-  };
-
   const customerTabs = [
     {
       id: "wallet",
@@ -486,14 +476,12 @@ const CustomerProfilePage = () => {
       id: "bookings",
       label: "Bookings",
       icon: "Event",
-      count: customerTabCounts.bookings,
       show: isOwnProfile,
     },
     {
       id: "following",
       label: "Đang theo dõi",
       icon: "PersonAdd",
-      count: customerTabCounts.following,
       show: true,
     },
   ];
@@ -663,7 +651,6 @@ const CustomerProfilePage = () => {
                 activeTab={activeTab}
                 onTabChange={handleTabChange}
                 isOwnProfile={isOwnProfile}
-                counts={customerTabCounts}
                 customTabs={customerTabs}
               />
 

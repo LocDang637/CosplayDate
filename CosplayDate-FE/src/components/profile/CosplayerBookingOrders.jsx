@@ -499,11 +499,8 @@ const CosplayerBookingOrders = ({ isOwnProfile }) => {
     if (booking.status === 'Pending') {
       statuses.push('Confirmed', 'Cancelled');
     } else if (booking.status === 'Confirmed') {
-      const bookingDate = parseISO(booking.bookingDate);
-      const now = new Date();
-      if (bookingDate <= now) {
-        statuses.push('Completed');
-      }
+      // Allow completion for confirmed bookings
+      statuses.push('Completed');
       statuses.push('Cancelled');
     }
 
@@ -1067,13 +1064,6 @@ const CosplayerBookingOrders = ({ isOwnProfile }) => {
         </Box>
       ) : (
         <>
-          {/* Results count */}
-          <Box sx={{ mb: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <Typography variant="body2" color="text.secondary">
-              Hiển thị {filteredBookings.length} trong số {bookings.length} kết quả
-            </Typography>
-          </Box>
-
           {filteredBookings.map((booking) => (
             <BookingCard key={booking.id} booking={booking} />
           ))}
