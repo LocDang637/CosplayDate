@@ -33,6 +33,25 @@ namespace CosplayDate.Infrastructure.Services
             var checksumKey = _configuration["PayOS:ChecksumKey"] ?? throw new ArgumentNullException("PayOS:ChecksumKey");
 
             _payOS = new PayOS(clientId, apiKey, checksumKey);
+            // ===== FIX: Configure webhook immediately on service initialization =====
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    var backendBaseUrl = _configuration["App:BackendUrl"] ?? "https://cosplaydate-production-aa2c.up.railway.app";
+                    var webhookUrl = $"{backendBaseUrl}/api/payment/webhook";
+
+                    _logger.LogInformation("🔧 Configuring PayOS webhook URL on startup: {WebhookUrl}", webhookUrl);
+
+                    await _payOS.confirmWebhook(webhookUrl);
+
+                    _logger.LogInformation("✅ PayOS webhook configured successfully on startup");
+                }
+                catch (Exception webhookError)
+                {
+                    _logger.LogError(webhookError, "❌ Failed to configure webhook on startup: {Error}", webhookError.Message);
+                }
+            });
         }
 
         private static string TruncateForPayOS(string? input, int maxLength)
@@ -307,6 +326,29 @@ namespace CosplayDate.Infrastructure.Services
             {
                 _logger.LogError(ex, "❌ Error confirming webhook URL: {WebhookUrl}", webhookUrl);
                 return ApiResponse<string>.Error("Failed to confirm webhook URL");
+            }
+        }
+
+        // Also add this method to manually configure webhook via API endpoint
+        public async Task<ApiResponse<string>> ConfigureWebhookAsync()
+        {
+            try
+            {
+                var backendBaseUrl = _configuration["App:BackendUrl"] ?? "https://cosplaydate-production-aa2c.up.railway.app";
+                var webhookUrl = $"{backendBaseUrl}/api/payment/webhook";
+
+                _logger.LogInformation("🔧 Manual webhook configuration: {WebhookUrl}", webhookUrl);
+
+                await _payOS.confirmWebhook(webhookUrl);
+
+                _logger.LogInformation("✅ Webhook configured manually");
+
+                return ApiResponse<string>.Success("", $"Webhook configured to: {webhookUrl}");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "❌ Manual webhook configuration failed");
+                return ApiResponse<string>.Error($"Failed to configure webhook: {ex.Message}");
             }
         }
     }
