@@ -15,5 +15,7 @@ namespace CosplayDate.Application.Services.Interfaces
         Task<ApiResponse<string>> CancelPaymentLinkAsync(long orderCode, string? reason = null);
         Task<ApiResponse<WebhookResponseDto>> VerifyWebhookAsync(WebhookRequestDto webhookData);
         Task<ApiResponse<string>> ConfirmWebhookAsync(string webhookUrl);
+
+        Task<ApiResponse<string>> ConfigureWebhookAsync();
     }
 }
