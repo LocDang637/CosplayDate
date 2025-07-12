@@ -126,6 +126,7 @@ namespace CosplayDate.Infrastructure.Services
                 catch (Exception webhookError)
                 {
                     _logger.LogWarning("⚠️ Failed to configure webhook (continuing anyway): {Error}", webhookError.Message);
+                    _logger.LogWarning("Current URL: " + backendBaseUrl);
                     // Don't fail the payment creation if webhook config fails
                 }
 
