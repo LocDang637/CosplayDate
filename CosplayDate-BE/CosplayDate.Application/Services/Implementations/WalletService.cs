@@ -669,7 +669,7 @@ namespace CosplayDate.Application.Services.Implementations
         }
 
    
-        public async Task<ApiResponse<string>> ReleaseEscrowAsync(int cosplayerId, decimal amount, int escrowId)
+        public async Task<ApiResponse<string>> ReleaseEscrowToCosplayerAsync(int cosplayerId, decimal amount, int escrowId)
         {
             try
             {
@@ -716,7 +716,7 @@ namespace CosplayDate.Application.Services.Implementations
         }
 
         // Refactored: RefundEscrowAsync always generates a unique transactionCode internally and retries if duplicate
-        public async Task<ApiResponse<string>> RefundEscrowAsync(int userId, decimal amount, int escrowId)
+        public async Task<ApiResponse<string>> RefundEscrowToCustomerAsync(int customerId, decimal amount, int escrowId)
         {
             int retry = 0;
             while (retry < 3)
@@ -726,8 +726,8 @@ namespace CosplayDate.Application.Services.Implementations
 
                 try
                 {
-                    _logger.LogInformation("Attempting to refund escrow #{EscrowId} for user #{UserId}, amount: {Amount}, transactionCode: {TransactionCode}",
-                        escrowId, userId, amount, transactionCode);
+                    _logger.LogInformation("Attempting to refund escrow #{EscrowId} for customer #{CustomerId}, amount: {Amount}, transactionCode: {TransactionCode}",
+                        escrowId, customerId, amount, transactionCode);
 
                     // Check if escrow was already refunded
                     var escrow = await _unitOfWork.EscrowTransactions.GetByIdAsync(escrowId);
@@ -755,24 +755,24 @@ namespace CosplayDate.Application.Services.Implementations
                     }
 
                     // Fetch user
-                    var user = await _unitOfWork.Users.GetByIdAsync(userId);
+                    var user = await _unitOfWork.Users.GetByIdAsync(customerId);
                     if (user == null)
                     {
-                        _logger.LogError("User #{UserId} not found for escrow #{EscrowId}", userId, escrowId);
-                        return ApiResponse<string>.Error("User not found");
+                        _logger.LogError("Customer #{CustomerId} not found for escrow #{EscrowId}", customerId, escrowId);
+                        return ApiResponse<string>.Error("Customer not found");
                     }
 
                     // TEST MODE: Always add refund to wallet
                     var currentBalance = user.WalletBalance ?? 0;
-                    _logger.LogInformation("[REFUND] Before refund: UserId={UserId}, Balance={Balance}", userId, user.WalletBalance);
+                    _logger.LogInformation("[REFUND] Before refund: UserId={UserId}, Balance={Balance}", customerId, user.WalletBalance);
                     user.WalletBalance = currentBalance + amount;
                     user.UpdatedAt = DateTime.UtcNow;
-                    _logger.LogInformation("[REFUND] After refund: UserId={UserId}, Balance={Balance}", userId, user.WalletBalance);
+                    _logger.LogInformation("[REFUND] After refund: UserId={UserId}, Balance={Balance}", customerId, user.WalletBalance);
 
                     // Create new WalletTransaction
                     var transaction = new WalletTransaction
                     {
-                        UserId = userId,
+                        UserId = customerId,
                         TransactionCode = transactionCode,
                         Type = "EscrowRefund",
                         Amount = amount,
@@ -792,12 +792,12 @@ namespace CosplayDate.Application.Services.Implementations
 
                     await _unitOfWork.SaveChangesAsync();
                     _logger.LogInformation("Saved refund transaction for escrow #{EscrowId}, UserId: {UserId}, Amount: {Amount}, NewBalance: {NewBalance}",
-                        escrowId, userId, amount, user.WalletBalance);
+                        escrowId, customerId, amount, user.WalletBalance);
 
                     _unitOfWork.Clear();
 
-                    _logger.LogInformation("Refunded escrow #{EscrowId} to user #{UserId} amount {Amount}, new balance: {Balance}",
-                        escrowId, userId, amount, user.WalletBalance);
+                    _logger.LogInformation("Refunded escrow #{EscrowId} to customer #{CustomerId} amount {Amount}, new balance: {Balance}",
+                        escrowId, customerId, amount, user.WalletBalance);
 
                     return ApiResponse<string>.Success(transaction.TransactionCode, "Escrow refund processed successfully");
                 }
@@ -812,7 +812,7 @@ namespace CosplayDate.Application.Services.Implementations
                         continue;
                     }
 
-                    _logger.LogError(ex, "[WALLET] Error processing escrow refund #{EscrowId} for user #{UserId}", escrowId, userId);
+                    _logger.LogError(ex, "[WALLET] Error processing escrow refund #{EscrowId} for customer #{CustomerId}", escrowId, customerId);
                     return ApiResponse<string>.Error($"Exception: {ex.Message}");
                 }
             }

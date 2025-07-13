@@ -20,9 +20,9 @@ namespace CosplayDate.Infrastructure.Services
         private readonly IUnitOfWork _unitOfWork;
 
         public PayOSService(
-            IConfiguration configuration,
-            ILogger<PayOSService> logger,
-            IUnitOfWork unitOfWork)
+    IConfiguration configuration,
+    ILogger<PayOSService> logger,
+    IUnitOfWork unitOfWork)
         {
             _configuration = configuration;
             _logger = logger;
@@ -33,6 +33,11 @@ namespace CosplayDate.Infrastructure.Services
             var checksumKey = _configuration["PayOS:ChecksumKey"] ?? throw new ArgumentNullException("PayOS:ChecksumKey");
 
             _payOS = new PayOS(clientId, apiKey, checksumKey);
+
+            _logger.LogInformation("✅ PayOS service initialized successfully. Webhook configured via dashboard.");
+
+            // REMOVED: All automatic webhook configuration code
+            // Webhook is now configured via PayOS dashboard: https://cosplaydate-production-aa2c.up.railway.app/api/payment/webhook
         }
 
         private static string TruncateForPayOS(string? input, int maxLength)
@@ -126,6 +131,7 @@ namespace CosplayDate.Infrastructure.Services
                 catch (Exception webhookError)
                 {
                     _logger.LogWarning("⚠️ Failed to configure webhook (continuing anyway): {Error}", webhookError.Message);
+                    _logger.LogWarning("Current URL: " + backendBaseUrl);
                     // Don't fail the payment creation if webhook config fails
                 }
 
@@ -306,6 +312,37 @@ namespace CosplayDate.Infrastructure.Services
             {
                 _logger.LogError(ex, "❌ Error confirming webhook URL: {WebhookUrl}", webhookUrl);
                 return ApiResponse<string>.Error("Failed to confirm webhook URL");
+            }
+        }
+
+        // Also add this method to manually configure webhook via API endpoint
+        public async Task<ApiResponse<string>> ConfigureWebhookAsync()
+        {
+            try
+            {
+                // Try multiple configuration key formats for Railway compatibility
+                var backendBaseUrl = _configuration["App:BackendUrl"]
+                                  ?? _configuration["App__BackendUrl"]
+                                  ?? _configuration["BACKEND_URL"]
+                                  ?? Environment.GetEnvironmentVariable("BACKEND_URL")
+                                  ?? "https://cosplaydate-production-aa2c.up.railway.app";
+
+                var webhookUrl = $"{backendBaseUrl}/api/payment/webhook";
+
+                _logger.LogInformation("🔧 Manual webhook configuration requested");
+                _logger.LogInformation("🔧 Backend base URL resolved to: {BackendBaseUrl}", backendBaseUrl);
+                _logger.LogInformation("🔧 Webhook URL: {WebhookUrl}", webhookUrl);
+
+                await _payOS.confirmWebhook(webhookUrl);
+
+                _logger.LogInformation("✅ Webhook configured manually to: {WebhookUrl}", webhookUrl);
+
+                return ApiResponse<string>.Success("", $"Webhook configured to: {webhookUrl}");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "❌ Manual webhook configuration failed");
+                return ApiResponse<string>.Error($"Failed to configure webhook: {ex.Message}");
             }
         }
     }

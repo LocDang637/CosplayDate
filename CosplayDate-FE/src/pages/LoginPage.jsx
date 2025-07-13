@@ -55,20 +55,73 @@ const LoginPage = () => {
     if (apiError) setApiError(''); // Clear API error when user types
   };
 
-  const handleSuccessfulLogin = (userData, token = null) => {
-    console.log('✅ Login successful!', userData);
+  // NEW: Function to determine redirect path based on user type
+  const getRedirectPath = (userData) => {
+    const userType = userData.userType || userData.role;
+    
+    console.log('🔍 Determining redirect path for user:', {
+      userType,
+      email: userData.email,
+      firstName: userData.firstName
+    });
+    
+    switch (userType) {
+      case 'Admin':
+        console.log('🎯 Admin user detected - redirecting to admin dashboard');
+        return '/admin/dashboard';
+      case 'Cosplayer':
+        console.log('🎭 Cosplayer user detected - redirecting to homepage');
+        return '/';
+      case 'Customer':
+        console.log('👤 Customer user detected - redirecting to homepage');
+        return '/';
+      default:
+        console.log('❓ Unknown user type - redirecting to homepage');
+        return '/';
+    }
+  };
 
+  // NEW: Function to get welcome message based on user type
+  const getWelcomeMessage = (userData) => {
+    const userType = userData.userType || userData.role;
+    const name = userData.firstName || 'Người dùng';
+    
+    switch (userType) {
+      case 'Admin':
+        return `Chào mừng quản trị viên ${name}! Hệ thống đang chờ bạn quản lý.`;
+      case 'Cosplayer':
+        return `Chào mừng trở lại, ${name}! Hôm nay bạn sẽ mang đến những trải nghiệm tuyệt vời nào?`;
+      case 'Customer':
+        return `Chào mừng trở lại, ${name}! Sẵn sàng khám phá thế giới cosplay chưa?`;
+      default:
+        return `Chào mừng trở lại, ${name}!`;
+    }
+  };
+
+  const handleSuccessfulLogin = (userData, token = null) => {
+    console.log('✅ Login successful!', {
+      user: userData,
+      userType: userData.userType || userData.role,
+      hasToken: !!token
+    });
+    
     // Store user data and token
     localStorage.setItem('user', JSON.stringify(userData));
     if (token) {
       localStorage.setItem('token', token);
     }
-
-    // Navigate to home page with welcome message
-    navigate('/', {
-      state: {
-        message: `Chào mừng trở lại, ${userData.firstName}!`,
-        user: userData
+    
+    // NEW: Get redirect path and welcome message based on user type
+    const redirectPath = getRedirectPath(userData);
+    const welcomeMessage = getWelcomeMessage(userData);
+    
+    console.log('🚀 Redirecting to:', redirectPath);
+    
+    // Navigate to appropriate page with welcome message
+    navigate(redirectPath, { 
+      state: { 
+        message: welcomeMessage,
+        user: userData 
       }
     });
   };
@@ -120,7 +173,8 @@ const LoginPage = () => {
         hasUser: !!result.data?.user,
         hasToken: !!result.data?.token,
         isVerified: result.data?.isVerified,
-        userEmail: result.data?.user?.email
+        userEmail: result.data?.user?.email,
+        userType: result.data?.user?.userType || result.data?.user?.role // NEW: Log user type
       });
 
       if (result.success) {
@@ -129,7 +183,8 @@ const LoginPage = () => {
         console.log('Processing successful result:', {
           isVerified,
           hasToken: !!token,
-          userEmail: user?.email
+          userEmail: user?.email,
+          userType: user?.userType || user?.role // NEW: Log user type
         });
 
         if (isVerified && token) {
@@ -363,6 +418,10 @@ const LoginPage = () => {
           }}>
             <Typography variant="body2" sx={{ fontSize: '11px', color: 'text.secondary' }}>
               🌐 API Endpoint: {import.meta.env.VITE_API_BASE_URL || 'http://localhost:5068/api'}
+            </Typography>
+            {/* NEW: Show login instructions for testing */}
+            <Typography variant="body2" sx={{ fontSize: '11px', color: 'text.secondary', mt: 1 }}>
+              👨‍💼 Admin: admin@cosplaydate.com | 🎭 Cosplayer/Customer: Use regular accounts
             </Typography>
           </Box>
         </Box>

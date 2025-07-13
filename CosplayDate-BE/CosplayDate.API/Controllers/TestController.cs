@@ -1,4 +1,5 @@
 ﻿// TestController.cs - Create this to test authentication
+using CosplayDate.Application.Services.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
@@ -9,6 +10,19 @@ namespace CosplayDate.API.Controllers
     [Route("api/[controller]")]
     public class TestController : ControllerBase
     {
+        private readonly IPayOSService _payOSService;
+        private readonly IWalletService _walletService;
+        private readonly ILogger<TestController> _logger;
+
+        public TestController(
+            IPayOSService payOSService,
+            IWalletService walletService,
+            ILogger<TestController> logger)
+        {
+            _payOSService = payOSService;
+            _walletService = walletService;
+            _logger = logger;
+        }
         /// <summary>
         /// Public endpoint - no authentication required
         /// </summary>
@@ -91,5 +105,7 @@ namespace CosplayDate.API.Controllers
                 timestamp = DateTime.UtcNow
             });
         }
+
+        
     }
 }
