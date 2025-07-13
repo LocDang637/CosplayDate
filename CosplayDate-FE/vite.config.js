@@ -4,6 +4,7 @@ import react from '@vitejs/plugin-react'
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [react()],
+  base: '/', // Ensure assets are loaded from root
   server: {
     proxy: {
       '/api': {
@@ -18,6 +19,14 @@ export default defineConfig({
             console.log('Proxying request to:', proxyReq.getHeader('host') + proxyReq.path);
           });
         }
+      }
+    }
+  },
+  build: {
+    rollupOptions: {
+      output: {
+        // Disable code splitting to avoid chunk loading issues
+        manualChunks: undefined
       }
     }
   }
