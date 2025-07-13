@@ -1,0 +1,91 @@
+using CosplayDate.Application.DTOs.Review;
+using CosplayDate.Application.Services.Interfaces;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+using System.Security.Claims;
+using System.Threading.Tasks;
+using System.Linq;
+
+namespace CosplayDate.API.Controllers
+{
+    [Route("api/[controller]")]
+    [ApiController]
+    [Authorize]
+    public class ReviewController : ControllerBase
+    {
+        private readonly IReviewService _reviewService;
+        public ReviewController(IReviewService reviewService)
+        {
+            _reviewService = reviewService;
+        }
+
+        /// <summary>
+        /// Tạo review cho booking/cosplayer
+        /// </summary>
+        [HttpPost]
+        public async Task<IActionResult> CreateReview([FromBody] CreateReviewRequestDto request)
+        {
+            var customerId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
+            var result = await _reviewService.CreateReviewAsync(customerId, request);
+            if (result.IsSuccess) return Ok(result);
+            return BadRequest(result);
+        }
+
+        /// <summary>
+        /// Lấy danh sách review của cosplayer (có phân trang)
+        /// </summary>
+        [HttpGet("cosplayer/{cosplayerId}")]
+        public async Task<IActionResult> GetReviewsForCosplayer(int cosplayerId, int page = 1, int pageSize = 10)
+        {
+            var result = await _reviewService.GetReviewsForCosplayerAsync(cosplayerId, page, pageSize);
+            return Ok(result);
+        }
+
+        /// <summary>
+        /// Lấy điểm trung bình rating của cosplayer
+        /// </summary>
+        [HttpGet("cosplayer/{cosplayerId}/average")]
+        public async Task<IActionResult> GetAverageRatingForCosplayer(int cosplayerId)
+        {
+            var result = await _reviewService.GetAverageRatingForCosplayerAsync(cosplayerId);
+            return Ok(result);
+        }
+
+        /// <summary>
+        /// Cập nhật review (chỉ chủ review)
+        /// </summary>
+        [HttpPut("{reviewId}")]
+        public async Task<IActionResult> UpdateReview(int reviewId, [FromBody] UpdateReviewRequestDto request)
+        {
+            var customerId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
+            var result = await _reviewService.UpdateReviewAsync(reviewId, customerId, request);
+            if (result.IsSuccess) return Ok(result);
+            return BadRequest(result);
+        }
+
+        /// <summary>
+        /// Xóa review (customer hoặc admin)
+        /// </summary>
+        [HttpDelete("{reviewId}")]
+        public async Task<IActionResult> DeleteReview(int reviewId)
+        {
+            var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
+            var isAdmin = User.IsInRole("Admin") || User.Claims.Any(c => c.Type == ClaimTypes.Role && c.Value == "Admin");
+            var result = await _reviewService.DeleteReviewAsync(reviewId, userId, isAdmin);
+            if (result.IsSuccess) return Ok(result);
+            return BadRequest(result);
+        }
+
+        /// <summary>
+        /// Cosplayer trả lời review (owner response)
+        /// </summary>
+        [HttpPost("{reviewId}/owner-response")]
+        public async Task<IActionResult> UpdateOwnerResponse(int reviewId, [FromBody] OwnerResponseRequestDto request)
+        {
+            var cosplayerId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
+            var result = await _reviewService.UpdateOwnerResponseAsync(reviewId, cosplayerId, request);
+            if (result.IsSuccess) return Ok(result);
+            return BadRequest(result);
+        }
+    }
+} 
