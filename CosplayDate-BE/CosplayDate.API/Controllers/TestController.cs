@@ -106,46 +106,6 @@ namespace CosplayDate.API.Controllers
             });
         }
 
-        // Add this endpoint to manually configure webhook
-        [HttpPost("configure-webhook")]
-        public async Task<IActionResult> ConfigureWebhook()
-        {
-            try
-            {
-                var result = await _payOSService.ConfigureWebhookAsync();
-
-                if (result.IsSuccess)
-                {
-                    return Ok(new
-                    {
-                        message = "Webhook configured successfully",
-                        url = $"{Request.Scheme}://{Request.Host}/api/payment/webhook"
-                    });
-                }
-
-                return BadRequest(new { message = result.Message });
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error configuring webhook");
-                return StatusCode(500, new { message = "Internal server error" });
-            }
-        }
-
-        // Test webhook endpoint
-        [HttpGet("webhook")]
-        [HttpPost("webhook")]
-        public IActionResult TestWebhook()
-        {
-            _logger.LogInformation("🎯 Webhook endpoint accessed: {Method} {Path}", Request.Method, Request.Path);
-
-            return Ok(new
-            {
-                message = "Webhook endpoint is working",
-                method = Request.Method,
-                timestamp = DateTime.UtcNow,
-                host = Request.Host.ToString()
-            });
-        }
+        
     }
 }
