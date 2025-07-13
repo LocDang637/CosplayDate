@@ -20,9 +20,9 @@ namespace CosplayDate.Infrastructure.Services
         private readonly IUnitOfWork _unitOfWork;
 
         public PayOSService(
-            IConfiguration configuration,
-            ILogger<PayOSService> logger,
-            IUnitOfWork unitOfWork)
+    IConfiguration configuration,
+    ILogger<PayOSService> logger,
+    IUnitOfWork unitOfWork)
         {
             _configuration = configuration;
             _logger = logger;
@@ -33,25 +33,11 @@ namespace CosplayDate.Infrastructure.Services
             var checksumKey = _configuration["PayOS:ChecksumKey"] ?? throw new ArgumentNullException("PayOS:ChecksumKey");
 
             _payOS = new PayOS(clientId, apiKey, checksumKey);
-            // ===== FIX: Configure webhook immediately on service initialization =====
-            _ = Task.Run(async () =>
-            {
-                try
-                {
-                    var backendBaseUrl = _configuration["App:BackendUrl"] ?? "https://cosplaydate-production-aa2c.up.railway.app";
-                    var webhookUrl = $"{backendBaseUrl}/api/payment/webhook";
 
-                    _logger.LogInformation("🔧 Configuring PayOS webhook URL on startup: {WebhookUrl}", webhookUrl);
+            _logger.LogInformation("✅ PayOS service initialized successfully. Webhook configured via dashboard.");
 
-                    await _payOS.confirmWebhook(webhookUrl);
-
-                    _logger.LogInformation("✅ PayOS webhook configured successfully on startup");
-                }
-                catch (Exception webhookError)
-                {
-                    _logger.LogError(webhookError, "❌ Failed to configure webhook on startup: {Error}", webhookError.Message);
-                }
-            });
+            // REMOVED: All automatic webhook configuration code
+            // Webhook is now configured via PayOS dashboard: https://cosplaydate-production-aa2c.up.railway.app/api/payment/webhook
         }
 
         private static string TruncateForPayOS(string? input, int maxLength)
@@ -334,14 +320,22 @@ namespace CosplayDate.Infrastructure.Services
         {
             try
             {
-                var backendBaseUrl = _configuration["App:BackendUrl"] ?? "https://cosplaydate-production-aa2c.up.railway.app";
+                // Try multiple configuration key formats for Railway compatibility
+                var backendBaseUrl = _configuration["App:BackendUrl"]
+                                  ?? _configuration["App__BackendUrl"]
+                                  ?? _configuration["BACKEND_URL"]
+                                  ?? Environment.GetEnvironmentVariable("BACKEND_URL")
+                                  ?? "https://cosplaydate-production-aa2c.up.railway.app";
+
                 var webhookUrl = $"{backendBaseUrl}/api/payment/webhook";
 
-                _logger.LogInformation("🔧 Manual webhook configuration: {WebhookUrl}", webhookUrl);
+                _logger.LogInformation("🔧 Manual webhook configuration requested");
+                _logger.LogInformation("🔧 Backend base URL resolved to: {BackendBaseUrl}", backendBaseUrl);
+                _logger.LogInformation("🔧 Webhook URL: {WebhookUrl}", webhookUrl);
 
                 await _payOS.confirmWebhook(webhookUrl);
 
-                _logger.LogInformation("✅ Webhook configured manually");
+                _logger.LogInformation("✅ Webhook configured manually to: {WebhookUrl}", webhookUrl);
 
                 return ApiResponse<string>.Success("", $"Webhook configured to: {webhookUrl}");
             }
