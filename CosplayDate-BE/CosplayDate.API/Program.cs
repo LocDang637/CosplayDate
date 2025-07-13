@@ -214,6 +214,7 @@ builder.Services.AddScoped<IBookingNotificationService, BookingNotificationServi
 builder.Services.AddScoped<BookingValidationService>();
 builder.Services.AddScoped<BookingReminderBackgroundService>();
 builder.Services.AddScoped<IEscrowService, EscrowService>();
+builder.Services.AddScoped<IReviewService, ReviewService>();
 
 // ===== ADD ADMIN ANALYTICS SERVICE =====
 builder.Services.AddScoped<IAdminAnalyticsService, AdminAnalyticsService>();

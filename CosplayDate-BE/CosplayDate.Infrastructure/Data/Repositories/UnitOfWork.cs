@@ -45,6 +45,7 @@ namespace CosplayDate.Infrastructure.Data.Repositories
         public IRepository<Cosplayer> Cosplayers { get; private set; }
         public IRepository<EventParticipant> EventParticipants { get; private set; }
         public IRepository<PhotoLike> PhotoLikes { get; private set; }
+        public IRepository<ReviewTag> ReviewTags => Repository<ReviewTag>();
 
         public IRepository<T> Repository<T>() where T : class
         {

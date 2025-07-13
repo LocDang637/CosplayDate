@@ -17,6 +17,7 @@ namespace CosplayDate.Domain.Interfaces
         IRepository<Payment> Payments { get; }              // ADD THIS LINE
         IRepository<EscrowTransaction> EscrowTransactions { get; } // ADD THIS LINE
         IRepository<Review> Reviews { get; }
+        IRepository<ReviewTag> ReviewTags { get; }
         IRepository<WalletTransaction> WalletTransactions { get; }
         IRepository<UserFollow> UserFollows { get; }
         IRepository<UserInterest> UserInterests { get; }
