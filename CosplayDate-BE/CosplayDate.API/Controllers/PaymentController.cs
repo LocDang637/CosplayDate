@@ -498,48 +498,6 @@ namespace CosplayDate.API.Controllers
             }
         }
 
-        // Add this endpoint to manually configure webhook
-        [HttpPost("configure-webhook")]
-        public async Task<IActionResult> ConfigureWebhook()
-        {
-            try
-            {
-                var result = await _payOSService.ConfigureWebhookAsync();
-
-                if (result.IsSuccess)
-                {
-                    return Ok(new
-                    {
-                        message = "Webhook configured successfully",
-                        url = $"{Request.Scheme}://{Request.Host}/api/payment/webhook"
-                    });
-                }
-
-                return BadRequest(new { message = result.Message });
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error configuring webhook");
-                return StatusCode(500, new { message = "Internal server error" });
-            }
-        }
-
-        // Test webhook endpoint
-        [HttpGet("webhook")]
-        [HttpPost("webhook")]
-        public IActionResult TestWebhook()
-        {
-            _logger.LogInformation("🎯 Webhook endpoint accessed: {Method} {Path}", Request.Method, Request.Path);
-
-            return Ok(new
-            {
-                message = "Webhook endpoint is working",
-                method = Request.Method,
-                timestamp = DateTime.UtcNow,
-                host = Request.Host.ToString()
-            });
-        }
-
         private async Task TriggerManualWebhookProcessing(long orderCode, int amount)
         {
             try
@@ -572,6 +530,125 @@ namespace CosplayDate.API.Controllers
             catch (Exception ex)
             {
                 _logger.LogError(ex, "❌ Error in manual webhook processing for OrderCode: {OrderCode}", orderCode);
+            }
+        }
+
+        /// <summary>
+        /// Configure PayOS webhook URL manually
+        /// </summary>
+        [HttpPost("configure-webhook")]
+        [AllowAnonymous] // No auth needed for webhook config
+        public async Task<IActionResult> ConfigureWebhook()
+        {
+            try
+            {
+                _logger.LogInformation("🔧 Manual webhook configuration requested");
+
+                var result = await _payOSService.ConfigureWebhookAsync();
+
+                if (result.IsSuccess)
+                {
+                    var webhookUrl = $"{Request.Scheme}://{Request.Host}/api/payment/webhook";
+                    _logger.LogInformation("✅ Webhook configured to: {WebhookUrl}", webhookUrl);
+
+                    return Ok(new
+                    {
+                        isSuccess = true,
+                        message = "Webhook configured successfully",
+                        data = new
+                        {
+                            webhookUrl = webhookUrl,
+                            timestamp = DateTime.UtcNow,
+                            host = Request.Host.ToString()
+                        }
+                    });
+                }
+
+                _logger.LogError("❌ Webhook configuration failed: {Message}", result.Message);
+                return BadRequest(new
+                {
+                    isSuccess = false,
+                    message = result.Message,
+                    data = new { }
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "❌ Error configuring webhook");
+                return StatusCode(500, new
+                {
+                    isSuccess = false,
+                    message = "Internal server error",
+                    data = new { }
+                });
+            }
+        }
+
+        /// <summary>
+        /// Test webhook endpoint - GET method
+        /// </summary>
+        [HttpGet("webhook")]
+        [AllowAnonymous] // PayOS needs to access this without auth
+        public IActionResult TestWebhookGet()
+        {
+            try
+            {
+                _logger.LogInformation("🎯 Webhook GET accessed from {IP} at {Timestamp}",
+                    Request.HttpContext.Connection.RemoteIpAddress, DateTime.UtcNow);
+
+                return Ok(new
+                {
+                    isSuccess = true,
+                    message = "PayOS webhook endpoint is working",
+                    data = new
+                    {
+                        method = "GET",
+                        timestamp = DateTime.UtcNow,
+                        host = Request.Host.ToString(),
+                        path = Request.Path.ToString(),
+                        userAgent = Request.Headers.UserAgent.ToString(),
+                        remoteIp = Request.HttpContext.Connection.RemoteIpAddress?.ToString()
+                    }
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "❌ Error in webhook GET test");
+                return StatusCode(500, new { message = "Webhook test failed" });
+            }
+        }
+
+        /// <summary>
+        /// Get webhook configuration status
+        /// </summary>
+        [HttpGet("webhook-status")]
+        [AllowAnonymous]
+        public IActionResult GetWebhookStatus()
+        {
+            try
+            {
+                var webhookUrl = $"{Request.Scheme}://{Request.Host}/api/payment/webhook";
+
+                _logger.LogInformation("📊 Webhook status check requested");
+
+                return Ok(new
+                {
+                    isSuccess = true,
+                    message = "Webhook status retrieved",
+                    data = new
+                    {
+                        webhookUrl = webhookUrl,
+                        isReachable = true,
+                        timestamp = DateTime.UtcNow,
+                        environment = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ?? "Unknown",
+                        host = Request.Host.ToString()
+                    }
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "❌ Error getting webhook status");
+                return StatusCode(500, new { message = "Failed to get webhook status" });
             }
         }
     }
