@@ -13,5 +13,6 @@ namespace CosplayDate.Application.Services.Interfaces
         Task<ApiResponse<ReviewResponseDto>> UpdateReviewAsync(int reviewId, int customerId, UpdateReviewRequestDto request);
         Task<ApiResponse<bool>> DeleteReviewAsync(int reviewId, int userId, bool isAdmin = false);
         Task<ApiResponse<ReviewResponseDto>> UpdateOwnerResponseAsync(int reviewId, int cosplayerId, OwnerResponseRequestDto request);
+        Task<ApiResponse<ReviewResponseDto>> GetReviewByBookingIdAsync(int bookingId);
     }
-} 
+}

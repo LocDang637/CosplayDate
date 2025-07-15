@@ -3,6 +3,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import CosplayerBookingOrders from '../components/profile/CosplayerBookingOrders';
 import CosplayerFollowers from '../components/profile/CosplayerFollowers';
+import WalletTab from '../components/profile/WalletTab';
 import {
   Box,
   Container,
@@ -600,6 +601,12 @@ const CosplayerProfilePage = () => {
       show: true
     },
     {
+      id: 'wallet',
+      label: 'Ví',
+      icon: 'AccountBalanceWallet',
+      show: isOwnProfile
+    },
+    {
       id: 'bookings',
       label: 'Đặt lịch',
       icon: 'Event',
@@ -609,14 +616,12 @@ const CosplayerProfilePage = () => {
       id: 'gallery',
       label: 'Thư viện',
       icon: 'PhotoLibrary',
-      count: photos.length + videos.length,
       show: true
     },
     {
       id: 'followers',
       label: 'Người theo dõi',
       icon: 'People',
-      count: profileUser?.followersCount || profileUser?.stats?.totalFollowers || 0,
       show: isOwnProfile
     }
   ];
@@ -636,6 +641,17 @@ const CosplayerProfilePage = () => {
         return (
           <CosplayerBookingOrders
             isOwnProfile={isOwnProfile}
+          />
+        );
+      case 'wallet':
+        return (
+          <WalletTab
+            userType="Cosplayer"
+            balance={currentProfile?.balance || 0}
+            loyaltyPoints={currentProfile?.loyaltyPoints || 0}
+            onBalanceUpdate={(newBalance) => {
+              setCurrentProfile(prev => ({ ...prev, balance: newBalance }));
+            }}
           />
         );
       case 'gallery':

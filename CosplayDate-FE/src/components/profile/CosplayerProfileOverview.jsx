@@ -50,6 +50,7 @@ import {
 } from '@mui/icons-material';
 import { bookingAPI } from '../../services/bookingAPI';
 import { cosplayerAPI } from '../../services/cosplayerAPI';
+import { reviewAPI } from '../../services/reviewAPI';
 
 const CosplayerProfileOverview = ({ user, currentProfile, isOwnProfile }) => {
   const [upcomingBooking, setUpcomingBooking] = useState(null);
@@ -68,6 +69,12 @@ const CosplayerProfileOverview = ({ user, currentProfile, isOwnProfile }) => {
   const [formErrors, setFormErrors] = useState({});
   const [submitLoading, setSubmitLoading] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState(null);
+
+  // Reviews state
+  const [reviews, setReviews] = useState([]);
+  const [reviewsLoading, setReviewsLoading] = useState(true);
+  const [reviewsError, setReviewsError] = useState(null);
+  const [reviewsWithBookings, setReviewsWithBookings] = useState([]);
 
   console.log('upcomingBooking', upcomingBooking);
   console.log('loadingBooking', loadingBooking);
@@ -137,6 +144,7 @@ const CosplayerProfileOverview = ({ user, currentProfile, isOwnProfile }) => {
   useEffect(() => {
     if (user?.id) {
       loadServices();
+      loadReviews();
     }
   }, [user?.id]);
 
@@ -156,6 +164,31 @@ const CosplayerProfileOverview = ({ user, currentProfile, isOwnProfile }) => {
       setServicesError('Không thể tải danh sách dịch vụ');
     } finally {
       setServicesLoading(false);
+    }
+  };
+
+  const loadReviews = async () => {
+    try {
+      setReviewsLoading(true);
+      setReviewsError(null);
+
+      const result = await reviewAPI.getCosplayerReviews(user.id, 1, 10);
+
+      if (result.success && result.data && result.data.isSuccess) {
+        const reviewsData = result.data.data || [];
+        setReviews(reviewsData);
+        
+        // No need to fetch booking details anymore since serviceType is now included in the review response
+        console.log('Reviews with service type:', reviewsData);
+        setReviewsWithBookings(reviewsData);
+      } else {
+        setReviewsError(result.message || 'Không thể tải đánh giá');
+      }
+    } catch (err) {
+      console.error('Failed to load reviews:', err);
+      setReviewsError('Không thể tải đánh giá');
+    } finally {
+      setReviewsLoading(false);
     }
   };
 
@@ -360,6 +393,20 @@ const CosplayerProfileOverview = ({ user, currentProfile, isOwnProfile }) => {
               {formatDate(review.createdAt)}
             </Typography>
           </Box>
+          {review.serviceType && (
+            <Box sx={{ mt: 0.5 }}>
+              <Chip
+                label={review.serviceType}
+                size="small"
+                sx={{
+                  backgroundColor: 'rgba(233, 30, 99, 0.1)',
+                  color: 'primary.main',
+                  fontSize: '11px',
+                  height: '20px',
+                }}
+              />
+            </Box>
+          )}
         </Box>
         {review.isVerified && <Verified sx={{ color: 'success.main', fontSize: 16 }} />}
       </Box>
@@ -534,66 +581,51 @@ const CosplayerProfileOverview = ({ user, currentProfile, isOwnProfile }) => {
             )}
           </Paper>
 
-          <Paper
-            sx={{
-              borderRadius: '16px',
-              p: 3,
-              mb: 3,
-              background: 'rgba(255,255,255,0.95)',
-              border: '1px solid rgba(233, 30, 99, 0.1)',
-            }}
-          >
-            <Typography variant="h6" sx={{ fontWeight: 700, mb: 3, color: 'text.primary' }}>
-              Thống kê hoạt động
-            </Typography>
-            <Grid container spacing={2}>
-              <Grid size={{ xs: 6, sm: 3 }}>
-                <StatCard
-                  icon={<Event sx={{ color: 'white', fontSize: 20 }} />}
-                  title="Đơn đặt"
-                  value={user?.stats?.totalBookings || 0}
-                  subtitle="Tổng số đơn"
-                  color="#2196F3"
-                />
-              </Grid>
-              <Grid size={{ xs: 6, sm: 3 }}>
-                <StatCard
-                  icon={<Star sx={{ color: 'white', fontSize: 20 }} />}
-                  title="Hoàn thành"
-                  value={user?.stats?.completedBookings || 0}
-                  subtitle="Đơn thành công"
-                  color="#4CAF50"
-                />
-              </Grid>
-
-              {/* Private Information - Only for own profile */}
-              {isOwnProfile && currentProfile && (
-                <>
-                  <Grid size={{ xs: 6, sm: 3 }}>
-                    <StatCard
-                      icon={<AttachMoney sx={{ color: 'white', fontSize: 20 }} />}
-                      title="Ví tiền"
-                      value={new Intl.NumberFormat('vi-VN').format(currentProfile.walletBalance || 0)}
-                      subtitle="VND"
-                      color="#FF5722"
-                    />
-                  </Grid>
-                  <Grid size={{ xs: 6, sm: 3 }}>
-                    <StatCard
-                      icon={<TrendingUp sx={{ color: 'white', fontSize: 20 }} />}
-                      title="Điểm thưởng"
-                      value={currentProfile.loyaltyPoints || 0}
-                      subtitle="Loyalty Points"
-                      color="#3F51B5"
-                    />
-                  </Grid>
-                </>
-              )}
-            </Grid>
-          </Paper>
-
-          {/* ✅ FIXED: Safe reviews rendering */}
-          {user?.recentReviews && Array.isArray(user.recentReviews) && user.recentReviews.length > 0 && (
+          {/* ✅ UPDATED: Reviews section using API data */}
+          {reviewsLoading ? (
+            <Paper
+              sx={{
+                borderRadius: '16px',
+                p: 3,
+                background: 'rgba(255,255,255,0.95)',
+                border: '1px solid rgba(233, 30, 99, 0.1)',
+                textAlign: 'center',
+              }}
+            >
+              <CircularProgress size={24} />
+              <Typography variant="body2" sx={{ mt: 1, color: 'text.secondary' }}>
+                Đang tải đánh giá...
+              </Typography>
+            </Paper>
+          ) : reviewsError ? (
+            <Paper
+              sx={{
+                borderRadius: '16px',
+                p: 3,
+                background: 'rgba(255,255,255,0.95)',
+                border: '1px solid rgba(233, 30, 99, 0.1)',
+              }}
+            >
+              <Alert severity="error" sx={{ mb: 2 }}>
+                {reviewsError}
+              </Alert>
+              <Button
+                variant="outlined"
+                onClick={loadReviews}
+                sx={{
+                  borderColor: 'primary.main',
+                  color: 'primary.main',
+                  textTransform: 'none',
+                  '&:hover': {
+                    borderColor: 'primary.dark',
+                    backgroundColor: 'rgba(233, 30, 99, 0.05)'
+                  }
+                }}
+              >
+                Thử lại
+              </Button>
+            </Paper>
+          ) : reviewsWithBookings.length > 0 ? (
             <Paper
               sx={{
                 borderRadius: '16px',
@@ -605,11 +637,18 @@ const CosplayerProfileOverview = ({ user, currentProfile, isOwnProfile }) => {
               <Typography variant="h6" sx={{ fontWeight: 700, mb: 3, color: 'text.primary' }}>
                 Đánh giá gần đây
               </Typography>
-              {user.recentReviews.slice(0, 3).map((review, index) => (
+              {reviewsWithBookings.slice(0, 3).map((review, index) => (
                 <RecentReview key={review.id || index} review={review} />
               ))}
+              {reviewsWithBookings.length > 3 && (
+                <Box sx={{ textAlign: 'center', mt: 2 }}>
+                  <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+                    Còn {reviewsWithBookings.length - 3} đánh giá khác...
+                  </Typography>
+                </Box>
+              )}
             </Paper>
-          )}
+          ) : null}
         </Grid>
 
         <Grid size={{ xs: 12, md: 4 }}>
@@ -733,29 +772,6 @@ const CosplayerProfileOverview = ({ user, currentProfile, isOwnProfile }) => {
             <Typography variant="h6" sx={{ fontWeight: 700, mb: 3, color: 'text.primary' }}>
               Hiệu suất
             </Typography>
-
-            <Box sx={{ mb: 3 }}>
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                  Tỉ lệ thành công
-                </Typography>
-                <Typography variant="body2" sx={{ fontWeight: 600, color: 'success.main' }}>
-                  {Math.round(user?.stats?.successRate || 0)}%
-                </Typography>
-              </Box>
-              <LinearProgress
-                variant="determinate"
-                value={Math.min(user?.stats?.successRate || 0, 100)}
-                sx={{
-                  height: 8,
-                  borderRadius: 4,
-                  backgroundColor: 'rgba(76, 175, 80, 0.2)',
-                  '& .MuiLinearProgress-bar': {
-                    backgroundColor: '#4CAF50',
-                  },
-                }}
-              />
-            </Box>
 
             <Box sx={{ mb: 3 }}>
               <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>

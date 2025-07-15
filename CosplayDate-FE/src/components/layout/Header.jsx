@@ -144,8 +144,6 @@ const Header = ({ user = null, onLogout }) => {
       action: handleProfileNavigation,
       icon: user?.userType === 'Cosplayer' ? <PersonIcon /> : <AccountCircle />
     },
-    { label: 'Tin nhắn', path: '/messages', icon: <Message /> },
-    { label: 'Cài đặt', path: '/settings', icon: <Settings /> },
     { label: 'Đăng xuất', action: handleLogout, icon: <Logout /> },
   ] : [
     { label: 'Đăng nhập', path: '/login', icon: <Login /> },
@@ -238,25 +236,6 @@ const Header = ({ user = null, onLogout }) => {
     if (isAuthenticated) {
       return (
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-          {/* Notifications */}
-          <IconButton
-            onClick={() => handleNavigation('/notifications')}
-            sx={{ color: 'text.primary' }}
-          >
-            <Badge badgeContent={notificationCount} color="error">
-              <Notifications />
-            </Badge>
-          </IconButton>
-
-          {/* Messages */}
-          <IconButton
-            onClick={() => handleNavigation('/messages')}
-            sx={{ color: 'text.primary' }}
-          >
-            <Message />
-          </IconButton>
-
-          {/* Profile Menu */}
           <IconButton
             onClick={handleProfileMenuOpen}
             sx={{ ml: 1 }}

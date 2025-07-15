@@ -18,5 +18,6 @@ namespace CosplayDate.Application.DTOs.Review
         public List<string> Tags { get; set; } = new();
         public string CustomerName { get; set; } = string.Empty;
         public string? CustomerAvatarUrl { get; set; }
+        public string? ServiceType { get; set; }
     }
-} 
+}

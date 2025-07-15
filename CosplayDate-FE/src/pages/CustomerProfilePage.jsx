@@ -25,7 +25,7 @@ import Header from '../components/layout/Header';
 import Footer from '../components/layout/Footer';
 import CustomerProfileHeader from '../components/profile/CustomerProfileHeader';
 import ProfileTabs from '../components/profile/ProfileTabs';
-import CustomerWallet from '../components/profile/CustomerWallet';
+import WalletTab from '../components/profile/WalletTab';
 
 import ProfileEditModal from '../components/profile/ProfileEditModal';
 import CustomerBookingOrders from '../components/profile/CustomerBookingOrders';
@@ -465,35 +465,23 @@ const CustomerProfilePage = () => {
     },
   ];
 
-  const customerTabCounts = {
-    reviews: mockStats.reviewsGiven,
-    events: mockStats.totalBookings,
-    achievements: 8,
-    favorites: mockStats.favoriteCosplayers,
-    bookings: mockStats.totalBookings,
-    following: profileUser?.followingCount || 0,
-    wallet: 1,
-  };
-
   const customerTabs = [
     {
       id: "wallet",
-      label: "Wallet",
+      label: "Ví",
       icon: "AccountBalanceWallet",
       show: isOwnProfile,
     },
     {
       id: "bookings",
-      label: "Bookings",
+      label: "Đặt lịch",
       icon: "Event",
-      count: customerTabCounts.bookings,
       show: isOwnProfile,
     },
     {
       id: "following",
       label: "Đang theo dõi",
       icon: "PersonAdd",
-      count: customerTabCounts.following,
       show: true,
     },
   ];
@@ -502,7 +490,8 @@ const CustomerProfilePage = () => {
     switch (activeTab) {
       case "wallet":
         return (
-          <CustomerWallet
+          <WalletTab
+            userType="Customer"
             balance={currentProfile?.walletBalance || profileUser?.walletBalance}
             loyaltyPoints={currentProfile?.loyaltyPoints || profileUser?.loyaltyPoints}
             // Pass API functions for real data loading
@@ -663,7 +652,6 @@ const CustomerProfilePage = () => {
                 activeTab={activeTab}
                 onTabChange={handleTabChange}
                 isOwnProfile={isOwnProfile}
-                counts={customerTabCounts}
                 customTabs={customerTabs}
               />
 
