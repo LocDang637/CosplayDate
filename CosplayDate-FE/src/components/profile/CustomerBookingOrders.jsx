@@ -41,9 +41,10 @@ import {
   Star,
   FilterList
 } from '@mui/icons-material';
-import { format, parseISO, differenceInDays } from 'date-fns';
+import { format, parseISO, differenceInDays, isValid } from 'date-fns';
 import { vi } from 'date-fns/locale';
 import { bookingAPI } from '../../services/bookingAPI';
+import { reviewAPI } from '../../services/reviewAPI';
 import { useNavigate } from 'react-router-dom';
 
 const CustomerBookingOrders = () => {
@@ -55,6 +56,7 @@ const CustomerBookingOrders = () => {
   const [totalPages, setTotalPages] = useState(1);
   const [totalCount, setTotalCount] = useState(0);
   const [stats, setStats] = useState({});
+  const [bookingReviews, setBookingReviews] = useState({}); // Store reviews by booking ID
 
   // Filters
   const [filterStatus, setFilterStatus] = useState('');
@@ -68,6 +70,26 @@ const CustomerBookingOrders = () => {
     open: false,
     booking: null,
     reason: ''
+  });
+
+  // Review dialog state
+  const [reviewDialog, setReviewDialog] = useState({
+    open: false,
+    booking: null,
+    review: null, // null for create, review object for edit
+    formData: {
+      rating: 5,
+      comment: '',
+      tags: []
+    },
+    loading: false
+  });
+
+  // Delete review dialog state
+  const [deleteReviewDialog, setDeleteReviewDialog] = useState({
+    open: false,
+    review: null,
+    loading: false
   });
 
   useEffect(() => {
@@ -102,6 +124,45 @@ const CustomerBookingOrders = () => {
       completed: bookingsData.filter(b => b.status === 'Completed').length,
       cancelled: bookingsData.filter(b => b.status === 'Cancelled').length
     };
+  };
+
+  const loadBookingReviews = async (bookingIds) => {
+    try {
+      console.log('Loading reviews for booking IDs:', bookingIds);
+      
+      const reviewPromises = bookingIds.map(async (bookingId) => {
+        const result = await reviewAPI.getReviewByBookingId(bookingId);
+        console.log(`Review result for booking ${bookingId}:`, result);
+        return {
+          bookingId,
+          review: result.success ? result.data : null
+        };
+      });
+
+      const reviewResults = await Promise.all(reviewPromises);
+      const reviewsMap = {};
+      
+      reviewResults.forEach(({ bookingId, review }) => {
+        reviewsMap[bookingId] = review;
+      });
+
+      console.log('Final reviewsMap:', reviewsMap);
+      setBookingReviews(reviewsMap);
+    } catch (error) {
+      console.error('Error loading booking reviews:', error);
+    }
+  };
+
+  // Helper function to safely parse dates
+  const safeParseDate = (dateString, fallback = new Date()) => {
+    if (!dateString) return fallback;
+    try {
+      const parsed = parseISO(dateString);
+      return isNaN(parsed.getTime()) ? fallback : parsed;
+    } catch (error) {
+      console.error('Error parsing date:', dateString, error);
+      return fallback;
+    }
   };
 
   const loadBookings = async () => {
@@ -186,6 +247,15 @@ const CustomerBookingOrders = () => {
         setTotalCount(paginationData.totalCount || bookingsData.length || 0);
 
         console.log('Final bookings count:', bookingsData.length);
+
+        // Load reviews for completed bookings
+        const completedBookingIds = bookingsData
+          .filter(booking => booking.status === 'Completed')
+          .map(booking => booking.id);
+        
+        if (completedBookingIds.length > 0) {
+          await loadBookingReviews(completedBookingIds);
+        }
       } else {
         console.warn('API response structure unexpected:', result);
         setError(result.message || 'Không thể tải danh sách đặt lịch');
@@ -218,6 +288,145 @@ const CustomerBookingOrders = () => {
     } catch (err) {
       console.error('Error cancelling booking:', err);
       setError('Không thể hủy đặt lịch');
+    }
+  };
+
+  // Review handler functions
+  const handleOpenCreateReview = (booking) => {
+    setReviewDialog({
+      open: true,
+      booking: booking,
+      review: null,
+      formData: {
+        rating: 5,
+        comment: '',
+        tags: []
+      },
+      loading: false
+    });
+  };
+
+  const handleOpenEditReview = (booking, review) => {
+    setReviewDialog({
+      open: true,
+      booking: booking,
+      review: review,
+      formData: {
+        rating: review.rating,
+        comment: review.comment || '',
+        tags: review.tags || []
+      },
+      loading: false
+    });
+  };
+
+  const handleCloseReviewDialog = () => {
+    setReviewDialog({
+      open: false,
+      booking: null,
+      review: null,
+      formData: {
+        rating: 5,
+        comment: '',
+        tags: []
+      },
+      loading: false
+    });
+  };
+
+  const handleReviewFormChange = (field, value) => {
+    setReviewDialog(prev => ({
+      ...prev,
+      formData: {
+        ...prev.formData,
+        [field]: value
+      }
+    }));
+  };
+
+  const handleSubmitReview = async () => {
+    if (!reviewDialog.booking) return;
+
+    setReviewDialog(prev => ({ ...prev, loading: true }));
+
+    try {
+      const { rating, comment, tags } = reviewDialog.formData;
+      
+      let result;
+      if (reviewDialog.review) {
+        // Update existing review
+        result = await reviewAPI.updateReview(reviewDialog.review.id, {
+          rating,
+          comment,
+          tags
+        });
+      } else {
+        // Create new review
+        result = await reviewAPI.createReview({
+          bookingId: reviewDialog.booking.id,
+          rating,
+          comment,
+          tags
+        });
+      }
+
+      if (result.success) {
+        // Reload reviews for this booking
+        await loadBookingReviews([reviewDialog.booking.id]);
+        handleCloseReviewDialog();
+      } else {
+        console.error('Review operation failed:', result.error);
+        setError(result.error || 'Không thể thực hiện thao tác đánh giá');
+      }
+    } catch (error) {
+      console.error('Error submitting review:', error);
+      setError('Không thể thực hiện thao tác đánh giá');
+    } finally {
+      setReviewDialog(prev => ({ ...prev, loading: false }));
+    }
+  };
+
+  const handleOpenDeleteReview = (review) => {
+    setDeleteReviewDialog({
+      open: true,
+      review: review,
+      loading: false
+    });
+  };
+
+  const handleCloseDeleteReview = () => {
+    setDeleteReviewDialog({
+      open: false,
+      review: null,
+      loading: false
+    });
+  };
+
+  const handleDeleteReview = async () => {
+    if (!deleteReviewDialog.review) return;
+
+    setDeleteReviewDialog(prev => ({ ...prev, loading: true }));
+
+    try {
+      const result = await reviewAPI.deleteReview(deleteReviewDialog.review.id);
+
+      if (result.success) {
+        // Remove review from local state
+        setBookingReviews(prev => {
+          const updated = { ...prev };
+          delete updated[deleteReviewDialog.review.bookingId];
+          return updated;
+        });
+        handleCloseDeleteReview();
+      } else {
+        console.error('Delete review failed:', result.error);
+        setError(result.error || 'Không thể xóa đánh giá');
+      }
+    } catch (error) {
+      console.error('Error deleting review:', error);
+      setError('Không thể xóa đánh giá');
+    } finally {
+      setDeleteReviewDialog(prev => ({ ...prev, loading: false }));
     }
   };
 
@@ -382,6 +591,32 @@ const CustomerBookingOrders = () => {
                     }).format(booking.totalPrice || 0)}
                   </Typography>
                 </Box>
+
+                {/* Line 4: Review (compact view) - Only show for completed bookings */}
+                {booking.status === 'Completed' && (
+                  <Box sx={{ mt: 0.5 }}>
+                    {console.log(`Compact view - Review data for booking ${booking.id}:`, bookingReviews[booking.id])}
+                    {bookingReviews[booking.id] ? (
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <Typography variant="body2" color="text.secondary">
+                          Đánh giá của bạn:
+                        </Typography>
+                        <Rating
+                          value={bookingReviews[booking.id].rating} 
+                          size="small"
+                          readOnly
+                        />
+                        <Typography variant="body2" color="text.secondary">
+                          {bookingReviews[booking.id].rating}/5
+                        </Typography>
+                      </Box>
+                    ) : (
+                      <Typography variant="body2" color="text.secondary" sx={{ fontStyle: 'italic' }}>
+                        Chưa có đánh giá
+                      </Typography>
+                    )}
+                  </Box>
+                )}
               </Box>
 
               {/* Expand/Collapse Icon */}
@@ -498,18 +733,156 @@ const CustomerBookingOrders = () => {
               </Box>
             )}
 
+            {/* Customer Review Section - Only show for completed bookings */}
+            {booking.status === 'Completed' && (
+              <Box sx={{ mb: 2 }}>
+                <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1 }}>
+                  Đánh giá của bạn
+                </Typography>
+                {console.log(`Review data for booking ${booking.id}:`, bookingReviews[booking.id])}
+                {bookingReviews[booking.id] ? (
+                  <Paper sx={{ p: 2, bgcolor: 'rgba(233, 30, 99, 0.02)', borderRadius: '8px' }}>
+                    <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 2 }}>
+                      <Avatar 
+                        src={bookingReviews[booking.id].customerAvatarUrl} 
+                        sx={{ width: 40, height: 40 }}
+                      >
+                        {bookingReviews[booking.id].customerName?.charAt(0)}
+                      </Avatar>
+                      <Box sx={{ flex: 1 }}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+                          <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                            {bookingReviews[booking.id].customerName}
+                          </Typography>
+                          {bookingReviews[booking.id].isVerified && (
+                            <Chip
+                              label="Đã xác minh"
+                              size="small"
+                              color="success"
+                              variant="outlined"
+                            />
+                          )}
+                        </Box>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+                          <Rating
+                            value={bookingReviews[booking.id].rating} 
+                            size="small"
+                            readOnly
+                          />
+                          <Typography variant="body2" color="text.secondary">
+                            {bookingReviews[booking.id].rating}/5
+                          </Typography>
+                          <Typography variant="body2" color="text.secondary">
+                            • {bookingReviews[booking.id].createdAt ? 
+                                format(safeParseDate(bookingReviews[booking.id].createdAt), 'dd/MM/yyyy HH:mm') : 
+                                'N/A'
+                              }
+                          </Typography>
+                        </Box>
+                        
+                        {bookingReviews[booking.id].comment && (
+                          <Typography variant="body2" sx={{ mb: 1, fontStyle: 'italic' }}>
+                            "{bookingReviews[booking.id].comment}"
+                          </Typography>
+                        )}
+                        
+                        {bookingReviews[booking.id].tags && bookingReviews[booking.id].tags.length > 0 && (
+                          <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap', mb: 1 }}>
+                            {bookingReviews[booking.id].tags.map((tag, index) => (
+                              <Chip 
+                                key={index} 
+                                label={tag} 
+                                size="small" 
+                                variant="outlined"
+                                sx={{ fontSize: '0.75rem', height: '24px' }}
+                              />
+                            ))}
+                          </Box>
+                        )}
+                        
+                        {bookingReviews[booking.id].ownerResponse && (
+                          <Box sx={{ mt: 1, p: 1, bgcolor: 'rgba(233, 30, 99, 0.05)', borderRadius: '4px' }}>
+                            <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600 }}>
+                              Phản hồi từ Cosplayer:
+                            </Typography>
+                            <Typography variant="body2" sx={{ mt: 0.5 }}>
+                              {bookingReviews[booking.id].ownerResponse}
+                            </Typography>
+                          </Box>
+                        )}
+                        
+                        {bookingReviews[booking.id].helpfulCount > 0 && (
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mt: 1 }}>
+                            <Typography variant="caption" color="text.secondary">
+                              {bookingReviews[booking.id].helpfulCount} người thấy hữu ích
+                            </Typography>
+                          </Box>
+                        )}
+                      </Box>
+                    </Box>
+                  </Paper>
+                ) : (
+                  <Box sx={{ 
+                    p: 2, 
+                    bgcolor: 'grey.50', 
+                    borderRadius: '8px',
+                    textAlign: 'center',
+                    border: '1px dashed #ccc'
+                  }}>
+                    <Typography variant="body2" color="text.secondary">
+                      Bạn chưa đánh giá dịch vụ này
+                    </Typography>
+                  </Box>
+                )}
+              </Box>
+            )}
+
             {/* Actions */}
             <Box sx={{ display: 'flex', gap: 1, justifyContent: 'flex-end' }}>
-              {/* {booking.status === 'Completed' && !booking.review && (
-                <Button
-                  variant="contained"
-                  size="small"
-                  startIcon={<Star />}
-                  onClick={() => navigate(`/review-booking/${booking.id}`)}
-                >
-                  Đánh giá
-                </Button>
-              )} */}
+              {/* Review Actions - Only show for completed bookings */}
+              {booking.status === 'Completed' && (
+                <>
+                  {bookingReviews[booking.id] ? (
+                    <>
+                      <Button
+                        variant="outlined"
+                        size="small"
+                        color="primary"
+                        startIcon={<Star />}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleOpenEditReview(booking, bookingReviews[booking.id]);
+                        }}
+                      >
+                        Chỉnh sửa đánh giá
+                      </Button>
+                      <Button
+                        variant="outlined"
+                        size="small"
+                        color="error"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleOpenDeleteReview(bookingReviews[booking.id]);
+                        }}
+                      >
+                        Xóa đánh giá
+                      </Button>
+                    </>
+                  ) : (
+                    <Button
+                      variant="contained"
+                      size="small"
+                      startIcon={<Star />}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleOpenCreateReview(booking);
+                      }}
+                    >
+                      Đánh giá
+                    </Button>
+                  )}
+                </>
+              )}
 
               {canCancel && (
                 <Button
@@ -850,6 +1223,165 @@ const CustomerBookingOrders = () => {
             disabled={!cancelDialog.reason.trim()}
           >
             Xác nhận hủy
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Review Dialog */}
+      <Dialog
+        open={reviewDialog.open}
+        onClose={handleCloseReviewDialog}
+        maxWidth="md"
+        fullWidth
+      >
+        <DialogTitle>
+          {reviewDialog.review ? 'Chỉnh sửa đánh giá' : 'Đánh giá dịch vụ'}
+        </DialogTitle>
+        <DialogContent>
+          <Box sx={{ mt: 2 }}>
+            {reviewDialog.booking && (
+              <Box sx={{ mb: 3, p: 2, bgcolor: 'grey.50', borderRadius: '8px' }}>
+                <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1 }}>
+                  Thông tin đặt lịch
+                </Typography>
+                <Typography variant="body2">
+                  <strong>Cosplayer:</strong> {reviewDialog.booking.cosplayer?.displayName || reviewDialog.booking.cosplayer?.name || 'N/A'}
+                </Typography>
+                <Typography variant="body2">
+                  <strong>Dịch vụ:</strong> {reviewDialog.booking.serviceType || 'N/A'}
+                </Typography>
+                <Typography variant="body2">
+                  <strong>Ngày:</strong> {reviewDialog.booking.bookingDate ? format(safeParseDate(reviewDialog.booking.bookingDate), 'dd/MM/yyyy') : 'N/A'}
+                </Typography>
+              </Box>
+            )}
+
+            {/* Rating */}
+            <Box sx={{ mb: 3 }}>
+              <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1 }}>
+                Đánh giá của bạn *
+              </Typography>
+              <Rating
+                value={reviewDialog.formData.rating}
+                onChange={(event, newValue) => {
+                  handleReviewFormChange('rating', newValue || 1);
+                }}
+                size="large"
+                sx={{ mb: 1 }}
+              />
+              <Typography variant="body2" color="text.secondary">
+                {reviewDialog.formData.rating}/5 sao
+              </Typography>
+            </Box>
+
+            {/* Comment */}
+            <Box sx={{ mb: 3 }}>
+              <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1 }}>
+                Nhận xét
+              </Typography>
+              <TextField
+                fullWidth
+                multiline
+                rows={4}
+                value={reviewDialog.formData.comment}
+                onChange={(e) => handleReviewFormChange('comment', e.target.value)}
+                placeholder="Chia sẻ trải nghiệm của bạn về dịch vụ này..."
+                variant="outlined"
+              />
+            </Box>
+
+            {/* Tags */}
+            <Box sx={{ mb: 2 }}>
+              <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1 }}>
+                Tags (tùy chọn)
+              </Typography>
+              <TextField
+                fullWidth
+                value={reviewDialog.formData.tags.join(', ')}
+                onChange={(e) => {
+                  const tagsArray = e.target.value.split(',').map(tag => tag.trim()).filter(tag => tag);
+                  handleReviewFormChange('tags', tagsArray);
+                }}
+                placeholder="Nhập tags phân cách bằng dấu phẩy (vd: Chuyên nghiệp, Tận tâm, Đúng giờ)"
+                variant="outlined"
+                helperText="Nhập các từ khóa mô tả dịch vụ, phân cách bằng dấu phẩy"
+              />
+              {reviewDialog.formData.tags.length > 0 && (
+                <Box sx={{ mt: 1, display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>
+                  {reviewDialog.formData.tags.map((tag, index) => (
+                    <Chip
+                      key={index}
+                      label={tag}
+                      size="small"
+                      variant="outlined"
+                      onDelete={() => {
+                        const newTags = reviewDialog.formData.tags.filter((_, i) => i !== index);
+                        handleReviewFormChange('tags', newTags);
+                      }}
+                    />
+                  ))}
+                </Box>
+              )}
+            </Box>
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleCloseReviewDialog}>
+            Hủy
+          </Button>
+          <Button
+            variant="contained"
+            onClick={handleSubmitReview}
+            disabled={reviewDialog.loading || !reviewDialog.formData.rating}
+          >
+            {reviewDialog.loading ? 'Đang xử lý...' : (reviewDialog.review ? 'Cập nhật đánh giá' : 'Gửi đánh giá')}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Delete Review Dialog */}
+      <Dialog
+        open={deleteReviewDialog.open}
+        onClose={handleCloseDeleteReview}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle>Xác nhận xóa đánh giá</DialogTitle>
+        <DialogContent>
+          <Typography variant="body2" sx={{ mb: 2 }}>
+            Bạn có chắc chắn muốn xóa đánh giá này? Hành động này không thể hoàn tác.
+          </Typography>
+          {deleteReviewDialog.review && (
+            <Box sx={{ p: 2, bgcolor: 'grey.50', borderRadius: '8px' }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+                <Rating
+                  value={deleteReviewDialog.review.rating}
+                  size="small"
+                  readOnly
+                />
+                <Typography variant="body2">
+                  {deleteReviewDialog.review.rating}/5 sao
+                </Typography>
+              </Box>
+              {deleteReviewDialog.review.comment && (
+                <Typography variant="body2" sx={{ fontStyle: 'italic' }}>
+                  "{deleteReviewDialog.review.comment}"
+                </Typography>
+              )}
+            </Box>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleCloseDeleteReview}>
+            Hủy
+          </Button>
+          <Button
+            variant="contained"
+            color="error"
+            onClick={handleDeleteReview}
+            disabled={deleteReviewDialog.loading}
+          >
+            {deleteReviewDialog.loading ? 'Đang xóa...' : 'Xóa đánh giá'}
           </Button>
         </DialogActions>
       </Dialog>

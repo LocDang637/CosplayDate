@@ -92,6 +92,41 @@ export const reviewAPI = {
     }
   },
 
+  // Get review for a specific booking
+  getReviewByBookingId: async (bookingId) => {
+    try {
+      console.log(`Getting review for booking ${bookingId}`);
+      
+      const response = await api.get(`/Review/booking/${bookingId}`);
+      
+      // Extract the actual review data from the API response
+      const apiResponse = response.data;
+      
+      return {
+        success: apiResponse.isSuccess,
+        data: apiResponse.data, // This is the actual review object
+        message: apiResponse.message || 'Review retrieved successfully'
+      };
+    } catch (error) {
+      console.error('Error getting review by booking ID:', error);
+      
+      // If it's a 404 error, it means no review exists for this booking
+      if (error.response?.status === 404) {
+        return {
+          success: false,
+          error: 'No review found for this booking',
+          data: null
+        };
+      }
+      
+      return {
+        success: false,
+        error: error.response?.data?.message || 'Failed to get review',
+        data: null
+      };
+    }
+  },
+
   // Get average rating for a specific cosplayer
   getCosplayerAverageRating: async (cosplayerId) => {
     try {

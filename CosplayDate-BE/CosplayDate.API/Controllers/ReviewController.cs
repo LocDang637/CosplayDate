@@ -87,5 +87,16 @@ namespace CosplayDate.API.Controllers
             if (result.IsSuccess) return Ok(result);
             return BadRequest(result);
         }
+
+        /// <summary>
+        /// Lấy review theo booking ID
+        /// </summary>
+        [HttpGet("booking/{bookingId}")]
+        public async Task<IActionResult> GetReviewByBookingId(int bookingId)
+        {
+            var result = await _reviewService.GetReviewByBookingIdAsync(bookingId);
+            if (result.IsSuccess) return Ok(result);
+            return BadRequest(result);
+        }
     }
-} 
+}

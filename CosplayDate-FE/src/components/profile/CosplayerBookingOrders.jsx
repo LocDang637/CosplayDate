@@ -27,7 +27,8 @@ import {
   DialogContent,
   DialogActions,
   Tooltip,
-  Collapse
+  Collapse,
+  Rating
 } from '@mui/material';
 import {
   Person,
@@ -43,11 +44,14 @@ import {
   Close,
   ExpandMore,
   ExpandLess,
-  Warning
+  Warning,
+  Star,
+  StarBorder
 } from '@mui/icons-material';
 import { format, parseISO, differenceInDays, isValid, isBefore, addDays } from 'date-fns';
 import { vi } from 'date-fns/locale';
 import { bookingAPI } from '../../services/bookingAPI';
+import { reviewAPI } from '../../services/reviewAPI';
 import { LocalizationProvider, DatePicker, TimePicker } from '@mui/x-date-pickers';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 
@@ -59,6 +63,7 @@ const CosplayerBookingOrders = ({ isOwnProfile }) => {
   const [totalPages, setTotalPages] = useState(1);
   const [totalCount, setTotalCount] = useState(0);
   const [stats, setStats] = useState({});
+  const [bookingReviews, setBookingReviews] = useState({}); // Store reviews by booking ID
 
   // Filters
   const [filterStatus, setFilterStatus] = useState('');
@@ -93,6 +98,15 @@ const CosplayerBookingOrders = ({ isOwnProfile }) => {
     }
   });
 
+  // Owner response dialog state
+  const [ownerResponseDialog, setOwnerResponseDialog] = useState({
+    open: false,
+    reviewId: null,
+    bookingId: null,
+    response: '',
+    loading: false
+  });
+
   // Error handling states for edit dialog
   const [editErrors, setEditErrors] = useState({
     dateError: '',
@@ -114,14 +128,8 @@ const CosplayerBookingOrders = ({ isOwnProfile }) => {
 
   // Add this function to handle opening edit dialog
   const handleEditBooking = (booking) => {
-    // Parse the date properly
-    let bookingDate;
-    try {
-      bookingDate = parseISO(booking.bookingDate);
-    } catch (e) {
-      console.error('Error parsing booking date:', e);
-      bookingDate = new Date();
-    }
+    // Use the helper function for safe date parsing
+    const bookingDate = safeParseDate(booking.bookingDate);
 
     setEditDialog({
       open: true,
@@ -284,6 +292,74 @@ const CosplayerBookingOrders = ({ isOwnProfile }) => {
     });
   };
 
+  // Handler functions for owner response
+  const handleOpenResponseDialog = (review, bookingId) => {
+    setOwnerResponseDialog({
+      open: true,
+      reviewId: review.id,
+      bookingId: bookingId,
+      response: '',
+      loading: false
+    });
+  };
+
+  const handleCloseResponseDialog = () => {
+    setOwnerResponseDialog({
+      open: false,
+      reviewId: null,
+      bookingId: null,
+      response: '',
+      loading: false
+    });
+  };
+
+  const handleResponseChange = (e) => {
+    setOwnerResponseDialog(prev => ({
+      ...prev,
+      response: e.target.value
+    }));
+  };
+
+  const handleSubmitResponse = async () => {
+    if (!ownerResponseDialog.response.trim()) {
+      return;
+    }
+
+    setOwnerResponseDialog(prev => ({ ...prev, loading: true }));
+
+    try {
+      const result = await reviewAPI.addOwnerResponse(
+        ownerResponseDialog.reviewId,
+        ownerResponseDialog.response.trim()
+      );
+
+      if (result.success) {
+        // Update the local booking reviews state
+        setBookingReviews(prev => ({
+          ...prev,
+          [ownerResponseDialog.bookingId]: {
+            ...prev[ownerResponseDialog.bookingId],
+            ownerResponse: ownerResponseDialog.response.trim()
+          }
+        }));
+
+        // Close the dialog
+        handleCloseResponseDialog();
+        
+        // Show success message (optional)
+        console.log('Owner response added successfully');
+      } else {
+        console.error('Failed to add owner response:', result.error);
+        // You can add error handling here (e.g., show toast notification)
+      }
+    } catch (error) {
+      console.error('Error adding owner response:', error);
+      // You can add error handling here
+    } finally {
+      setOwnerResponseDialog(prev => ({ ...prev, loading: false }));
+    }
+  };
+
   // Handler functions for edit dialog
   const handleEditDateChange = (newDate) => {
     setEditDialog({
@@ -341,6 +417,33 @@ const CosplayerBookingOrders = ({ isOwnProfile }) => {
     loadBookings();
   }, [page]); // Only reload when page changes, not filters
 
+  const loadBookingReviews = async (bookingIds) => {
+    try {
+      console.log('Loading reviews for booking IDs:', bookingIds);
+      
+      const reviewPromises = bookingIds.map(async (bookingId) => {
+        const result = await reviewAPI.getReviewByBookingId(bookingId);
+        console.log(`Review result for booking ${bookingId}:`, result);
+        return {
+          bookingId,
+          review: result.success ? result.data : null
+        };
+      });
+
+      const reviewResults = await Promise.all(reviewPromises);
+      const reviewsMap = {};
+      
+      reviewResults.forEach(({ bookingId, review }) => {
+        reviewsMap[bookingId] = review;
+      });
+
+      console.log('Final reviewsMap:', reviewsMap);
+      setBookingReviews(reviewsMap);
+    } catch (error) {
+      console.error('Error loading booking reviews:', error);
+    }
+  };
+
   const loadBookings = async () => {
     try {
       setLoading(true);
@@ -354,7 +457,17 @@ const CosplayerBookingOrders = ({ isOwnProfile }) => {
       const result = await bookingAPI.getBookings(params);
 
       if (result.success && result.data) {
-        setBookings(result.data.bookings || []);
+        const bookingsData = result.data.bookings || [];
+        setBookings(bookingsData);
+
+        // Load reviews for completed bookings
+        const completedBookingIds = bookingsData
+          .filter(booking => booking.status === 'Completed')
+          .map(booking => booking.id);
+        
+        if (completedBookingIds.length > 0) {
+          await loadBookingReviews(completedBookingIds);
+        }
 
         // Parse stats from the response
         setStats({
@@ -410,6 +523,12 @@ const CosplayerBookingOrders = ({ isOwnProfile }) => {
 
       if (result.success) {
         await loadBookings();
+        
+        // If the booking was completed, reload reviews for this booking
+        if (statusDialog.newStatus === 'Completed') {
+          await loadBookingReviews([bookingId]);
+        }
+        
         setStatusDialog({ open: false, booking: null, newStatus: '', showConfirm: false, cancellationReason: '' });
         // Optionally show success message
         console.log(`Booking status updated to ${statusDialog.newStatus} successfully`);
@@ -472,7 +591,7 @@ const CosplayerBookingOrders = ({ isOwnProfile }) => {
   };
 
   const canUpdateStatus = (booking) => {
-    const bookingDate = parseISO(booking.bookingDate);
+    const bookingDate = safeParseDate(booking.bookingDate);
     const daysUntilBooking = differenceInDays(bookingDate, new Date());
 
     // Can't update completed or cancelled bookings
@@ -520,6 +639,12 @@ const CosplayerBookingOrders = ({ isOwnProfile }) => {
   };
 
   const filteredBookings = bookings.filter(booking => {
+    // First check if booking object is valid
+    if (!booking || !booking.id) {
+      console.warn('Invalid booking object:', booking);
+      return false;
+    }
+
     // Search filter
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
@@ -568,12 +693,26 @@ const CosplayerBookingOrders = ({ isOwnProfile }) => {
     }
   });
 
+  // Helper function to safely parse dates
+  const safeParseDate = (dateString, fallback = new Date()) => {
+    if (!dateString) return fallback;
+    try {
+      const parsed = parseISO(dateString);
+      return isValid(parsed) ? parsed : fallback;
+    } catch (error) {
+      console.error('Error parsing date:', dateString, error);
+      return fallback;
+    }
+  };
+
   // Redesigned BookingCard Component
   const BookingCard = ({ booking }) => {
     const [expanded, setExpanded] = useState(false);
-    const bookingDate = parseISO(booking.bookingDate);
-    const createdDate = parseISO(booking.createdAt);
-    const daysUntilBooking = differenceInDays(bookingDate, new Date());
+    
+    // Use the helper function for safe date parsing
+    const bookingDate = safeParseDate(booking.bookingDate);
+    const createdDate = safeParseDate(booking.createdAt);
+    const daysUntilBooking = booking.bookingDate ? differenceInDays(bookingDate, new Date()) : 0;
 
     const handleToggle = () => {
       setExpanded(!expanded);
@@ -625,7 +764,7 @@ const CosplayerBookingOrders = ({ isOwnProfile }) => {
                   </Typography>
                 )}
 
-                {/* Line 4: Status • Payment Status • Total Price */}
+                {/* Line 4: Status • Payment Status • Total Price • Review Status */}
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
                   <Chip
                     label={getStatusLabel(booking.status)}
@@ -642,6 +781,30 @@ const CosplayerBookingOrders = ({ isOwnProfile }) => {
                   <Typography variant="body2" sx={{ fontWeight: 600, color: 'primary.main' }}>
                     {booking.totalPrice?.toLocaleString('vi-VN')} VND
                   </Typography>
+                  
+                  {/* Show review status for completed bookings */}
+                  {booking.status === 'Completed' && (
+                    <>
+                      <Typography variant="body2" color="text.secondary">•</Typography>
+                      {/* Debug: Log the review data in compact view */}
+                      {console.log(`Compact view - Review data for booking ${booking.id}:`, bookingReviews[booking.id])}
+                      {bookingReviews[booking.id] ? (
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                          <Star sx={{ fontSize: 16, color: '#ffc107' }} />
+                          <Typography variant="body2" color="text.secondary">
+                            {bookingReviews[booking.id].rating}/5
+                          </Typography>
+                        </Box>
+                      ) : (
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                          <StarBorder sx={{ fontSize: 16, color: 'text.secondary' }} />
+                          <Typography variant="body2" color="text.secondary">
+                            Chưa đánh giá
+                          </Typography>
+                        </Box>
+                      )}
+                    </>
+                  )}
                 </Box>
               </Box>
 
@@ -730,6 +893,135 @@ const CosplayerBookingOrders = ({ isOwnProfile }) => {
                 )}
               </Grid>
             </Box>
+
+            {/* Review Section - Only show for completed bookings */}
+            {booking.status === 'Completed' && (
+              <Box sx={{ mb: 2 }}>
+                <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1 }}>
+                  Đánh giá của khách hàng
+                </Typography>
+                {/* Debug: Log the review data */}
+                {console.log(`Review data for booking ${booking.id}:`, bookingReviews[booking.id])}
+                {bookingReviews[booking.id] ? (
+                  <Paper sx={{ p: 2, bgcolor: 'grey.50', borderRadius: '8px' }}>
+                    <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 2 }}>
+                      <Avatar 
+                        src={bookingReviews[booking.id].customerAvatarUrl} 
+                        sx={{ width: 40, height: 40 }}
+                      >
+                        {bookingReviews[booking.id].customerName?.charAt(0)}
+                      </Avatar>
+                      <Box sx={{ flex: 1 }}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+                          <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                            {bookingReviews[booking.id].customerName}
+                          </Typography>
+                          {bookingReviews[booking.id].isVerified && (
+                            <Tooltip title="Verified Customer">
+                              <CheckCircle sx={{ fontSize: 16, color: 'success.main' }} />
+                            </Tooltip>
+                          )}
+                        </Box>
+                        
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+                          <Rating 
+                            value={bookingReviews[booking.id].rating} 
+                            readOnly 
+                            size="small"
+                            sx={{ color: '#ffc107' }}
+                          />
+                          <Typography variant="body2" color="text.secondary">
+                            {bookingReviews[booking.id].rating}/5
+                          </Typography>
+                          <Typography variant="caption" color="text.secondary">
+                            • {bookingReviews[booking.id].createdAt ? 
+                                format(safeParseDate(bookingReviews[booking.id].createdAt), 'dd/MM/yyyy HH:mm') : 
+                                'N/A'
+                              }
+                          </Typography>
+                        </Box>
+                        
+                        {bookingReviews[booking.id].comment && (
+                          <Typography variant="body2" sx={{ mb: 1, fontStyle: 'italic' }}>
+                            "{bookingReviews[booking.id].comment}"
+                          </Typography>
+                        )}
+                        
+                        {bookingReviews[booking.id].tags && bookingReviews[booking.id].tags.length > 0 && (
+                          <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap', mb: 1 }}>
+                            {bookingReviews[booking.id].tags.map((tag, index) => (
+                              <Chip 
+                                key={index} 
+                                label={tag} 
+                                size="small" 
+                                variant="outlined"
+                                sx={{ fontSize: '0.75rem', height: '24px' }}
+                              />
+                            ))}
+                          </Box>
+                        )}
+                        
+                        {bookingReviews[booking.id].ownerResponse ? (
+                          <Box sx={{ mt: 1, p: 1, bgcolor: 'rgba(233, 30, 99, 0.05)', borderRadius: '4px' }}>
+                            <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600 }}>
+                              Phản hồi từ Cosplayer:
+                            </Typography>
+                            <Typography variant="body2" sx={{ mt: 0.5 }}>
+                              {bookingReviews[booking.id].ownerResponse}
+                            </Typography>
+                          </Box>
+                        ) : (
+                          <Box sx={{ mt: 1 }}>
+                            <Button
+                              size="small"
+                              variant="outlined"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleOpenResponseDialog(bookingReviews[booking.id], booking.id);
+                              }}
+                              sx={{
+                                borderColor: '#e91e63',
+                                color: '#e91e63',
+                                borderRadius: '6px',
+                                fontSize: '0.75rem',
+                                padding: '2px 8px',
+                                minWidth: 'auto',
+                                '&:hover': {
+                                  borderColor: '#d81b60',
+                                  backgroundColor: 'rgba(233, 30, 99, 0.08)'
+                                }
+                              }}
+                            >
+                              Phản hồi
+                            </Button>
+                          </Box>
+                        )}
+                        
+                        {bookingReviews[booking.id].helpfulCount > 0 && (
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mt: 1 }}>
+                            <Typography variant="caption" color="text.secondary">
+                              {bookingReviews[booking.id].helpfulCount} người thấy hữu ích
+                            </Typography>
+                          </Box>
+                        )}
+                      </Box>
+                    </Box>
+                  </Paper>
+                ) : (
+                  <Box sx={{ 
+                    p: 2, 
+                    bgcolor: 'grey.50', 
+                    borderRadius: '8px',
+                    textAlign: 'center',
+                    border: '1px dashed #ccc'
+                  }}>
+                    <Typography variant="body2" color="text.secondary">
+                      Chưa có đánh giá từ khách hàng
+                    </Typography>
+                  </Box>
+                )}
+              </Box>
+            )}
 
             {/* Action Buttons */}
             {canUpdateStatus(booking) && (
@@ -1477,6 +1769,52 @@ const CosplayerBookingOrders = ({ isOwnProfile }) => {
             }}
           >
             Cập nhật
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Owner Response Dialog */}
+      <Dialog
+        open={ownerResponseDialog.open}
+        onClose={handleCloseResponseDialog}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle>
+          Phản hồi đánh giá
+        </DialogTitle>
+        <DialogContent>
+          <Typography variant="body2" sx={{ mb: 2 }}>
+            Đặt lịch: <strong>{ownerResponseDialog.bookingId}</strong>
+          </Typography>
+          <Typography variant="body2" sx={{ mb: 2 }}>
+            Đánh giá ID: <strong>{ownerResponseDialog.reviewId}</strong>
+          </Typography>
+          <TextField
+            fullWidth
+            multiline
+            rows={4}
+            label="Nội dung phản hồi"
+            value={ownerResponseDialog.response}
+            onChange={handleResponseChange}
+            placeholder="Nhập nội dung phản hồi cho đánh giá này..."
+            sx={{ mb: 2 }}
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleCloseResponseDialog}>
+            Hủy
+          </Button>
+          <Button
+            variant="contained"
+            color="primary"
+            disabled={!ownerResponseDialog.response.trim() || ownerResponseDialog.loading}
+            onClick={(e) => {
+              e.stopPropagation();
+              handleSubmitResponse();
+            }}
+          >
+            Gửi phản hồi
           </Button>
         </DialogActions>
       </Dialog>
