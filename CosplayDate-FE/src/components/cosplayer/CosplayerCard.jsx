@@ -21,10 +21,10 @@ import {
   LocationOn,
   PersonAdd,
   PersonRemove,
-  Schedule,
   AttachMoney
 } from '@mui/icons-material';
 import { userAPI } from '../../services/api';
+import { reviewAPI } from '../../services/reviewAPI';
 
 const CosplayerCard = ({
   cosplayer,
@@ -39,6 +39,8 @@ const CosplayerCard = ({
   const [popupMessage, setPopupMessage] = useState('');
   const [followState, setFollowState] = useState(isFollowing);
   const [followLoading, setFollowLoading] = useState(false);
+  const [averageRating, setAverageRating] = useState(null);
+  const [ratingLoading, setRatingLoading] = useState(false);
 
   const getCurrentUser = () => {
     if (currentUser) return currentUser;
@@ -70,7 +72,7 @@ const CosplayerCard = ({
         try {
           const result = await userAPI.getUserProfile(cosplayer.id);
           if (result?.success) {
-            setFollowState(result.data?.isFollowing || false);
+            // Handle follow status from result
           }
         } catch (error) {
           console.error('Error checking follow status:', error);
@@ -80,6 +82,27 @@ const CosplayerCard = ({
 
     checkFollowStatus();
   }, [user, isCustomer, cosplayer.id]);
+
+  // Fetch average rating on component mount
+  useEffect(() => {
+    const fetchAverageRating = async () => {
+      if (cosplayer.id) {
+        setRatingLoading(true);
+        try {
+          const result = await reviewAPI.getCosplayerAverageRating(cosplayer.id);
+          if (result.success && result.data && result.data.isSuccess && result.data.data !== null) {
+            setAverageRating(Number(result.data.data));
+          }
+        } catch (error) {
+          console.error('Error fetching average rating:', error);
+        } finally {
+          setRatingLoading(false);
+        }
+      }
+    };
+
+    fetchAverageRating();
+  }, [cosplayer.id]);
 
   // Sync with prop changes
   useEffect(() => {
@@ -121,19 +144,6 @@ const CosplayerCard = ({
       setShowPopup(true);
     }
   };
-
-  // const handleMessageClick = (e) => {
-  //   e.stopPropagation();
-  //   if (!user) {
-  //     navigate('/login', {
-  //       state: {
-  //         message: 'Vui lòng đăng nhập để nhắn tin với cosplayer',
-  //         redirectUrl: `/profile/${cosplayer.id}`
-  //       }
-  //     });
-  //   }
-  //   // No reaction if user is logged in as per requirement
-  // };
 
   const handleFollowClick = async (e) => {
     e.stopPropagation();
@@ -178,7 +188,6 @@ const CosplayerCard = ({
           onFollow && onFollow(cosplayer.id, true);
         } else {
           setPopupMessage(result.message || 'Không thể theo dõi cosplayer');
-          setShowPopup(true);
         }
       }
     } catch (error) {
@@ -307,14 +316,14 @@ const CosplayerCard = ({
           {/* Rating */}
           <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', mb: 1 }}>
             <Rating
-              value={cosplayer.rating || 0}
+              value={averageRating !== null && typeof averageRating === 'number' ? averageRating : (cosplayer.rating || 0)}
               size="small"
               readOnly
               precision={0.1}
               sx={{ mr: 0.5 }}
             />
             <Typography variant="body2" sx={{ color: 'text.secondary', fontSize: '13px' }}>
-              {cosplayer.rating ? cosplayer.rating.toFixed(1) : '0.0'} ({cosplayer.totalReviews || 0} đánh giá)
+              {ratingLoading ? 'Đang tải...' : `${averageRating !== null && typeof averageRating === 'number' ? averageRating.toFixed(1) : (cosplayer.rating || 0).toFixed(1)} (${cosplayer.totalReviews || 0} đánh giá)`}
             </Typography>
           </Box>
 
@@ -392,33 +401,6 @@ const CosplayerCard = ({
 
           {/* Action Buttons */}
           <Box sx={{ display: 'flex', gap: 1, mt: 'auto' }}>
-            {/* <Button
-              variant="outlined"
-              size="small"
-              startIcon={<Message sx={{ fontSize: 16 }} />}
-              onClick={handleMessageClick}
-              disabled
-              sx={{
-                flex: 1,
-                borderColor: 'rgba(0, 0, 0, 0.23)',
-                color: 'text.secondary',
-                textTransform: 'none',
-                fontSize: '13px',
-                borderRadius: '8px',
-                py: 0.75,
-                '&:hover': {
-                  borderColor: 'primary.main',
-                  color: 'primary.main',
-                },
-                '&.Mui-disabled': {
-                  borderColor: 'rgba(0, 0, 0, 0.12)',
-                  color: 'rgba(0, 0, 0, 0.26)'
-                }
-              }}
-            >
-              Nhắn tin
-            </Button> */}
-
             <Tooltip
               title={
                 !user

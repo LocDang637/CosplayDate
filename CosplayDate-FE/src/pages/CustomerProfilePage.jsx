@@ -25,7 +25,7 @@ import Header from '../components/layout/Header';
 import Footer from '../components/layout/Footer';
 import CustomerProfileHeader from '../components/profile/CustomerProfileHeader';
 import ProfileTabs from '../components/profile/ProfileTabs';
-import CustomerWallet from '../components/profile/CustomerWallet';
+import WalletTab from '../components/profile/WalletTab';
 
 import ProfileEditModal from '../components/profile/ProfileEditModal';
 import CustomerBookingOrders from '../components/profile/CustomerBookingOrders';
@@ -468,13 +468,13 @@ const CustomerProfilePage = () => {
   const customerTabs = [
     {
       id: "wallet",
-      label: "Wallet",
+      label: "Ví",
       icon: "AccountBalanceWallet",
       show: isOwnProfile,
     },
     {
       id: "bookings",
-      label: "Bookings",
+      label: "Đặt lịch",
       icon: "Event",
       show: isOwnProfile,
     },
@@ -490,7 +490,8 @@ const CustomerProfilePage = () => {
     switch (activeTab) {
       case "wallet":
         return (
-          <CustomerWallet
+          <WalletTab
+            userType="Customer"
             balance={currentProfile?.walletBalance || profileUser?.walletBalance}
             loyaltyPoints={currentProfile?.loyaltyPoints || profileUser?.loyaltyPoints}
             // Pass API functions for real data loading

@@ -11,10 +11,12 @@ import {
   Chip,
   Avatar,
   Button,
-  Grid
+  Grid,
+  Rating
 } from '@mui/material';
 import { ArrowBack } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
+import { reviewAPI } from '../../services/reviewAPI';
 
 const BookingServiceSelect = ({
   services = [],
@@ -24,12 +26,35 @@ const BookingServiceSelect = ({
 }) => {
   const navigate = useNavigate();
   const [selectedId, setSelectedId] = React.useState(selectedService?.id?.toString() || '');
+  const [averageRating, setAverageRating] = React.useState(null);
+  const [ratingLoading, setRatingLoading] = React.useState(false);
 
   // Debug logging
   React.useEffect(() => {
     console.log('BookingServiceSelect - Cosplayer data:', cosplayer);
     console.log('BookingServiceSelect - Services data:', services);
   }, [cosplayer, services]);
+
+  // Fetch average rating on component mount
+  React.useEffect(() => {
+    const fetchAverageRating = async () => {
+      if (cosplayer?.id) {
+        setRatingLoading(true);
+        try {
+          const result = await reviewAPI.getCosplayerAverageRating(cosplayer.id);
+          if (result.success && result.data && result.data.isSuccess && result.data.data !== null) {
+            setAverageRating(Number(result.data.data));
+          }
+        } catch (error) {
+          console.error('Error fetching average rating:', error);
+        } finally {
+          setRatingLoading(false);
+        }
+      }
+    };
+
+    fetchAverageRating();
+  }, [cosplayer?.id]);
 
   // Ensure services is always an array
   const servicesList = Array.isArray(services) ? services : [];
@@ -104,11 +129,26 @@ const BookingServiceSelect = ({
                 {cosplayer?.displayName || `${cosplayer?.firstName || ''} ${cosplayer?.lastName || ''}`.trim() || 'Cosplayer'}
               </Typography>
               <Box sx={{ display: 'flex', gap: 1, mt: 0.5 }}>
-                <Chip
-                  label={`⭐ ${cosplayer?.rating || 0}`}
-                  size="small"
-                  sx={{ backgroundColor: 'rgba(255, 193, 7, 0.1)' }}
-                />
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                  {ratingLoading ? (
+                    <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+                      Đang tải...
+                    </Typography>
+                  ) : (
+                    <>
+                      <Rating
+                        value={averageRating !== null && typeof averageRating === 'number' ? averageRating : (cosplayer?.rating || 0)}
+                        readOnly
+                        size="small"
+                        precision={0.1}
+                        sx={{ color: '#FFD700' }}
+                      />
+                      <Typography variant="body2" sx={{ color: 'text.secondary', ml: 0.5 }}>
+                        ({averageRating !== null && typeof averageRating === 'number' ? averageRating.toFixed(1) : (cosplayer?.rating || 0).toFixed(1)})
+                      </Typography>
+                    </>
+                  )}
+                </Box>
                 <Chip
                   label={`${cosplayer?.stats?.completedBookings || cosplayer?.completedBookings || 0} lần đặt`}
                   size="small"

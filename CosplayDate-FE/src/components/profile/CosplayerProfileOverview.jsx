@@ -534,64 +534,6 @@ const CosplayerProfileOverview = ({ user, currentProfile, isOwnProfile }) => {
             )}
           </Paper>
 
-          <Paper
-            sx={{
-              borderRadius: '16px',
-              p: 3,
-              mb: 3,
-              background: 'rgba(255,255,255,0.95)',
-              border: '1px solid rgba(233, 30, 99, 0.1)',
-            }}
-          >
-            <Typography variant="h6" sx={{ fontWeight: 700, mb: 3, color: 'text.primary' }}>
-              Thống kê hoạt động
-            </Typography>
-            <Grid container spacing={2}>
-              <Grid size={{ xs: 6, sm: 3 }}>
-                <StatCard
-                  icon={<Event sx={{ color: 'white', fontSize: 20 }} />}
-                  title="Đơn đặt"
-                  value={user?.stats?.totalBookings || 0}
-                  subtitle="Tổng số đơn"
-                  color="#2196F3"
-                />
-              </Grid>
-              <Grid size={{ xs: 6, sm: 3 }}>
-                <StatCard
-                  icon={<Star sx={{ color: 'white', fontSize: 20 }} />}
-                  title="Hoàn thành"
-                  value={user?.stats?.completedBookings || 0}
-                  subtitle="Đơn thành công"
-                  color="#4CAF50"
-                />
-              </Grid>
-
-              {/* Private Information - Only for own profile */}
-              {isOwnProfile && currentProfile && (
-                <>
-                  <Grid size={{ xs: 6, sm: 3 }}>
-                    <StatCard
-                      icon={<AttachMoney sx={{ color: 'white', fontSize: 20 }} />}
-                      title="Ví tiền"
-                      value={new Intl.NumberFormat('vi-VN').format(currentProfile.walletBalance || 0)}
-                      subtitle="VND"
-                      color="#FF5722"
-                    />
-                  </Grid>
-                  <Grid size={{ xs: 6, sm: 3 }}>
-                    <StatCard
-                      icon={<TrendingUp sx={{ color: 'white', fontSize: 20 }} />}
-                      title="Điểm thưởng"
-                      value={currentProfile.loyaltyPoints || 0}
-                      subtitle="Loyalty Points"
-                      color="#3F51B5"
-                    />
-                  </Grid>
-                </>
-              )}
-            </Grid>
-          </Paper>
-
           {/* ✅ FIXED: Safe reviews rendering */}
           {user?.recentReviews && Array.isArray(user.recentReviews) && user.recentReviews.length > 0 && (
             <Paper
@@ -733,29 +675,6 @@ const CosplayerProfileOverview = ({ user, currentProfile, isOwnProfile }) => {
             <Typography variant="h6" sx={{ fontWeight: 700, mb: 3, color: 'text.primary' }}>
               Hiệu suất
             </Typography>
-
-            <Box sx={{ mb: 3 }}>
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                  Tỉ lệ thành công
-                </Typography>
-                <Typography variant="body2" sx={{ fontWeight: 600, color: 'success.main' }}>
-                  {Math.round(user?.stats?.successRate || 0)}%
-                </Typography>
-              </Box>
-              <LinearProgress
-                variant="determinate"
-                value={Math.min(user?.stats?.successRate || 0, 100)}
-                sx={{
-                  height: 8,
-                  borderRadius: 4,
-                  backgroundColor: 'rgba(76, 175, 80, 0.2)',
-                  '& .MuiLinearProgress-bar': {
-                    backgroundColor: '#4CAF50',
-                  },
-                }}
-              />
-            </Box>
 
             <Box sx={{ mb: 3 }}>
               <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>

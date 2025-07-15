@@ -492,40 +492,24 @@ const CustomerProfileHeader = ({
               />
             </Box>
 
-            {/* Bio */}
-            {customer.bio && (
-              <Box sx={{ mb: 2 }}>
-                <Typography
-                  variant="body1"
-                  sx={{
-                    color: 'text.secondary',
-                    fontStyle: 'italic',
-                    lineHeight: 1.6
-                  }}
-                >
-                  {customer.bio}
-                </Typography>
-              </Box>
-            )}
-
             {/* Info Grid */}
             <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', flexDirection: 'column' }}>
-              {/* Location */}
-              {customer.location && (
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                  <LocationOn sx={{ fontSize: 20, color: 'text.secondary' }} />
-                  <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-                    {customer.location}
-                  </Typography>
-                </Box>
-              )}
-
               {/* Member Since */}
               {memberSince && (
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
                   <CalendarMonth sx={{ fontSize: 20, color: 'text.secondary' }} />
                   <Typography variant="body2" sx={{ color: 'text.secondary' }}>
                     Thành viên từ {new Date(memberSince).toLocaleDateString('vi-VN')}
+                  </Typography>
+                </Box>
+              )}
+
+              {/* Location */}
+              {customer.location && (
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                  <LocationOn sx={{ fontSize: 20, color: 'text.secondary' }} />
+                  <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+                    {customer.location}
                   </Typography>
                 </Box>
               )}
@@ -540,6 +524,22 @@ const CustomerProfileHeader = ({
                 </Box>
               )}
             </Box>
+
+            {/* Bio */}
+            {customer.bio && (
+              <Box sx={{ mt: 2 }}>
+                <Typography
+                  variant="body1"
+                  sx={{
+                    color: 'text.secondary',
+                    fontStyle: 'italic',
+                    lineHeight: 1.6
+                  }}
+                >
+                  {customer.bio}
+                </Typography>
+              </Box>
+            )}
 
             {/* Interests */}
             {customer.interests && customer.interests.length > 0 && (
