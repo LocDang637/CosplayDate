@@ -29,7 +29,13 @@ namespace CosplayDate.API.Controllers
         {
             try
             {
-                var result = await _cosplayerService.GetCosplayersAsync(request);
+                var currentUserId = 0;
+                if (User.Identity?.IsAuthenticated == true)
+                {
+                    currentUserId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
+                }
+
+                var result = await _cosplayerService.GetCosplayersAsync(request, currentUserId);
 
                 if (result.IsSuccess)
                 {
@@ -49,6 +55,7 @@ namespace CosplayDate.API.Controllers
         /// Get cosplayer details by ID - FIXED to handle both cosplayer ID and user ID
         /// </summary>
         [HttpGet("{id}")]
+        [AllowAnonymous]
         public async Task<IActionResult> GetCosplayerDetails(int id)
         {
             try

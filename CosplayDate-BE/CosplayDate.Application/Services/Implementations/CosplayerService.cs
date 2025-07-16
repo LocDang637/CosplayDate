@@ -251,7 +251,7 @@ namespace CosplayDate.Application.Services.Implementations
 
         // ... [Keep all existing methods - GetCosplayersAsync, UpdateCosplayerProfileAsync, BecomeCosplayerAsync, etc.] ...
 
-        public async Task<ApiResponse<GetCosplayersResponseDto>> GetCosplayersAsync(GetCosplayersRequestDto request)
+        public async Task<ApiResponse<GetCosplayersResponseDto>> GetCosplayersAsync(GetCosplayersRequestDto request, int currentUserId = 0)
         {
             try
             {
@@ -373,6 +373,20 @@ namespace CosplayDate.Application.Services.Implementations
                     var featuredPhoto = await _unitOfWork.Repository<CosplayerPhoto>()
                         .FirstOrDefaultAsync(cp => cp.CosplayerId == cosplayer.Id && cp.IsPortfolio == true);
 
+                    // Check if current user is following this cosplayer
+                    var isFollowing = false;
+                    var isFavorite = false;
+                    if (currentUserId > 0)
+                    {
+                        var followRecord = await _unitOfWork.UserFollows
+                            .FirstOrDefaultAsync(f => f.FollowerId == currentUserId && f.FollowedId == cosplayer.UserId);
+                        isFollowing = followRecord != null;
+
+                        var favoriteRecord = await _unitOfWork.Favorites
+                            .FirstOrDefaultAsync(f => f.CustomerId == currentUserId && f.CosplayerId == cosplayer.Id);
+                        isFavorite = favoriteRecord != null;
+                    }
+
                     var dto = new CosplayerSummaryDto
                     {
                         Id = cosplayer.Id,
@@ -392,8 +406,8 @@ namespace CosplayDate.Application.Services.Implementations
                         Specialties = specialties.Select(s => s.Specialty).ToList(),
                         Tags = cosplayer.Tags?.Split(',').Select(t => t.Trim()).Where(t => !string.IsNullOrEmpty(t)).ToList() ?? new List<string>(),
                         FeaturedPhotoUrl = featuredPhoto?.PhotoUrl,
-                        IsFollowing = false, // Will be set if currentUserId is provided
-                        IsFavorite = false   // Will be set if currentUserId is provided
+                        IsFollowing = isFollowing,
+                        IsFavorite = isFavorite
                     };
 
                     cosplayerDtos.Add(dto);

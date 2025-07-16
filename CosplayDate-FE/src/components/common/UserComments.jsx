@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Box,
   Typography,
@@ -7,138 +7,71 @@ import {
   Paper,
   Chip,
   Button,
-  Pagination
+  Pagination,
+  CircularProgress
 } from '@mui/material';
 import { ThumbUp, Reply, MoreHoriz } from '@mui/icons-material';
+import { reviewAPI } from '../../services/reviewAPI';
 
 const UserComments = ({ title = "Đánh giá từ người dùng" }) => {
   const [currentPage, setCurrentPage] = useState(1);
+  const [reviews, setReviews] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
   const commentsPerPage = 6;
 
-  // Mock comments data
-  const allComments = [
-    {
-      id: 1,
-      user: {
-        name: 'Minh Anh',
-        avatar: 'https://images.unsplash.com/photo-1494790108755-2616b612b830?w=100&h=100&fit=crop&crop=face',
-        verified: true
-      },
-      rating: 5,
-      date: '2 ngày trước',
-      comment: 'Website tuyệt vời! Tôi đã tìm được nhiều cosplayer tài năng và chuyên nghiệp. Giao diện đẹp và dễ sử dụng.',
-      likes: 24,
-      helpful: true
-    },
-    {
-      id: 2,
-      user: {
-        name: 'Hoàng Nam',
-        avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&h=100&fit=crop&crop=face',
-        verified: false
-      },
-      rating: 4,
-      date: '1 tuần trước',
-      comment: 'Chất lượng cosplayer rất tốt, giá cả hợp lý. Hệ thống đặt lịch tiện lợi. Sẽ tiếp tục sử dụng dịch vụ.',
-      likes: 18,
-      helpful: false
-    },
-    {
-      id: 3,
-      user: {
-        name: 'Thu Hà',
-        avatar: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=100&h=100&fit=crop&crop=face',
-        verified: true
-      },
-      rating: 5,
-      date: '3 ngày trước',
-      comment: 'Tôi là cosplayer và đây là nền tảng tuyệt vời để kết nối với khách hàng. Hỗ trợ tốt từ team.',
-      likes: 31,
-      helpful: true
-    },
-    {
-      id: 4,
-      user: {
-        name: 'Quang Minh',
-        avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=100&h=100&fit=crop&crop=face',
-        verified: false
-      },
-      rating: 4,
-      date: '5 ngày trước',
-      comment: 'Đa dạng lựa chọn cosplayer với nhiều thể loại khác nhau. Tính năng tìm kiếm và lọc rất hữu ích.',
-      likes: 12,
-      helpful: false
-    },
-    {
-      id: 5,
-      user: {
-        name: 'Linh Chi',
-        avatar: 'https://images.unsplash.com/photo-1544723795-3fb6469f5b39?w=100&h=100&fit=crop&crop=face',
-        verified: true
-      },
-      rating: 5,
-      date: '1 ngày trước',
-      comment: 'CosplayDate đã giúp tôi tổ chức event thành công! Các cosplayer đều rất chuyên nghiệp và đúng giờ.',
-      likes: 28,
-      helpful: true
-    },
-    {
-      id: 6,
-      user: {
-        name: 'Đức Anh',
-        avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=100&h=100&fit=crop&crop=face',
-        verified: false
-      },
-      rating: 4,
-      date: '4 ngày trước',
-      comment: 'Trải nghiệm tốt, giao diện thân thiện. Chỉ cần cải thiện thêm về tốc độ tải trang là hoàn hảo.',
-      likes: 15,
-      helpful: false
-    },
-    {
-      id: 7,
-      user: {
-        name: 'Mai Phương',
-        avatar: 'https://images.unsplash.com/photo-1489424731084-a5d8b219a5bb?w=100&h=100&fit=crop&crop=face',
-        verified: true
-      },
-      rating: 5,
-      date: '6 ngày trước',
-      comment: 'Hệ thống thanh toán an toàn, dễ dàng theo dõi lịch sử giao dịch. Rất hài lòng với dịch vụ!',
-      likes: 22,
-      helpful: true
-    },
-    {
-      id: 8,
-      user: {
-        name: 'Tuấn Hùng',
-        avatar: 'https://images.unsplash.com/photo-1507591064344-4c6ce005b128?w=100&h=100&fit=crop&crop=face',
-        verified: false
-      },
-      rating: 4,
-      date: '1 tuần trước',
-      comment: 'Nhiều lựa chọn cosplayer chất lượng cao. Giá cả minh bạch, không phát sinh chi phí ẩn.',
-      likes: 19,
-      helpful: false
+  // Load reviews from API
+  const loadReviews = async (page = 1) => {
+    setLoading(true);
+    setError(null);
+    
+    try {
+      const response = await reviewAPI.getAllReviews(page, commentsPerPage);
+      
+      if (response.success && response.data) {
+        // Check if response.data is the ApiResponse structure
+        const reviewsData = response.data.data || response.data;
+        setReviews(Array.isArray(reviewsData) ? reviewsData : []);
+      } else {
+        setError(response.error || 'Failed to load reviews');
+        setReviews([]);
+      }
+    } catch (err) {
+      console.error('Error loading reviews:', err);
+      setError('Failed to load reviews');
+      setReviews([]);
+    } finally {
+      setLoading(false);
     }
-  ];
+  };
 
-  // Calculate pagination
-  const totalPages = Math.ceil(allComments.length / commentsPerPage);
-  const startIndex = (currentPage - 1) * commentsPerPage;
-  const currentComments = allComments.slice(startIndex, startIndex + commentsPerPage);
+  // Load reviews on component mount and page change
+  useEffect(() => {
+    loadReviews(currentPage);
+  }, [currentPage]);
+
+  // Calculate pagination (since we don't have total count from API, we'll use a simple approach)
+  const totalPages = reviews.length === commentsPerPage ? currentPage + 1 : currentPage;
 
   const handlePageChange = (event, value) => {
     setCurrentPage(value);
   };
 
-  const handleLike = (commentId) => {
-    console.log('Liked comment:', commentId);
-    // Handle like logic here
+  const handleLike = async (reviewId) => {
+    try {
+      // Toggle helpful vote
+      const response = await reviewAPI.toggleHelpful(reviewId, true);
+      if (response.success) {
+        // Reload reviews to get updated helpful count
+        loadReviews(currentPage);
+      }
+    } catch (error) {
+      console.error('Error toggling helpful vote:', error);
+    }
   };
 
-  const handleReply = (commentId) => {
-    console.log('Reply to comment:', commentId);
+  const handleReply = (reviewId) => {
+    console.log('Reply to review:', reviewId);
     // Handle reply logic here
   };
 
@@ -146,6 +79,21 @@ const UserComments = ({ title = "Đánh giá từ người dùng" }) => {
     if (rating >= 5) return '#4CAF50';
     if (rating >= 4) return '#FF9800';
     return '#F44336';
+  };
+
+  // Format date helper
+  const formatDate = (dateString) => {
+    if (!dateString) return '';
+    
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffTime = Math.abs(now - date);
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    
+    if (diffDays === 1) return '1 ngày trước';
+    if (diffDays <= 7) return `${diffDays} ngày trước`;
+    if (diffDays <= 30) return `${Math.ceil(diffDays / 7)} tuần trước`;
+    return `${Math.ceil(diffDays / 30)} tháng trước`;
   };
 
   return (
@@ -184,173 +132,244 @@ const UserComments = ({ title = "Đánh giá từ người dùng" }) => {
       </Box>
 
       {/* Comments Grid */}
-      <Box sx={{ 
-        display: 'grid',
-        gridTemplateColumns: { xs: '1fr', md: 'repeat(2, 1fr)', lg: 'repeat(3, 1fr)' },
-        gap: 3,
-        mb: 4
-      }}>
-        {currentComments.map((comment) => (
-          <Paper
-            key={comment.id}
-            sx={{
-              p: 3,
-              borderRadius: '16px',
-              background: 'white',
-              border: '1px solid rgba(233, 30, 99, 0.08)',
-              transition: 'all 0.3s ease',
-              '&:hover': {
-                transform: 'translateY(-4px)',
-                boxShadow: '0 8px 24px rgba(233, 30, 99, 0.15)',
-              },
-            }}
+      {loading ? (
+        <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
+          <CircularProgress color="primary" />
+        </Box>
+      ) : error ? (
+        <Box sx={{ textAlign: 'center', py: 4 }}>
+          <Typography color="error" sx={{ mb: 2 }}>
+            {error}
+          </Typography>
+          <Button 
+            variant="outlined" 
+            onClick={() => loadReviews(currentPage)}
+            color="primary"
           >
-            {/* User Info */}
-            <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-              <Avatar
-                src={comment.user.avatar}
-                alt={comment.user.name}
-                sx={{
-                  width: 48,
-                  height: 48,
-                  mr: 2,
-                  border: '2px solid rgba(233, 30, 99, 0.1)',
-                }}
-              />
-              <Box sx={{ flex: 1 }}>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            Thử lại
+          </Button>
+        </Box>
+      ) : reviews.length === 0 ? (
+        <Box sx={{ textAlign: 'center', py: 4 }}>
+          <Typography color="text.secondary">
+            Chưa có đánh giá nào
+          </Typography>
+        </Box>
+      ) : (
+        <Box sx={{ 
+          display: 'grid',
+          gridTemplateColumns: { xs: '1fr', md: 'repeat(2, 1fr)', lg: 'repeat(3, 1fr)' },
+          gap: 3,
+          mb: 4
+        }}>
+          {reviews.map((review) => (
+            <Paper
+              key={review.id}
+              sx={{
+                p: 3,
+                borderRadius: '16px',
+                background: 'white',
+                border: '1px solid rgba(233, 30, 99, 0.08)',
+                transition: 'all 0.3s ease',
+                '&:hover': {
+                  transform: 'translateY(-4px)',
+                  boxShadow: '0 8px 24px rgba(233, 30, 99, 0.15)',
+                },
+              }}
+            >
+              {/* User Info */}
+              <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                <Avatar
+                  src={review.customerAvatarUrl || ''}
+                  alt={review.customerName || 'User'}
+                  sx={{
+                    width: 48,
+                    height: 48,
+                    mr: 2,
+                    border: '2px solid rgba(233, 30, 99, 0.1)',
+                  }}
+                >
+                  {!review.customerAvatarUrl && (review.customerName || 'U')[0]}
+                </Avatar>
+                <Box sx={{ flex: 1 }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <Typography
+                      variant="subtitle1"
+                      sx={{
+                        fontWeight: 600,
+                        color: 'text.primary',
+                        fontSize: '14px',
+                      }}
+                    >
+                      {review.customerName || 'Anonymous'}
+                    </Typography>
+                    {review.isVerified && (
+                      <Chip
+                        label="✓"
+                        size="small"
+                        sx={{
+                          backgroundColor: 'primary.main',
+                          color: 'white',
+                          fontSize: '10px',
+                          height: '16px',
+                          minWidth: '16px',
+                          '& .MuiChip-label': { px: 0.5 }
+                        }}
+                      />
+                    )}
+                  </Box>
                   <Typography
-                    variant="subtitle1"
+                    variant="body2"
                     sx={{
-                      fontWeight: 600,
-                      color: 'text.primary',
-                      fontSize: '14px',
+                      color: 'text.secondary',
+                      fontSize: '12px',
                     }}
                   >
-                    {comment.user.name}
+                    {formatDate(review.createdAt)}
                   </Typography>
-                  {comment.user.verified && (
-                    <Chip
-                      label="✓"
-                      size="small"
-                      sx={{
-                        backgroundColor: 'primary.main',
-                        color: 'white',
-                        fontSize: '10px',
-                        height: '16px',
-                        minWidth: '16px',
-                        '& .MuiChip-label': { px: 0.5 }
-                      }}
-                    />
-                  )}
                 </Box>
+              </Box>
+
+              {/* Rating */}
+              <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                <Rating
+                  value={review.rating}
+                  readOnly
+                  size="small"
+                  sx={{
+                    '& .MuiRating-iconFilled': {
+                      color: getRatingColor(review.rating),
+                    },
+                  }}
+                />
                 <Typography
                   variant="body2"
                   sx={{
+                    ml: 1,
                     color: 'text.secondary',
                     fontSize: '12px',
                   }}
                 >
-                  {comment.date}
+                  {review.rating}/5
                 </Typography>
               </Box>
-              <Button
-                size="small"
-                sx={{ minWidth: 'auto', p: 0.5, color: 'text.secondary' }}
-              >
-                <MoreHoriz />
-              </Button>
-            </Box>
 
-            {/* Rating */}
-            <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-              <Rating
-                value={comment.rating}
-                readOnly
-                size="small"
-                sx={{
-                  '& .MuiRating-iconFilled': {
-                    color: getRatingColor(comment.rating),
-                  },
-                }}
-              />
+              {/* Comment Text */}
               <Typography
                 variant="body2"
                 sx={{
-                  ml: 1,
-                  color: 'text.secondary',
-                  fontSize: '12px',
+                  color: 'text.primary',
+                  fontSize: '14px',
+                  lineHeight: 1.5,
+                  mb: 3,
                 }}
               >
-                {comment.rating}/5
+                {review.comment}
               </Typography>
-            </Box>
 
-            {/* Comment Text */}
-            <Typography
-              variant="body2"
-              sx={{
-                color: 'text.primary',
-                fontSize: '14px',
-                lineHeight: 1.5,
-                mb: 3,
-              }}
-            >
-              {comment.comment}
-            </Typography>
+              {/* Service Type Tag */}
+              {review.serviceType && (
+                <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                  <Typography
+                    variant="body2"
+                    sx={{
+                      color: 'text.secondary',
+                      fontSize: '12px',
+                      mr: 1,
+                    }}
+                  >
+                    Dịch vụ:
+                  </Typography>
+                  <Typography
+                    variant="body2"
+                    sx={{
+                      color: 'text.primary',
+                      fontSize: '12px',
+                      fontWeight: 500,
+                    }}
+                  >
+                    {review.serviceType}
+                  </Typography>
+                </Box>
+              )}
 
-            {/* Actions */}
-            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <Button
-                size="small"
-                startIcon={<ThumbUp />}
-                onClick={() => handleLike(comment.id)}
-                sx={{
-                  color: comment.helpful ? 'primary.main' : 'text.secondary',
-                  textTransform: 'none',
-                  fontSize: '12px',
-                  '&:hover': {
-                    backgroundColor: 'rgba(233, 30, 99, 0.05)',
-                  },
-                }}
-              >
-                Hữu ích ({comment.likes})
-              </Button>
-              
-              <Button
-                size="small"
-                startIcon={<Reply />}
-                onClick={() => handleReply(comment.id)}
-                sx={{
-                  color: 'text.secondary',
-                  textTransform: 'none',
-                  fontSize: '12px',
-                  '&:hover': {
-                    backgroundColor: 'rgba(233, 30, 99, 0.05)',
-                  },
-                }}
-              >
-                Trả lời
-              </Button>
-            </Box>
-          </Paper>
-        ))}
-      </Box>
+              {/* Cosplayer Info */}
+              {(review.cosplayerName || review.cosplayerAvatarUrl) && (
+                <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                  <Typography
+                    variant="body2"
+                    sx={{
+                      color: 'text.secondary',
+                      fontSize: '12px',
+                      mr: 1,
+                    }}
+                  >
+                    Cosplayer:
+                  </Typography>
+                  <Avatar
+                    src={review.cosplayerAvatarUrl || ''}
+                    alt={review.cosplayerName || 'Cosplayer'}
+                    sx={{
+                      width: 20,
+                      height: 20,
+                      mr: 1,
+                      fontSize: '10px',
+                    }}
+                  >
+                    {!review.cosplayerAvatarUrl && (review.cosplayerName || 'C')[0]}
+                  </Avatar>
+                  <Typography
+                    variant="body2"
+                    sx={{
+                      color: 'text.primary',
+                      fontSize: '12px',
+                      fontWeight: 500,
+                    }}
+                  >
+                    {review.cosplayerName || 'Anonymous'}
+                  </Typography>
+                </Box>
+              )}
+
+              {/* Actions */}
+              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <Button
+                  size="small"
+                  startIcon={<ThumbUp />}
+                  onClick={() => handleLike(review.id)}
+                  sx={{
+                    color: review.isHelpfulByCurrentUser ? 'primary.main' : 'text.secondary',
+                    textTransform: 'none',
+                    fontSize: '12px',
+                    '&:hover': {
+                      backgroundColor: 'rgba(233, 30, 99, 0.05)',
+                    },
+                  }}
+                >
+                  Hữu ích ({review.helpfulCount || 0})
+                </Button>
+              </Box>
+            </Paper>
+          ))}
+        </Box>
+      )}
 
       {/* Pagination */}
-      <Box sx={{ display: 'flex', justifyContent: 'center' }}>
-        <Pagination
-          count={totalPages}
-          page={currentPage}
-          onChange={handlePageChange}
-          color="primary"
-          sx={{
-            '& .MuiPaginationItem-root': {
-              borderRadius: '8px',
-            },
-          }}
-        />
-      </Box>
+      {!loading && !error && reviews.length > 0 && (
+        <Box sx={{ display: 'flex', justifyContent: 'center' }}>
+          <Pagination
+            count={totalPages}
+            page={currentPage}
+            onChange={handlePageChange}
+            color="primary"
+            sx={{
+              '& .MuiPaginationItem-root': {
+                borderRadius: '8px',
+              },
+            }}
+          />
+        </Box>
+      )}
     </Paper>
   );
 };

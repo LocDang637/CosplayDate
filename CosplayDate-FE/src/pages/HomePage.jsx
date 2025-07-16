@@ -109,6 +109,16 @@ const HomePage = () => {
     navigate("/cosplayers");
   };
 
+  const handleCosplayersUpdate = (cosplayerId, isFollowing) => {
+    setCosplayers(prevCosplayers => 
+      prevCosplayers.map(cosplayer => 
+        cosplayer.id === cosplayerId 
+          ? { ...cosplayer, isFollowing }
+          : cosplayer
+      )
+    );
+  };
+
   return (
     <ThemeProvider theme={cosplayTheme}>
       <Box sx={{ minHeight: '100vh', backgroundColor: '#FFE8F5' }}>
@@ -245,6 +255,7 @@ const HomePage = () => {
             onSeeAll={handleSeeAll}
             loading={loading}
             currentUser={user}
+            onCosplayersUpdate={handleCosplayersUpdate}
           />
         </Container>
 

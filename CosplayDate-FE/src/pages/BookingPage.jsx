@@ -68,6 +68,9 @@ const BookingPage = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
+  // User state for header
+  const [user, setUser] = useState(null);
+
   // Booking data
   const [cosplayer, setCosplayer] = useState(null);
   const [services, setServices] = useState([]);
@@ -80,6 +83,20 @@ const BookingPage = () => {
 
   // Polling ref
   const pollingIntervalRef = useRef(null);
+
+  // Load user data from localStorage
+  useEffect(() => {
+    const storedUser = localStorage.getItem('user');
+    if (storedUser) {
+      try {
+        const parsedUser = JSON.parse(storedUser);
+        setUser(parsedUser);
+      } catch (error) {
+        console.error('Error parsing stored user:', error);
+        localStorage.removeItem('user');
+      }
+    }
+  }, []);
 
   // Save state whenever it changes
   useEffect(() => {
@@ -254,21 +271,18 @@ const BookingPage = () => {
       }
       setCosplayer(cosplayerResult.data);
 
-      // Load services
-      const servicesResult = await cosplayerAPI.getServices(cosplayerId);
-      if (servicesResult.success && servicesResult.data.length > 0) {
-        setServices(servicesResult.data);
-
-        // Update cosplayer name if provided
-        if (servicesResult.cosplayerName && cosplayer) {
-          setCosplayer({
-            ...cosplayer,
-            displayName: servicesResult.cosplayerName
-          });
-        }
+      // Extract services from cosplayer data if available
+      if (cosplayerResult.data.services && cosplayerResult.data.services.length > 0) {
+        setServices(cosplayerResult.data.services);
       } else {
-        setServices([]);
-        setError('Cosplayer này chưa có dịch vụ nào.');
+        // Fallback: Load services separately if not included in cosplayer details
+        const servicesResult = await cosplayerAPI.getServices(cosplayerId);
+        if (servicesResult.success && servicesResult.data.length > 0) {
+          setServices(servicesResult.data);
+        } else {
+          setServices([]);
+          setError('Cosplayer này chưa có dịch vụ nào.');
+        }
       }
 
     } catch (err) {
@@ -301,6 +315,13 @@ const BookingPage = () => {
 
   const handleBack = () => {
     setActiveStep((prev) => prev - 1);
+  };
+
+  const handleLogout = () => {
+    setUser(null);
+    localStorage.removeItem('user');
+    localStorage.removeItem('token');
+    navigate('/');
   };
 
   const renderStepContent = () => {
@@ -377,7 +398,7 @@ const BookingPage = () => {
   if (loading && activeStep === 0) {
     return (
       <ThemeProvider theme={cosplayTheme}>
-        <Header />
+        <Header user={user} onLogout={handleLogout} />
         <PageLayout>
           <Container maxWidth="lg">
             <Box sx={{
@@ -397,7 +418,7 @@ const BookingPage = () => {
 
   return (
     <ThemeProvider theme={cosplayTheme}>
-      <Header />
+      <Header user={user} onLogout={handleLogout} />
       <PageLayout>
         <Container maxWidth="lg">
           <Box sx={{ py: 4 }}>

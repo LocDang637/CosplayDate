@@ -25,7 +25,7 @@ import Header from '../components/layout/Header';
 import Footer from '../components/layout/Footer';
 import CustomerProfileHeader from '../components/profile/CustomerProfileHeader';
 import ProfileTabs from '../components/profile/ProfileTabs';
-import CustomerWallet from '../components/profile/CustomerWallet';
+import WalletTab from '../components/profile/WalletTab';
 
 import ProfileEditModal from '../components/profile/ProfileEditModal';
 import CustomerBookingOrders from '../components/profile/CustomerBookingOrders';
@@ -39,7 +39,7 @@ const CustomerProfilePage = () => {
   const [user, setUser] = useState(null);
   const [profileUser, setProfileUser] = useState(null);
   const [currentProfile, setCurrentProfile] = useState(null); // Add current profile state
-  const [activeTab, setActiveTab] = useState('wallet');
+  const [activeTab, setActiveTab] = useState('following'); // Default to 'following' for anonymous users
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [isOwnProfile, setIsOwnProfile] = useState(false); // Changed to state instead of computed
@@ -95,11 +95,14 @@ const CustomerProfilePage = () => {
       } catch (error) {
         console.error("❌ Error parsing stored user:", error);
         localStorage.removeItem("user");
-        navigate('/login');
-        return;
+        // Don't redirect to login for profile pages - allow anonymous viewing
+        if (!userId) {
+          navigate('/login');
+          return;
+        }
       }
     } else {
-      console.log("⚠️ No user found in localStorage");
+      console.log("⚠️ No user found in localStorage - allowing anonymous viewing");
       setUserDataLoaded(true);
     }
 
@@ -108,6 +111,15 @@ const CustomerProfilePage = () => {
       showSnackbar(location.state.message, 'success');
     }
   }, []);
+
+  // Set default tab based on user ownership status
+  useEffect(() => {
+    if (isOwnProfile) {
+      setActiveTab('wallet');
+    } else {
+      setActiveTab('following');
+    }
+  }, [isOwnProfile]);
 
   // Add this useEffect to handle URL query parameters:
   useEffect(() => {
@@ -465,35 +477,23 @@ const CustomerProfilePage = () => {
     },
   ];
 
-  const customerTabCounts = {
-    reviews: mockStats.reviewsGiven,
-    events: mockStats.totalBookings,
-    achievements: 8,
-    favorites: mockStats.favoriteCosplayers,
-    bookings: mockStats.totalBookings,
-    following: profileUser?.followingCount || 0,
-    wallet: 1,
-  };
-
   const customerTabs = [
     {
       id: "wallet",
-      label: "Wallet",
+      label: "Ví",
       icon: "AccountBalanceWallet",
       show: isOwnProfile,
     },
     {
       id: "bookings",
-      label: "Bookings",
+      label: "Đặt lịch",
       icon: "Event",
-      count: customerTabCounts.bookings,
       show: isOwnProfile,
     },
     {
       id: "following",
       label: "Đang theo dõi",
       icon: "PersonAdd",
-      count: customerTabCounts.following,
       show: true,
     },
   ];
@@ -502,7 +502,8 @@ const CustomerProfilePage = () => {
     switch (activeTab) {
       case "wallet":
         return (
-          <CustomerWallet
+          <WalletTab
+            userType="Customer"
             balance={currentProfile?.walletBalance || profileUser?.walletBalance}
             loyaltyPoints={currentProfile?.loyaltyPoints || profileUser?.loyaltyPoints}
             // Pass API functions for real data loading
@@ -656,20 +657,15 @@ const CustomerProfilePage = () => {
             </Menu>
           )}
 
-          {/* Only show profile tabs and content for own profile */}
-          {isOwnProfile && (
-            <>
-              <ProfileTabs
-                activeTab={activeTab}
-                onTabChange={handleTabChange}
-                isOwnProfile={isOwnProfile}
-                counts={customerTabCounts}
-                customTabs={customerTabs}
-              />
+          {/* Show profile tabs and content - filter tabs based on isOwnProfile */}
+          <ProfileTabs
+            activeTab={activeTab}
+            onTabChange={handleTabChange}
+            isOwnProfile={isOwnProfile}
+            customTabs={customerTabs}
+          />
 
-              <Box sx={{ minHeight: "400px" }}>{renderTabContent()}</Box>
-            </>
-          )}
+          <Box sx={{ minHeight: "400px" }}>{renderTabContent()}</Box>
         </Container>
 
         <Footer />

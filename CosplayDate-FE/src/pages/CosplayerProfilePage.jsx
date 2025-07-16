@@ -1,8 +1,10 @@
 // src/pages/CosplayerProfilePage.jsx - UPDATED VERSION with API-based isOwnProfile
+// Fixed export issue
 import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import CosplayerBookingOrders from '../components/profile/CosplayerBookingOrders';
 import CosplayerFollowers from '../components/profile/CosplayerFollowers';
+import WalletTab from '../components/profile/WalletTab';
 import {
   Box,
   Container,
@@ -52,6 +54,7 @@ const CosplayerProfilePage = () => {
 
   const handleFollowToggle = async () => {
     if (!user) {
+      // Redirect to login if not logged in
       navigate('/login');
       return;
     }
@@ -176,10 +179,14 @@ const CosplayerProfilePage = () => {
       } catch (error) {
         console.error('❌ Error parsing stored user:', error);
         localStorage.removeItem('user');
-        navigate('/login');
-        return;
+        // Don't redirect to login for profile pages - allow anonymous viewing
+        if (!userId) {
+          navigate('/login');
+          return;
+        }
       }
     } else {
+      console.log('⚠️ No user found in localStorage - allowing anonymous viewing');
       setUserDataLoaded(true);
     }
 
@@ -329,7 +336,7 @@ const CosplayerProfilePage = () => {
           setIsOwnProfile(apiIsOwnProfile);
 
           // Set isFollowing from API response (only for non-own profiles)
-          if (!apiIsOwnProfile) {
+          if (!apiIsOwnProfile && user) {
             setIsFollowing(apiIsFollowing || false);
           }
 
@@ -600,6 +607,12 @@ const CosplayerProfilePage = () => {
       show: true
     },
     {
+      id: 'wallet',
+      label: 'Ví',
+      icon: 'AccountBalanceWallet',
+      show: isOwnProfile
+    },
+    {
       id: 'bookings',
       label: 'Đặt lịch',
       icon: 'Event',
@@ -609,14 +622,12 @@ const CosplayerProfilePage = () => {
       id: 'gallery',
       label: 'Thư viện',
       icon: 'PhotoLibrary',
-      count: photos.length + videos.length,
       show: true
     },
     {
       id: 'followers',
       label: 'Người theo dõi',
       icon: 'People',
-      count: profileUser?.followersCount || profileUser?.stats?.totalFollowers || 0,
       show: isOwnProfile
     }
   ];
@@ -636,6 +647,17 @@ const CosplayerProfilePage = () => {
         return (
           <CosplayerBookingOrders
             isOwnProfile={isOwnProfile}
+          />
+        );
+      case 'wallet':
+        return (
+          <WalletTab
+            userType="Cosplayer"
+            balance={currentProfile?.balance || 0}
+            loyaltyPoints={currentProfile?.loyaltyPoints || 0}
+            onBalanceUpdate={(newBalance) => {
+              setCurrentProfile(prev => ({ ...prev, balance: newBalance }));
+            }}
           />
         );
       case 'gallery':

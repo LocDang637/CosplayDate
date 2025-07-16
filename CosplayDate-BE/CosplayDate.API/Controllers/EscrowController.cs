@@ -1,6 +1,7 @@
 ﻿using CosplayDate.Application.DTOs.Escrow;
 using CosplayDate.Application.Services.Interfaces;
 using CosplayDate.Domain.Entities;
+using CosplayDate.Domain.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
@@ -14,11 +15,16 @@ namespace CosplayDate.API.Controllers
     {
         private readonly IEscrowService _escrowService;
         private readonly ILogger<EscrowController> _logger;
+        private readonly IServiceProvider _serviceProvider;
 
-        public EscrowController(IEscrowService escrowService, ILogger<EscrowController> logger)
+        public EscrowController(
+            IEscrowService escrowService, 
+            ILogger<EscrowController> logger,
+            IServiceProvider serviceProvider)
         {
             _escrowService = escrowService;
             _logger = logger;
+            _serviceProvider = serviceProvider;
         }
 
         /// <summary>
@@ -168,7 +174,7 @@ namespace CosplayDate.API.Controllers
                 }
 
                 var escrows = await _escrowService.GetPendingEscrowsAsync(cosplayerId.Value);
-                var pendingEscrows = await MapToPendingEscrowDtos(escrows);
+                var pendingEscrows = MapToPendingEscrowDtos(escrows);
 
                 return Ok(pendingEscrows);
             }
@@ -180,15 +186,36 @@ namespace CosplayDate.API.Controllers
         }
 
         /// <summary>
-        /// Get customer's escrow history
+        /// Get user's escrow history (supports both customers and cosplayers)
         /// </summary>
         [HttpGet("history")]
-        public async Task<IActionResult> GetCustomerEscrows([FromQuery] EscrowListRequestDto request)
+        public async Task<IActionResult> GetEscrowHistory([FromQuery] EscrowListRequestDto request)
         {
             try
             {
                 var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
-                var escrows = await _escrowService.GetCustomerEscrowsAsync(userId);
+                
+                // Determine if user is a customer or cosplayer
+                var cosplayerId = await GetCosplayerIdByUserId(userId);
+                var isCustomer = cosplayerId == null;
+
+                List<Domain.Entities.EscrowTransaction> escrows;
+                
+                if (isCustomer)
+                {
+                    // Get customer escrows
+                    escrows = await _escrowService.GetCustomerEscrowsAsync(userId);
+                }
+                else if (cosplayerId.HasValue)
+                {
+                    // Get cosplayer escrows
+                    escrows = await _escrowService.GetCosplayerEscrowsAsync(cosplayerId.Value);
+                }
+                else
+                {
+                    // This shouldn't happen, but handle gracefully
+                    escrows = new List<Domain.Entities.EscrowTransaction>();
+                }
 
                 // Apply filtering and pagination
                 var filteredEscrows = ApplyFilters(escrows, request);
@@ -198,19 +225,34 @@ namespace CosplayDate.API.Controllers
                     .Take(request.PageSize)
                     .ToList();
 
-                var escrowDtos = pagedEscrows.Select(e => new EscrowTransactionDto
+                // Use the enhanced history method to get detailed information
+                var detailedHistory = await _escrowService.GetEscrowHistoryAsync(userId, isCustomer);
+                
+                // Map to DTOs with enhanced information
+                var escrowDtos = pagedEscrows.Select(escrow =>
                 {
-                    Id = e.Id,
-                    BookingId = e.BookingId,
-                    PaymentId = e.PaymentId,
-                    CustomerId = e.CustomerId,
-                    CosplayerId = e.CosplayerId,
-                    Amount = e.Amount,
-                    Status = e.Status,
-                    TransactionCode = e.TransactionCode,
-                    CreatedAt = e.CreatedAt,
-                    ReleasedAt = e.ReleasedAt,
-                    RefundedAt = e.RefundedAt
+                    var historyItem = detailedHistory.FirstOrDefault(h => h.Id == escrow.Id);
+                    
+                    return new EscrowTransactionDto
+                    {
+                        Id = escrow.Id,
+                        BookingId = escrow.BookingId,
+                        PaymentId = escrow.PaymentId,
+                        CustomerId = escrow.CustomerId,
+                        CosplayerId = escrow.CosplayerId,
+                        Amount = escrow.Amount,
+                        Status = escrow.Status,
+                        TransactionCode = escrow.TransactionCode,
+                        CreatedAt = escrow.CreatedAt,
+                        ReleasedAt = escrow.ReleasedAt,
+                        RefundedAt = escrow.RefundedAt,
+                        // Enhanced fields from history
+                        BookingCode = historyItem?.BookingCode,
+                        CustomerName = isCustomer ? null : historyItem?.PartnerName,
+                        CosplayerName = isCustomer ? historyItem?.PartnerName : null,
+                        ServiceType = historyItem?.ServiceType,
+                        BookingDate = historyItem?.BookingDate
+                    };
                 }).ToList();
 
                 var response = new EscrowListResponseDto
@@ -229,7 +271,7 @@ namespace CosplayDate.API.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error getting customer escrows");
+                _logger.LogError(ex, "Error getting escrow history");
                 return StatusCode(500, new { message = "Failed to retrieve escrow history" });
             }
         }
@@ -257,12 +299,22 @@ namespace CosplayDate.API.Controllers
 
         private async Task<int?> GetCosplayerIdByUserId(int userId)
         {
-            // Implementation depends on your data structure
-            // This is a placeholder - you'll need to implement this
-            return null;
+            try
+            {
+                using var scope = _serviceProvider.CreateScope();
+                var unitOfWork = scope.ServiceProvider.GetRequiredService<IUnitOfWork>();
+                
+                var cosplayer = await unitOfWork.Cosplayers.FindAsync(c => c.UserId == userId);
+                return cosplayer.FirstOrDefault()?.Id;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting cosplayer ID for user {UserId}", userId);
+                return null;
+            }
         }
 
-        private async Task<List<PendingEscrowDto>> MapToPendingEscrowDtos(List<Domain.Entities.EscrowTransaction> escrows)
+        private List<PendingEscrowDto> MapToPendingEscrowDtos(List<Domain.Entities.EscrowTransaction> escrows)
         {
             // Map escrow transactions to pending DTOs with booking and customer details
             // This is a placeholder - you'll need to implement proper mapping

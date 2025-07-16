@@ -1,4 +1,4 @@
-// File: src/components/profile/CustomerWallet.jsx (Fixed Version)
+// File: src/components/profile/WalletTab.jsx (Reusable Version)
 import React, { useState, useEffect } from "react";
 import {
   Box,
@@ -57,7 +57,8 @@ import {
 import { paymentAPI } from "../../services/paymentAPI";
 import escrowAPI from "../../services/escrowAPI";
 
-const CustomerWallet = ({
+const WalletTab = ({
+  userType = "Customer", // "Customer" or "Cosplayer"
   balance = 0,
   transactions = [],
   loyaltyPoints = 0,
@@ -93,7 +94,7 @@ const CustomerWallet = ({
   const [packages, setPackages] = useState([]);
   const [selectedPackage, setSelectedPackage] = useState(null);
   const [processingPayment, setProcessingPayment] = useState(false);
-  const [walletBalance, setWalletBalance] = useState(balance);
+  const [walletBalance, setWalletBalance] = useState(0); // Initialize with 0 instead of balance prop
 
   // Real transaction data from escrow API
   const [escrowTransactions, setEscrowTransactions] = useState([]);
@@ -106,22 +107,35 @@ const CustomerWallet = ({
 
   // Load initial data
   useEffect(() => {
+    console.log("🔄 WalletTab initial load - userType:", userType, "balance prop:", balance);
     loadWalletData();
   }, []);
 
   useEffect(() => {
-    setWalletBalance(balance);
+    console.log("🔄 WalletTab balance prop changed:", balance);
+    // Only update if we haven't loaded from API yet and balance is greater than 0
+    if (balance > 0) {
+      setWalletBalance(balance);
+    }
   }, [balance]);
 
   const loadWalletData = async () => {
     try {
       const result = await paymentAPI.getWalletBalance();
-      if (result.success) {
-        setWalletBalance(result.data.Balance || balance);
-        onBalanceUpdate?.(result.data.Balance || balance);
+      if (result.success || result.isSuccess) {
+        // Handle both success response formats
+        const balanceData = result.data;
+        const actualBalance = balanceData.balance || balanceData.Balance || balance;
+        
+        setWalletBalance(actualBalance);
+        onBalanceUpdate?.(actualBalance);
+        
+        console.log("✅ Wallet balance loaded:", actualBalance);
+      } else {
+        console.error("❌ Failed to load wallet balance:", result.message);
       }
     } catch (error) {
-      console.error("Failed to load wallet data:", error);
+      console.error("❌ Failed to load wallet data:", error);
     }
   };
 
@@ -212,7 +226,7 @@ const CustomerWallet = ({
       });
 
       if (result.success && result.data) {
-        const transformedTransactions = escrowAPI.transformEscrowsToTransactions(result.data.escrows || []);
+        const transformedTransactions = escrowAPI.transformEscrowsToTransactions(result.data.escrows || [], userType);
         setEscrowTransactions(transformedTransactions);
         setTotalPages(result.data.totalPages || 1);
         setTotalCount(result.data.totalCount || 0);
@@ -757,23 +771,25 @@ const CustomerWallet = ({
               </Typography>
 
               <Box sx={{ display: "flex", gap: 2, flexWrap: "wrap" }}>
-                <Button
-                  variant="contained"
-                  startIcon={<Add />}
-                  onClick={handleTopUpOpen}
-                  sx={{
-                    backgroundColor: "rgba(255,255,255,0.2)",
-                    color: "white",
-                    borderRadius: "12px",
-                    flex: 1,
-                    minWidth: "120px",
-                    "&:hover": {
-                      backgroundColor: "rgba(255,255,255,0.3)",
-                    },
-                  }}
-                >
-                  Nạp tiền
-                </Button>
+                {userType === "Customer" && (
+                  <Button
+                    variant="contained"
+                    startIcon={<Add />}
+                    onClick={handleTopUpOpen}
+                    sx={{
+                      backgroundColor: "rgba(255,255,255,0.2)",
+                      color: "white",
+                      borderRadius: "12px",
+                      flex: 1,
+                      minWidth: "120px",
+                      "&:hover": {
+                        backgroundColor: "rgba(255,255,255,0.3)",
+                      },
+                    }}
+                  >
+                    Nạp tiền
+                  </Button>
+                )}
                 {/* <Button
                   variant="outlined"
                   startIcon={<Download />}
@@ -1246,15 +1262,16 @@ const CustomerWallet = ({
       </Paper>
 
       {/* Top Up Dialog */}
-      <Dialog
-        open={topUpDialog}
-        onClose={() => setTopUpDialog(false)}
-        maxWidth="md"
-        fullWidth
-        PaperProps={{
-          sx: {
-            borderRadius: "16px",
-            maxHeight: "90vh",
+      {userType === "Customer" && (
+        <Dialog
+          open={topUpDialog}
+          onClose={() => setTopUpDialog(false)}
+          maxWidth="md"
+          fullWidth
+          PaperProps={{
+            sx: {
+              borderRadius: "16px",
+              maxHeight: "90vh",
           },
         }}
       >
@@ -1454,6 +1471,7 @@ const CustomerWallet = ({
           )}
         </DialogContent>
       </Dialog>
+      )}
 
       {/* Withdraw Dialog */}
       <Dialog
@@ -1545,4 +1563,4 @@ const CustomerWallet = ({
   );
 };
 
-export default CustomerWallet;
+export default WalletTab;

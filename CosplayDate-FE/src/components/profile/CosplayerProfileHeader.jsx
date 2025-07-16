@@ -1,5 +1,5 @@
 // src/components/profile/CosplayerProfileHeader.jsx - Improved Version with Avatar Upload
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Box,
@@ -39,9 +39,11 @@ import {
   Event,
   Warning,
   PersonAdd, PersonRemove,
-  MoreVert
+  MoreVert,
+  EmojiEvents
 } from '@mui/icons-material';
 import EditCosplayerDialog from './EditCosplayerDialog';
+import { reviewAPI } from '../../services/reviewAPI';
 
 const CosplayerProfileHeader = ({
   user,
@@ -63,6 +65,8 @@ const CosplayerProfileHeader = ({
   const [anchorEl, setAnchorEl] = useState(null);
   const [showPopup, setShowPopup] = useState(false);
   const [popupMessage, setPopupMessage] = useState('');
+  const [averageRating, setAverageRating] = useState(null);
+  const [ratingLoading, setRatingLoading] = useState(false);
 
   if (!user) return null;
 
@@ -92,6 +96,27 @@ const CosplayerProfileHeader = ({
 
   // Check if current user is a customer (not a cosplayer)
   const isCustomer = loggedInUser && loggedInUser.userType === 'Customer';
+
+  // Fetch average rating on component mount
+  useEffect(() => {
+    const fetchAverageRating = async () => {
+      if (user?.id) {
+        setRatingLoading(true);
+        try {
+          const result = await reviewAPI.getCosplayerAverageRating(user.id);
+          if (result.success && result.data && result.data.isSuccess && result.data.data !== null) {
+            setAverageRating(Number(result.data.data));
+          }
+        } catch (error) {
+          console.error('Error fetching average rating:', error);
+        } finally {
+          setRatingLoading(false);
+        }
+      }
+    };
+
+    fetchAverageRating();
+  }, [user?.id]);
 
   const handleEditClick = () => {
     setEditDialogOpen(true);
@@ -365,14 +390,14 @@ const CosplayerProfileHeader = ({
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 3, mb: 2 }}>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                   <Rating
-                    value={cosplayer.rating || 0}
+                    value={averageRating !== null && typeof averageRating === 'number' ? averageRating : (user?.rating || 0)}
                     readOnly
                     precision={0.1}
                     size="medium"
                     sx={{ color: '#FFB400' }}
                   />
                   <Typography variant="body1" sx={{ fontWeight: 600 }}>
-                    {cosplayer.rating ? cosplayer.rating.toFixed(1) : '0.0'}
+                    {ratingLoading ? 'Đang tải...' : (averageRating !== null && typeof averageRating === 'number' ? averageRating.toFixed(1) : (user?.rating || 0).toFixed(1))}
                   </Typography>
                   <Typography variant="body2" sx={{ color: 'text.secondary' }}>
                     ({cosplayer.totalReviews} đánh giá)
@@ -382,21 +407,21 @@ const CosplayerProfileHeader = ({
 
               {/* Info Grid */}
               <Box sx={{ display: 'flex', gap: 3, flexWrap: 'wrap' }}>
-                {/* Price */}
+                {/* Price
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
                   <AttachMoney sx={{ fontSize: 20, color: 'primary.main' }} />
                   <Typography variant="body1" sx={{ fontWeight: 600, color: 'primary.main' }}>
                     {formatPrice(cosplayer.pricePerHour)}
                   </Typography>
-                </Box>
+                </Box> */}
 
-                {/* Location */}
+                {/* Location
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
                   <LocationOn sx={{ fontSize: 20, color: 'text.secondary' }} />
                   <Typography variant="body2" sx={{ color: 'text.secondary' }}>
                     {cosplayer.location}
                   </Typography>
-                </Box>
+                </Box> */}
 
                 {/* Response Time */}
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
@@ -405,11 +430,47 @@ const CosplayerProfileHeader = ({
                     Phản hồi: {cosplayer.responseTime}
                   </Typography>
                 </Box>
+
+                {/* Loyalty Points */}
+                {isOwnProfile && (
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                    <EmojiEvents sx={{ fontSize: 20, color: '#FFB400' }} />
+                    <Typography variant="body2" sx={{ fontWeight: 600, color: '#FFB400' }}>
+                      {((cosplayer.loyaltyPoints || currentProfile?.loyaltyPoints) || 0).toLocaleString()} điểm
+                    </Typography>
+                  </Box>
+                )}
               </Box>
+
+              {/* Stats Section */}
+              {cosplayer.stats && (
+                <Box sx={{
+                  display: 'flex',
+                  gap: 4,
+                  flexWrap: 'wrap',
+                  justifyContent: 'flex-start',
+                  alignItems: 'center',
+                  mt: 2,
+                  mb: 2
+                }}>
+                  <StatItem
+                    icon={<WorkspacePremium sx={{ color: 'primary.main' }} />}
+                    value={cosplayer.stats.completedBookings}
+                    label="Đơn hoàn thành"
+                  />
+                  <StatItem
+                    icon={<Groups sx={{ fontSize: 20, color: 'primary.main' }} />}
+                    value={
+                      ((cosplayer.stats?.totalFollowers ?? cosplayer.followersCount) || 0).toLocaleString()
+                    }
+                    label="Người theo dõi"
+                  />
+                </Box>
+              )}
 
               {/* Tags */}
               {cosplayer.tags && cosplayer.tags.length > 0 && (
-                <Box sx={{ display: 'flex', gap: 1, mt: 2, flexWrap: 'wrap' }}>
+                <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
                   {cosplayer.tags.map((tag, index) => (
                     <Chip
                       key={index}
@@ -487,44 +548,6 @@ const CosplayerProfileHeader = ({
                     />
                   ))}
                 </Box>
-              </Box>
-            </>
-          )}
-
-          {/* Stats Section */}
-          {cosplayer.stats && (
-            <>
-              <Divider sx={{ my: 3 }} />
-              <Box sx={{
-                display: 'flex',
-                gap: 2,
-                flexWrap: 'wrap',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                px: 2
-              }}>
-                <StatItem
-                  icon={<WorkspacePremium sx={{ color: 'primary.main' }} />}
-                  value={cosplayer.stats.completedBookings}
-                  label="Đơn hoàn thành"
-                />
-                <StatItem
-                  icon={<Groups sx={{ fontSize: 20, color: 'primary.main' }} />}
-                  value={
-                    ((cosplayer.stats?.totalFollowers ?? cosplayer.followersCount) || 0).toLocaleString()
-                  }
-                  label="Người theo dõi"
-                />
-                <StatItem
-                  icon={<Favorite sx={{ color: 'error.main' }} />}
-                  value={(cosplayer.stats.totalLikes || 0).toLocaleString()}
-                  label="Lượt thích"
-                />
-                <StatItem
-                  icon={<PhotoLibrary sx={{ fontSize: 20, color: 'primary.main' }} />}
-                  value={(cosplayer.stats.totalPosts || 0).toLocaleString()}
-                  label="Bài viết"
-                />
               </Box>
             </>
           )}

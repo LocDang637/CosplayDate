@@ -20,15 +20,23 @@ const createApiInstance = () => {
     return config;
   });
 
-  // FIX: Improved response interceptor - don't auto-redirect on profile routes
+  // FIX: Improved response interceptor - don't auto-redirect on homepage and other public routes
   instance.interceptors.response.use(
     (response) => response,
     (error) => {
       const currentPath = window.location.pathname;
-      const isProfileRoute = currentPath.startsWith('/profile/') || currentPath.startsWith('/cosplayer/');
+      const isPublicRoute = currentPath === '/' || 
+                           currentPath.startsWith('/profile/') || 
+                           currentPath.startsWith('/customer-profile/') ||
+                           currentPath.startsWith('/cosplayer/') ||
+                           currentPath.startsWith('/cosplayers') ||
+                           currentPath.startsWith('/login') ||
+                           currentPath.startsWith('/signup') ||
+                           currentPath.startsWith('/forgot-password') ||
+                           currentPath.startsWith('/reset-password');
 
-      // Only auto-redirect to login for 401 errors if not on profile routes
-      if (error.response?.status === 401 && !isProfileRoute) {
+      // Only auto-redirect to login for 401 errors if not on public routes
+      if (error.response?.status === 401 && !isPublicRoute) {
         localStorage.removeItem('token');
         localStorage.removeItem('user');
         window.location.href = '/login';

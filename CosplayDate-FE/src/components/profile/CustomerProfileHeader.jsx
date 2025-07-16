@@ -31,6 +31,7 @@ import {
   CircularProgress,
   Alert,
 } from '@mui/material';
+import { userAPI } from '../../services/api';
 import {
   Edit,
   Check,
@@ -187,58 +188,35 @@ const CustomerProfileHeader = ({
     setInterestsDialog(prev => ({ ...prev, open: true, loading: true, error: '' }));
 
     try {
-      const token = localStorage.getItem('token');
-      if (!token) {
-        throw new Error('No authentication token found');
-      }
-
-      console.log('Attempting to fetch interests from API');
-
-      // Use the configured API base URL from environment variables
-      const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'https://localhost:7241/api';
-      const apiUrl = `${apiBaseUrl}/users/interests`;
-
-      console.log('Making request to:', apiUrl);
-
-      const response = await fetch(apiUrl, {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-      });
-
-      console.log('Response status:', response.status);
-
-      if (!response.ok) {
-        if (response.status === 401) {
-          throw new Error('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.');
-        }
-        if (response.status === 404) {
-          throw new Error('API endpoint không tồn tại trên server.');
-        }
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const result = await response.json();
-      console.log('API Response:', result);
-
-      if (result.isSuccess) {
-        // Use interests from API response, fallback to user.interests, fallback to empty array
-        const currentInterests = result.data?.interests || customer.interests || [];
-
+      console.log('Fetching user interests using API...');
+      
+      // Get user interests using the proper API function
+      const result = await userAPI.getUserInterests();
+      
+      if (result.success && result.data) {
+        // Use interests and availableInterests from API response
+        const currentInterests = result.data.interests || [];
+        const availableInterests = result.data.availableInterests || [];
+        
         setInterestsDialog(prev => ({
           ...prev,
           loading: false,
-          availableInterests: result.data?.availableInterests || [],
+          availableInterests,
           selectedInterests: currentInterests,
           error: ''
         }));
       } else {
+        // Fallback to user.interests if API call fails
+        const fallbackInterests = [
+          'Anime', 'Manga', 'Gaming', 'Cosplay', 'Photography', 'Art',
+          'Music', 'Dance', 'Fashion', 'Movies', 'Technology', 'Travel',
+          'Food', 'Sports', 'Reading', 'Writing', 'Drawing', 'Singing'
+        ];
+
         setInterestsDialog(prev => ({
           ...prev,
           loading: false,
-          availableInterests: [],
+          availableInterests: fallbackInterests,
           selectedInterests: customer.interests || [],
           error: result.message || 'Không thể tải danh sách sở thích'
         }));
@@ -258,7 +236,7 @@ const CustomerProfileHeader = ({
         loading: false,
         availableInterests: fallbackInterests,
         selectedInterests: customer.interests || [],
-        error: `Không thể kết nối đến server. Đang sử dụng danh sách sở thích mặc định.`
+        error: 'Không thể kết nối đến server. Đang sử dụng danh sách sở thích mặc định.'
       }));
     }
   };
@@ -275,46 +253,18 @@ const CustomerProfileHeader = ({
     setInterestsDialog(prev => ({ ...prev, loading: true, error: '' }));
 
     try {
-      const token = localStorage.getItem('token');
-      if (!token) {
-        throw new Error('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.');
-      }
-
-      const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'https://localhost:7241/api';
-      const apiUrl = `${apiBaseUrl}/users/interests`;
-
-      console.log('Making PUT request to:', apiUrl);
-
-      const response = await fetch(apiUrl, {
-        method: 'PUT',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ interests: interestsDialog.selectedInterests }),
-      });
-
-      if (!response.ok) {
-        if (response.status === 401) {
-          throw new Error('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.');
-        }
-        if (response.status === 404) {
-          throw new Error('API endpoint không tồn tại trên server.');
-        }
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const result = await response.json();
-      console.log('Save response:', result);
-
-      if (result.isSuccess) {
+      console.log('Updating user interests using API...');
+      
+      // Use the proper API function to update interests
+      const result = await userAPI.updateUserInterests(interestsDialog.selectedInterests);
+      
+      if (result.success) {
         // Update the customer interests locally
         customer.interests = interestsDialog.selectedInterests;
 
         setInterestsDialog(prev => ({ ...prev, open: false, loading: false }));
 
-        // You could also trigger a success notification here if needed
-        console.log('Interests saved successfully');
+        console.log('Interests updated successfully');
       } else {
         setInterestsDialog(prev => ({
           ...prev,
@@ -492,40 +442,24 @@ const CustomerProfileHeader = ({
               />
             </Box>
 
-            {/* Bio */}
-            {customer.bio && (
-              <Box sx={{ mb: 2 }}>
-                <Typography
-                  variant="body1"
-                  sx={{
-                    color: 'text.secondary',
-                    fontStyle: 'italic',
-                    lineHeight: 1.6
-                  }}
-                >
-                  {customer.bio}
-                </Typography>
-              </Box>
-            )}
-
             {/* Info Grid */}
             <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', flexDirection: 'column' }}>
-              {/* Location */}
-              {customer.location && (
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                  <LocationOn sx={{ fontSize: 20, color: 'text.secondary' }} />
-                  <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-                    {customer.location}
-                  </Typography>
-                </Box>
-              )}
-
               {/* Member Since */}
               {memberSince && (
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
                   <CalendarMonth sx={{ fontSize: 20, color: 'text.secondary' }} />
                   <Typography variant="body2" sx={{ color: 'text.secondary' }}>
                     Thành viên từ {new Date(memberSince).toLocaleDateString('vi-VN')}
+                  </Typography>
+                </Box>
+              )}
+
+              {/* Location */}
+              {customer.location && (
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                  <LocationOn sx={{ fontSize: 20, color: 'text.secondary' }} />
+                  <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+                    {customer.location}
                   </Typography>
                 </Box>
               )}
@@ -576,6 +510,45 @@ const CustomerProfileHeader = ({
                     />
                   ))}
                 </Box>
+              </Box>
+            )}
+
+            {/* Add Interests button for empty interests (only for own profile) */}
+            {isOwnProfile && (!customer.interests || customer.interests.length === 0) && (
+              <Box sx={{ mt: 2 }}>
+                <Button
+                  variant="outlined"
+                  size="small"
+                  onClick={handleOpenInterestsDialog}
+                  startIcon={<Add />}
+                  sx={{
+                    borderColor: 'rgba(233, 30, 99, 0.3)',
+                    color: 'primary.main',
+                    borderRadius: '12px',
+                    '&:hover': {
+                      borderColor: 'primary.main',
+                      bgcolor: 'rgba(233, 30, 99, 0.1)'
+                    }
+                  }}
+                >
+                  Thêm sở thích
+                </Button>
+              </Box>
+            )}
+
+            {/* Bio */}
+            {customer.bio && (
+              <Box sx={{ mt: 2 }}>
+                <Typography
+                  variant="body1"
+                  sx={{
+                    color: 'text.secondary',
+                    fontStyle: 'italic',
+                    lineHeight: 1.6
+                  }}
+                >
+                  {customer.bio}
+                </Typography>
               </Box>
             )}
           </Box>

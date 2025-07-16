@@ -878,7 +878,7 @@ const ProfileGallery = ({
           <Typography variant="body1" sx={{ color: 'text.secondary', mb: 4, maxWidth: 400, mx: 'auto' }}>
             {searchTerm || selectedCategory !== 'all'
               ? 'Hãy thử điều chỉnh từ khóa tìm kiếm hoặc chọn danh mục khác'
-              : `Bắt đầu xây dựng bộ sưu tập ${mediaType === 'photos' ? 'ảnh' : 'video'} của bạn ngay hôm nay!`
+              : ``
             }
           </Typography>
           {isOwnProfile && (onAddPhoto || onAddMedia) && (
@@ -906,7 +906,7 @@ const ProfileGallery = ({
                 }
               }}
             >
-              Tải lên {mediaType === 'photos' ? 'ảnh' : 'video'} đầu tiên
+              Thêm {mediaType === 'photos' ? 'ảnh' : 'video'}
             </Button>
           )}
         </Paper>

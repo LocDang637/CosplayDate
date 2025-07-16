@@ -17,6 +17,7 @@ namespace CosplayDate.Application.Services.Interfaces
         Task<EscrowTransaction?> GetEscrowByIdAsync(int escrowId);
         Task<List<EscrowTransaction>> GetPendingEscrowsAsync(int cosplayerId);
         Task<List<EscrowTransaction>> GetCustomerEscrowsAsync(int customerId);
+        Task<List<EscrowTransaction>> GetCosplayerEscrowsAsync(int cosplayerId);
         Task<EscrowAnalyticsDto> GetEscrowAnalyticsAsync();
         Task<List<PendingEscrowDto>> GetDetailedPendingEscrowsAsync(int cosplayerId);
         Task<List<EscrowHistoryDto>> GetEscrowHistoryAsync(int userId, bool isCustomer = true);
