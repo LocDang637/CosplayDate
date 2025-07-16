@@ -22,6 +22,45 @@ namespace CosplayDate.Application.Services.Implementations
             _logger = logger;
         }
 
+        // Helper method to update cosplayer's rating and total reviews
+        private async Task UpdateCosplayerRatingAndTotalReviewsAsync(int cosplayerId)
+        {
+            try
+            {
+                var cosplayer = await _unitOfWork.Cosplayers.GetByIdAsync(cosplayerId);
+                if (cosplayer == null)
+                {
+                    _logger.LogWarning($"Cosplayer with ID {cosplayerId} not found when updating rating");
+                    return;
+                }
+
+                // Get all reviews for this cosplayer
+                var reviews = await _unitOfWork.Reviews.FindAsync(r => r.CosplayerId == cosplayerId);
+                
+                // Update total reviews count
+                cosplayer.TotalReviews = reviews.Count();
+                
+                // Update average rating
+                if (reviews.Any())
+                {
+                    cosplayer.Rating = (decimal)reviews.Average(r => r.Rating);
+                }
+                else
+                {
+                    cosplayer.Rating = 0;
+                }
+
+                _unitOfWork.Cosplayers.Update(cosplayer);
+                await _unitOfWork.SaveChangesAsync();
+                
+                _logger.LogInformation($"Updated cosplayer {cosplayerId}: Rating = {cosplayer.Rating}, TotalReviews = {cosplayer.TotalReviews}");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"Error updating cosplayer rating and total reviews for cosplayer {cosplayerId}");
+            }
+        }
+
         public async Task<ApiResponse<ReviewResponseDto>> CreateReviewAsync(int customerId, CreateReviewRequestDto request)
         {
             // Kiểm tra booking tồn tại và đã completed chưa
@@ -71,6 +110,10 @@ namespace CosplayDate.Application.Services.Implementations
             var customer = await _unitOfWork.Users.GetByIdAsync(customerId);
             // Lấy tags
             var tags = (await _unitOfWork.ReviewTags.FindAsync(t => t.ReviewId == review.Id)).Select(t => t.Tag).ToList();
+            
+            // Update cosplayer's rating and total reviews
+            await UpdateCosplayerRatingAndTotalReviewsAsync(booking.CosplayerId);
+            
             // Trả về response
             var response = new ReviewResponseDto
             {
@@ -92,7 +135,7 @@ namespace CosplayDate.Application.Services.Implementations
             return ApiResponse<ReviewResponseDto>.Success(response, "Review created successfully");
         }
 
-        public async Task<ApiResponse<List<ReviewResponseDto>>> GetReviewsForCosplayerAsync(int cosplayerId, int page = 1, int pageSize = 10)
+        public async Task<ApiResponse<List<ReviewResponseDto>>> GetReviewsForCosplayerAsync(int cosplayerId, int currentUserId = 0, int page = 1, int pageSize = 10)
         {
             var reviews = await _unitOfWork.Reviews.FindAsync(r => r.CosplayerId == cosplayerId);
             var paged = reviews.OrderByDescending(r => r.CreatedAt).Skip((page - 1) * pageSize).Take(pageSize).ToList();
@@ -105,6 +148,18 @@ namespace CosplayDate.Application.Services.Implementations
                 
                 // Get booking data to retrieve service type
                 var booking = await _unitOfWork.Bookings.GetByIdAsync(review.BookingId);
+                
+                // Check if current user has voted on this review
+                bool? isHelpfulByCurrentUser = null;
+                if (currentUserId > 0)
+                {
+                    var userVote = await _unitOfWork.Repository<ReviewHelpfulVote>()
+                        .FirstOrDefaultAsync(v => v.ReviewId == review.Id && v.UserId == currentUserId);
+                    if (userVote != null)
+                    {
+                        isHelpfulByCurrentUser = userVote.IsHelpful;
+                    }
+                }
                 
                 result.Add(new ReviewResponseDto
                 {
@@ -121,7 +176,8 @@ namespace CosplayDate.Application.Services.Implementations
                     Tags = tags,
                     CustomerName = customer != null ? $"{customer.FirstName} {customer.LastName}" : string.Empty,
                     CustomerAvatarUrl = customer?.AvatarUrl,
-                    ServiceType = booking?.ServiceType
+                    ServiceType = booking?.ServiceType,
+                    IsHelpfulByCurrentUser = isHelpfulByCurrentUser
                 });
             }
             return ApiResponse<List<ReviewResponseDto>>.Success(result, "Reviews loaded successfully");
@@ -158,6 +214,10 @@ namespace CosplayDate.Application.Services.Implementations
                 }
             }
             await _unitOfWork.SaveChangesAsync();
+            
+            // Update cosplayer's rating and total reviews after updating the review
+            await UpdateCosplayerRatingAndTotalReviewsAsync(review.CosplayerId);
+            
             // Lấy lại thông tin user và tags
             var customer = await _unitOfWork.Users.GetByIdAsync(customerId);
             var tags = (await _unitOfWork.ReviewTags.FindAsync(t => t.ReviewId == review.Id)).Select(t => t.Tag).ToList();
@@ -283,6 +343,9 @@ namespace CosplayDate.Application.Services.Implementations
             if (!isAdmin && review.CustomerId != userId)
                 return ApiResponse<bool>.Error("You don't have permission to delete this review");
 
+            // Store cosplayerId before deleting the review to update rating later
+            var cosplayerId = review.CosplayerId;
+
             // Xóa các tag liên quan
             var tags = await _unitOfWork.ReviewTags.FindAsync(t => t.ReviewId == reviewId);
             foreach (var tag in tags)
@@ -296,6 +359,10 @@ namespace CosplayDate.Application.Services.Implementations
             // Xóa review
             _unitOfWork.Reviews.Remove(review);
             await _unitOfWork.SaveChangesAsync();
+            
+            // Update cosplayer's rating and total reviews after deleting the review
+            await UpdateCosplayerRatingAndTotalReviewsAsync(cosplayerId);
+            
             return ApiResponse<bool>.Success(true, "Review deleted successfully");
         }
 
@@ -343,6 +410,104 @@ namespace CosplayDate.Application.Services.Implementations
             {
                 _logger.LogError(ex, "Error getting review by booking ID {BookingId}", bookingId);
                 return ApiResponse<ReviewResponseDto>.Error("An error occurred while retrieving the review");
+            }
+        }
+
+        public async Task<ApiResponse<ToggleHelpfulResponseDto>> ToggleHelpfulAsync(int reviewId, int userId, ToggleHelpfulRequestDto request)
+        {
+            try
+            {
+                var review = await _unitOfWork.Reviews.GetByIdAsync(reviewId);
+                if (review == null)
+                {
+                    return ApiResponse<ToggleHelpfulResponseDto>.Error("Review not found");
+                }
+
+                // Check if user is trying to vote on their own review
+                if (review.CustomerId == userId)
+                {
+                    return ApiResponse<ToggleHelpfulResponseDto>.Error("You cannot vote on your own review");
+                }
+
+                // Check if user has already voted on this review
+                var existingVote = await _unitOfWork.Repository<ReviewHelpfulVote>()
+                    .FirstOrDefaultAsync(v => v.ReviewId == reviewId && v.UserId == userId);
+
+                bool isToggled = false;
+                int newHelpfulCount = review.HelpfulCount ?? 0;
+
+                if (existingVote != null)
+                {
+                    // User has already voted
+                    if (existingVote.IsHelpful == request.IsHelpful)
+                    {
+                        // Same vote - remove it (toggle off)
+                        _unitOfWork.Repository<ReviewHelpfulVote>().Remove(existingVote);
+                        if (existingVote.IsHelpful)
+                        {
+                            newHelpfulCount = Math.Max(0, newHelpfulCount - 1);
+                        }
+                        isToggled = false;
+                    }
+                    else
+                    {
+                        // Different vote - update it
+                        existingVote.IsHelpful = request.IsHelpful;
+                        existingVote.CreatedAt = DateTime.UtcNow;
+                        _unitOfWork.Repository<ReviewHelpfulVote>().Update(existingVote);
+                        
+                        // Update count: if changing from unhelpful to helpful, +1; if changing from helpful to unhelpful, -1
+                        if (request.IsHelpful)
+                        {
+                            newHelpfulCount += 1;
+                        }
+                        else
+                        {
+                            newHelpfulCount = Math.Max(0, newHelpfulCount - 1);
+                        }
+                        isToggled = true;
+                    }
+                }
+                else
+                {
+                    // New vote
+                    var newVote = new ReviewHelpfulVote
+                    {
+                        ReviewId = reviewId,
+                        UserId = userId,
+                        IsHelpful = request.IsHelpful,
+                        CreatedAt = DateTime.UtcNow
+                    };
+                    await _unitOfWork.Repository<ReviewHelpfulVote>().AddAsync(newVote);
+                    
+                    if (request.IsHelpful)
+                    {
+                        newHelpfulCount += 1;
+                    }
+                    isToggled = true;
+                }
+
+                // Update the review's helpful count
+                review.HelpfulCount = newHelpfulCount;
+                _unitOfWork.Reviews.Update(review);
+                
+                await _unitOfWork.SaveChangesAsync();
+
+                var response = new ToggleHelpfulResponseDto
+                {
+                    ReviewId = reviewId,
+                    IsHelpful = request.IsHelpful,
+                    IsToggled = isToggled,
+                    HelpfulCount = newHelpfulCount
+                };
+
+                return ApiResponse<ToggleHelpfulResponseDto>.Success(response, 
+                    isToggled ? "Vote recorded successfully" : "Vote removed successfully");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error toggling helpful vote for review {ReviewId} by user {UserId}", reviewId, userId);
+                return ApiResponse<ToggleHelpfulResponseDto>.Error("An error occurred while processing your vote");
             }
         }
     }

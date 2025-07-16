@@ -37,7 +37,7 @@ const CosplayerCard = ({
   const navigate = useNavigate();
   const [showPopup, setShowPopup] = useState(false);
   const [popupMessage, setPopupMessage] = useState('');
-  const [followState, setFollowState] = useState(isFollowing);
+  const [followState, setFollowState] = useState(Boolean(isFollowing));
   const [followLoading, setFollowLoading] = useState(false);
   const [averageRating, setAverageRating] = useState(null);
   const [ratingLoading, setRatingLoading] = useState(false);
@@ -65,23 +65,12 @@ const CosplayerCard = ({
   // Check if current user is a customer (not a cosplayer)
   const isCustomer = user && user.userType === 'Customer';
 
-  // Check follow status on component mount
+  // Initialize follow state with prop value
   useEffect(() => {
-    const checkFollowStatus = async () => {
-      if (user && isCustomer && cosplayer.id) {
-        try {
-          const result = await userAPI.getUserProfile(cosplayer.id);
-          if (result?.success) {
-            // Handle follow status from result
-          }
-        } catch (error) {
-          console.error('Error checking follow status:', error);
-        }
-      }
-    };
-
-    checkFollowStatus();
-  }, [user, isCustomer, cosplayer.id]);
+    const newFollowState = Boolean(isFollowing);
+    console.log(`CosplayerCard ${cosplayer.id} - isFollowing prop changed:`, isFollowing, '-> state:', newFollowState);
+    setFollowState(newFollowState);
+  }, [isFollowing, cosplayer.id]);
 
   // Fetch average rating on component mount
   useEffect(() => {
@@ -103,11 +92,6 @@ const CosplayerCard = ({
 
     fetchAverageRating();
   }, [cosplayer.id]);
-
-  // Sync with prop changes
-  useEffect(() => {
-    setFollowState(isFollowing);
-  }, [isFollowing]);
 
   const formatPrice = (price) => {
     return new Intl.NumberFormat('vi-VN').format(price) + 'đ/giờ';
@@ -174,7 +158,9 @@ const CosplayerCard = ({
         if (result.success) {
           setFollowState(false);
           // Call parent callback if provided
-          onFollow && onFollow(cosplayer.id, false);
+          if (onFollow) {
+            onFollow(cosplayer.id, false);
+          }
         } else {
           setPopupMessage(result.message || 'Không thể bỏ theo dõi cosplayer');
           setShowPopup(true);
@@ -185,9 +171,12 @@ const CosplayerCard = ({
         if (result.success) {
           setFollowState(true);
           // Call parent callback if provided
-          onFollow && onFollow(cosplayer.id, true);
+          if (onFollow) {
+            onFollow(cosplayer.id, true);
+          }
         } else {
           setPopupMessage(result.message || 'Không thể theo dõi cosplayer');
+          setShowPopup(true);
         }
       }
     } catch (error) {

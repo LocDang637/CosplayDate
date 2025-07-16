@@ -487,7 +487,11 @@ const CosplayerBookingOrders = ({ isOwnProfile }) => {
       });
 
       console.log('Final reviewsMap:', reviewsMap);
-      setBookingReviews(reviewsMap);
+      // Merge with existing reviews instead of replacing
+      setBookingReviews(prev => ({
+        ...prev,
+        ...reviewsMap
+      }));
     } catch (error) {
       console.error('Error loading booking reviews:', error);
     }

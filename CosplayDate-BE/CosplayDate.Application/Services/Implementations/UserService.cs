@@ -384,6 +384,9 @@ namespace CosplayDate.Application.Services.Implementations
                 await _unitOfWork.UserFollows.AddAsync(follow);
                 await _unitOfWork.SaveChangesAsync();
 
+                // Update FollowersCount in Cosplayer table if the followed user is a cosplayer
+                await UpdateCosplayerFollowersCountAsync(followedId);
+
                 // Get total followers count
                 var totalFollowers = await _unitOfWork.UserFollows
                     .CountAsync(f => f.FollowedId == followedId);
@@ -418,6 +421,9 @@ namespace CosplayDate.Application.Services.Implementations
 
                 _unitOfWork.UserFollows.Remove(existingFollow);
                 await _unitOfWork.SaveChangesAsync();
+
+                // Update FollowersCount in Cosplayer table if the followed user is a cosplayer
+                await UpdateCosplayerFollowersCountAsync(followedId);
 
                 // Get total followers count
                 var totalFollowers = await _unitOfWork.UserFollows
@@ -612,6 +618,34 @@ namespace CosplayDate.Application.Services.Implementations
             // Note: Interests would need to be checked separately as it's in a related table
 
             return Math.Round((decimal)completedFields / totalFields * 100, 2);
+        }
+
+        /// <summary>
+        /// Updates the FollowersCount in the Cosplayer table for the given user ID if they are a cosplayer
+        /// </summary>
+        /// <param name="userId">The user ID to update the followers count for</param>
+        private async Task UpdateCosplayerFollowersCountAsync(int userId)
+        {
+            try
+            {
+                var cosplayer = await _unitOfWork.Cosplayers.FirstOrDefaultAsync(c => c.UserId == userId);
+                if (cosplayer != null)
+                {
+                    var followersCount = await _unitOfWork.UserFollows.CountAsync(f => f.FollowedId == userId);
+                    cosplayer.FollowersCount = followersCount;
+                    cosplayer.UpdatedAt = DateTime.UtcNow;
+                    
+                    _unitOfWork.Cosplayers.Update(cosplayer);
+                    await _unitOfWork.SaveChangesAsync();
+                    
+                    _logger.LogInformation("Updated followers count for cosplayer {CosplayerId} to {Count}", cosplayer.Id, followersCount);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error updating followers count for user {UserId}", userId);
+                // Don't throw exception here as it's a supplementary operation
+            }
         }
     }
 }

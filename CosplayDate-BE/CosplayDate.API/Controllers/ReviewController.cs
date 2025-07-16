@@ -37,7 +37,14 @@ namespace CosplayDate.API.Controllers
         [HttpGet("cosplayer/{cosplayerId}")]
         public async Task<IActionResult> GetReviewsForCosplayer(int cosplayerId, int page = 1, int pageSize = 10)
         {
-            var result = await _reviewService.GetReviewsForCosplayerAsync(cosplayerId, page, pageSize);
+            var currentUserId = 0;
+            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (int.TryParse(userIdClaim, out var userId))
+            {
+                currentUserId = userId;
+            }
+            
+            var result = await _reviewService.GetReviewsForCosplayerAsync(cosplayerId, currentUserId, page, pageSize);
             return Ok(result);
         }
 
@@ -119,6 +126,23 @@ namespace CosplayDate.API.Controllers
         public async Task<IActionResult> GetReviewByBookingId(int bookingId)
         {
             var result = await _reviewService.GetReviewByBookingIdAsync(bookingId);
+            if (result.IsSuccess) return Ok(result);
+            return BadRequest(result);
+        }
+
+        /// <summary>
+        /// Toggle helpful vote on a review
+        /// </summary>
+        [HttpPost("{reviewId}/helpful")]
+        public async Task<IActionResult> ToggleHelpful(int reviewId, [FromBody] ToggleHelpfulRequestDto request)
+        {
+            var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
+            if (userId == 0)
+            {
+                return BadRequest(new { isSuccess = false, message = "User not found" });
+            }
+
+            var result = await _reviewService.ToggleHelpfulAsync(reviewId, userId, request);
             if (result.IsSuccess) return Ok(result);
             return BadRequest(result);
         }

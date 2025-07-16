@@ -46,7 +46,9 @@ import {
   Description,
   Close,
   CheckCircle,
-  Work
+  Work,
+  ThumbUp,
+  ThumbUpOutlined
 } from '@mui/icons-material';
 import { bookingAPI } from '../../services/bookingAPI';
 import { cosplayerAPI } from '../../services/cosplayerAPI';
@@ -377,6 +379,60 @@ const CosplayerProfileOverview = ({ user, currentProfile, isOwnProfile }) => {
     </Card>
   );
 
+  // Add helpful vote handler
+  const handleHelpfulVote = async (reviewId, isHelpful) => {
+    try {
+      // Check if user is logged in
+      const token = localStorage.getItem('token');
+      if (!token) {
+        console.warn('User not logged in, cannot vote');
+        return;
+      }
+
+      // Additional safety check - prevent voting on own reviews
+      const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
+      const reviewToVoteOn = reviews.find(r => r.id === reviewId) || 
+                            reviewsWithBookings.find(r => r.id === reviewId);
+      
+      if (reviewToVoteOn && currentUser.id === reviewToVoteOn.customerId) {
+        console.warn('Cannot vote on your own review');
+        return;
+      }
+
+      const result = await reviewAPI.toggleHelpful(reviewId, isHelpful);
+      
+      if (result.success) {
+        // Update the local reviews state
+        setReviews(prevReviews => 
+          prevReviews.map(review => 
+            review.id === reviewId 
+              ? { 
+                  ...review, 
+                  helpfulCount: result.data.data.helpfulCount,
+                  isHelpfulByCurrentUser: result.data.data.isToggled ? true : null
+                }
+              : review
+          )
+        );
+        
+        // Also update reviewsWithBookings if it's different
+        setReviewsWithBookings(prevReviews => 
+          prevReviews.map(review => 
+            review.id === reviewId 
+              ? { 
+                  ...review, 
+                  helpfulCount: result.data.data.helpfulCount,
+                  isHelpfulByCurrentUser: result.data.data.isToggled ? true : null
+                }
+              : review
+          )
+        );
+      }
+    } catch (error) {
+      console.error('Error toggling helpful vote:', error);
+    }
+  };
+
   const RecentReview = ({ review }) => (
     <Box sx={{ p: 2, borderRadius: '12px', backgroundColor: 'rgba(233, 30, 99, 0.02)', mb: 2 }}>
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 1 }}>
@@ -410,9 +466,65 @@ const CosplayerProfileOverview = ({ user, currentProfile, isOwnProfile }) => {
         </Box>
         {review.isVerified && <Verified sx={{ color: 'success.main', fontSize: 16 }} />}
       </Box>
-      <Typography variant="body2" sx={{ color: 'text.secondary', fontSize: '13px', lineHeight: 1.4 }}>
+      <Typography variant="body2" sx={{ color: 'text.secondary', fontSize: '13px', lineHeight: 1.4, mb: 1 }}>
         {review.comment || 'Không có bình luận'}
       </Typography>
+      
+      {/* Helpful vote section - only show if user is logged in and it's not their own review */}
+      {(() => {
+        const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
+        const isLoggedIn = !!localStorage.getItem('token');
+        const isReviewAuthor = currentUser.id === review.customerId;
+        
+        // Don't show voting buttons if:
+        // 1. User is not logged in
+        // 2. User is the author of this review
+        if (!isLoggedIn || isReviewAuthor) {
+          return (
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 1 }}>
+              {review.helpfulCount > 0 && (
+                <Typography variant="caption" sx={{ color: 'text.secondary', fontSize: '12px' }}>
+                  {review.helpfulCount} người thấy hữu ích
+                </Typography>
+              )}
+            </Box>
+          );
+        }
+        
+        // Show voting buttons only for logged-in users who are not the review author
+        return (
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 1 }}>
+            <Typography variant="caption" sx={{ color: 'text.secondary', fontSize: '12px' }}>
+              Hữu ích?
+            </Typography>
+            
+            <Tooltip title="Hữu ích">
+              <IconButton
+                size="small"
+                onClick={() => handleHelpfulVote(review.id, true)}
+                sx={{
+                  color: review.isHelpfulByCurrentUser === true ? 'success.main' : 'text.secondary',
+                  '&:hover': {
+                    color: 'success.main',
+                    backgroundColor: 'rgba(76, 175, 80, 0.1)'
+                  }
+                }}
+              >
+                {review.isHelpfulByCurrentUser === true ? 
+                  <ThumbUp sx={{ fontSize: 16 }} /> : 
+                  <ThumbUpOutlined sx={{ fontSize: 16 }} />
+                }
+              </IconButton>
+            </Tooltip>
+            
+            {review.helpfulCount > 0 && (
+              <Typography variant="caption" sx={{ color: 'text.secondary', fontSize: '12px', ml: 0.5 }}>
+                {review.helpfulCount} người thấy hữu ích
+              </Typography>
+            )}
+          </Box>
+        );
+      })()}
     </Box>
   );
 

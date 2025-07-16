@@ -261,6 +261,30 @@ export const reviewAPI = {
         data: null
       };
     }
+  },
+
+  // Toggle helpful vote on a review
+  toggleHelpful: async (reviewId, isHelpful) => {
+    try {
+      console.log(`Toggling helpful vote for review ${reviewId}:`, { isHelpful });
+      
+      const apiResponse = await api.post(`/Review/${reviewId}/helpful`, {
+        isHelpful
+      });
+      
+      return {
+        success: true,
+        data: apiResponse.data,
+        message: 'Vote recorded successfully'
+      };
+    } catch (error) {
+      console.error('Error toggling helpful vote:', error);
+      return {
+        success: false,
+        error: error.response?.data?.message || 'Failed to record vote',
+        data: null
+      };
+    }
   }
 };
 
