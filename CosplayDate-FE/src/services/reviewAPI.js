@@ -215,6 +215,52 @@ export const reviewAPI = {
         data: null
       };
     }
+  },
+
+  // Update owner response for a review
+  updateOwnerResponse: async (reviewId, response) => {
+    try {
+      console.log(`Updating owner response for review ${reviewId}:`, response);
+      
+      const apiResponse = await api.put(`/Review/${reviewId}/owner-response`, {
+        response
+      });
+      
+      return {
+        success: true,
+        data: apiResponse.data,
+        message: 'Owner response updated successfully'
+      };
+    } catch (error) {
+      console.error('Error updating owner response:', error);
+      return {
+        success: false,
+        error: error.response?.data?.message || 'Failed to update owner response',
+        data: null
+      };
+    }
+  },
+
+  // Delete owner response for a review
+  deleteOwnerResponse: async (reviewId) => {
+    try {
+      console.log(`Deleting owner response for review ${reviewId}`);
+      
+      const apiResponse = await api.delete(`/Review/${reviewId}/owner-response`);
+      
+      return {
+        success: true,
+        data: apiResponse.data,
+        message: 'Owner response deleted successfully'
+      };
+    } catch (error) {
+      console.error('Error deleting owner response:', error);
+      return {
+        success: false,
+        error: error.response?.data?.message || 'Failed to delete owner response',
+        data: null
+      };
+    }
   }
 };
 

@@ -82,54 +82,103 @@ export const getEscrowHistory = async (params = {}) => {
 /**
  * Transform escrow data to transaction format for CustomerWallet component
  * @param {Array} escrows - Array of escrow objects from API
+ * @param {string} userType - "Customer" or "Cosplayer" to determine transaction perspective
  * @returns {Array} Array of transformed transaction objects
  */
-export const transformEscrowsToTransactions = (escrows = []) => {
+export const transformEscrowsToTransactions = (escrows = [], userType = "Customer") => {
   return escrows.map(escrow => {
-    // Determine transaction type and description based on status
+    // Determine transaction type and description based on status and user type
     let type, description;
-    switch (escrow.status) {
-      case 'Held':
-        type = 'booking_payment';
-        description = 'Thanh toán đặt lịch';
-        break;
-      case 'Released':
-        type = 'booking_payment';
-        description = 'Thanh toán đặt lịch';
-        break;
-      case 'Refunded':
-        type = 'refund';
-        description = 'Hoàn tiền đặt lịch';
-        break;
-      default:
-        type = 'booking_payment';
-        description = 'Thanh toán đặt lịch';
+    
+    if (userType === "Cosplayer") {
+      // From cosplayer perspective
+      switch (escrow.status) {
+        case 'Held':
+          type = 'booking_payment';
+          description = 'Thanh toán đặt lịch';
+          break;
+        case 'Released':
+          type = 'booking_payment';
+          description = 'Hoàn tiền đặt lịch'; // Cosplayer receives money
+          break;
+        case 'Refunded':
+          type = 'refund';
+          description = 'Thanh toán đặt lịch'; // Money is returned to customer (cosplayer loses)
+          break;
+        default:
+          type = 'booking_payment';
+          description = 'Thanh toán đặt lịch';
+      }
+      
+      // For cosplayers: Released = positive (received), Refunded = negative (lost)
+      const amount = escrow.status === 'Released' ? escrow.amount : -escrow.amount;
+      
+      return {
+        id: escrow.id,
+        type: type,
+        description: description,
+        amount: amount,
+        date: escrow.releasedAt || escrow.refundedAt || escrow.createdAt,
+        status: escrow.status.toLowerCase(),
+        reference: escrow.transactionCode,
+        bookingId: escrow.bookingId,
+        cosplayer: escrow.cosplayerName || `Cosplayer #${escrow.cosplayerId}`,
+        serviceType: escrow.serviceType,
+        bookingDate: escrow.bookingDate,
+        // Additional escrow-specific fields
+        escrowStatus: escrow.status,
+        paymentId: escrow.paymentId,
+        customerId: escrow.customerId,
+        cosplayerId: escrow.cosplayerId,
+        createdAt: escrow.createdAt,
+        releasedAt: escrow.releasedAt,
+        refundedAt: escrow.refundedAt
+      };
+    } else {
+      // From customer perspective (original logic)
+      switch (escrow.status) {
+        case 'Held':
+          type = 'booking_payment';
+          description = 'Thanh toán đặt lịch';
+          break;
+        case 'Released':
+          type = 'booking_payment';
+          description = 'Thanh toán đặt lịch';
+          break;
+        case 'Refunded':
+          type = 'refund';
+          description = 'Hoàn tiền đặt lịch';
+          break;
+        default:
+          type = 'booking_payment';
+          description = 'Thanh toán đặt lịch';
+      }
+
+      // For customers: negative for outgoing payments, positive for refunds
+      const amount = escrow.status === 'Refunded' ? escrow.amount : -escrow.amount;
+
+      return {
+        id: escrow.id,
+        type: type,
+        description: description,
+        amount: amount,
+        date: escrow.releasedAt || escrow.refundedAt || escrow.createdAt,
+        status: escrow.status.toLowerCase(),
+        reference: escrow.transactionCode,
+        bookingId: escrow.bookingId,
+        cosplayer: escrow.cosplayerName || `Cosplayer #${escrow.cosplayerId}`,
+        serviceType: escrow.serviceType,
+        bookingDate: escrow.bookingDate,
+        // Additional escrow-specific fields
+        escrowStatus: escrow.status,
+        paymentId: escrow.paymentId,
+        customerId: escrow.customerId,
+        cosplayerId: escrow.cosplayerId,
+        createdAt: escrow.createdAt,
+        releasedAt: escrow.releasedAt,
+        refundedAt: escrow.refundedAt
+      };
     }
-
-    // Amount should be negative for outgoing payments, positive for refunds
-    const amount = escrow.status === 'Refunded' ? escrow.amount : -escrow.amount;
-
-    return {
-      id: escrow.id,
-      type: type,
-      description: description,
-      amount: amount,
-      date: escrow.releasedAt || escrow.refundedAt || escrow.createdAt,
-      status: escrow.status.toLowerCase(),
-      reference: escrow.transactionCode,
-      bookingId: escrow.bookingId,
-      cosplayer: escrow.cosplayerName || `Cosplayer #${escrow.cosplayerId}`,
-      serviceType: escrow.serviceType,
-      bookingDate: escrow.bookingDate,
-      // Additional escrow-specific fields
-      escrowStatus: escrow.status,
-      paymentId: escrow.paymentId,
-      customerId: escrow.customerId,
-      cosplayerId: escrow.cosplayerId,
-      createdAt: escrow.createdAt,
-      releasedAt: escrow.releasedAt,
-      refundedAt: escrow.refundedAt
-    };
   });
 };
 

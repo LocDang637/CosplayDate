@@ -213,6 +213,66 @@ namespace CosplayDate.Application.Services.Implementations
             return ApiResponse<ReviewResponseDto>.Success(response, "Owner response updated successfully");
         }
 
+        public async Task<ApiResponse<ReviewResponseDto>> EditOwnerResponseAsync(int reviewId, int cosplayerId, OwnerResponseRequestDto request)
+        {
+            var review = await _unitOfWork.Reviews.GetByIdAsync(reviewId);
+            if (review == null)
+                return ApiResponse<ReviewResponseDto>.Error("Review not found");
+            if (review.CosplayerId != cosplayerId)
+                return ApiResponse<ReviewResponseDto>.Error("You don't have permission to edit this owner response");
+            
+            // Check if owner response exists
+            if (string.IsNullOrEmpty(review.OwnerResponse))
+                return ApiResponse<ReviewResponseDto>.Error("No owner response found to edit");
+
+            review.OwnerResponse = request.Response;
+            review.OwnerResponseDate = DateTime.UtcNow;
+            _unitOfWork.Reviews.Update(review);
+            await _unitOfWork.SaveChangesAsync();
+            
+            // Get customer information and tags
+            var customer = await _unitOfWork.Users.GetByIdAsync(review.CustomerId);
+            var tags = (await _unitOfWork.ReviewTags.FindAsync(t => t.ReviewId == review.Id)).Select(t => t.Tag).ToList();
+            
+            var response = new ReviewResponseDto
+            {
+                Id = review.Id,
+                BookingId = review.BookingId,
+                CustomerId = review.CustomerId,
+                CosplayerId = review.CosplayerId,
+                Rating = review.Rating,
+                Comment = review.Comment,
+                IsVerified = review.IsVerified,
+                HelpfulCount = review.HelpfulCount,
+                OwnerResponse = review.OwnerResponse,
+                CreatedAt = review.CreatedAt,
+                Tags = tags,
+                CustomerName = customer != null ? $"{customer.FirstName} {customer.LastName}" : string.Empty,
+                CustomerAvatarUrl = customer?.AvatarUrl
+            };
+            return ApiResponse<ReviewResponseDto>.Success(response, "Owner response edited successfully");
+        }
+
+        public async Task<ApiResponse<bool>> DeleteOwnerResponseAsync(int reviewId, int cosplayerId)
+        {
+            var review = await _unitOfWork.Reviews.GetByIdAsync(reviewId);
+            if (review == null)
+                return ApiResponse<bool>.Error("Review not found");
+            if (review.CosplayerId != cosplayerId)
+                return ApiResponse<bool>.Error("You don't have permission to delete this owner response");
+            
+            // Check if owner response exists
+            if (string.IsNullOrEmpty(review.OwnerResponse))
+                return ApiResponse<bool>.Error("No owner response found to delete");
+
+            review.OwnerResponse = null;
+            review.OwnerResponseDate = null;
+            _unitOfWork.Reviews.Update(review);
+            await _unitOfWork.SaveChangesAsync();
+            
+            return ApiResponse<bool>.Success(true, "Owner response deleted successfully");
+        }
+
         public async Task<ApiResponse<bool>> DeleteReviewAsync(int reviewId, int userId, bool isAdmin = false)
         {
             var review = await _unitOfWork.Reviews.GetByIdAsync(reviewId);

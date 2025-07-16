@@ -89,6 +89,30 @@ namespace CosplayDate.API.Controllers
         }
 
         /// <summary>
+        /// Cosplayer cập nhật trả lời review (owner response)
+        /// </summary>
+        [HttpPut("{reviewId}/owner-response")]
+        public async Task<IActionResult> EditOwnerResponse(int reviewId, [FromBody] OwnerResponseRequestDto request)
+        {
+            var cosplayerId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
+            var result = await _reviewService.EditOwnerResponseAsync(reviewId, cosplayerId, request);
+            if (result.IsSuccess) return Ok(result);
+            return BadRequest(result);
+        }
+
+        /// <summary>
+        /// Cosplayer xóa trả lời review (owner response)
+        /// </summary>
+        [HttpDelete("{reviewId}/owner-response")]
+        public async Task<IActionResult> DeleteOwnerResponse(int reviewId)
+        {
+            var cosplayerId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
+            var result = await _reviewService.DeleteOwnerResponseAsync(reviewId, cosplayerId);
+            if (result.IsSuccess) return Ok(result);
+            return BadRequest(result);
+        }
+
+        /// <summary>
         /// Lấy review theo booking ID
         /// </summary>
         [HttpGet("booking/{bookingId}")]

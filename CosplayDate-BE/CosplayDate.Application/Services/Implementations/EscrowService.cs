@@ -250,6 +250,21 @@ namespace CosplayDate.Application.Services.Implementations
             }
         }
 
+        public async Task<List<EscrowTransaction>> GetCosplayerEscrowsAsync(int cosplayerId)
+        {
+            try
+            {
+                var escrows = await _unitOfWork.EscrowTransactions
+                    .FindAsync(e => e.CosplayerId == cosplayerId);
+                return escrows.OrderByDescending(e => e.CreatedAt).ToList();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting escrows for cosplayer {CosplayerId}", cosplayerId);
+                throw;
+            }
+        }
+
         private string GenerateTransactionCode()
         {
             return $"ESC{DateTime.UtcNow:yyyyMMddHHmmss}{Random.Shared.Next(1000, 9999)}";

@@ -140,14 +140,17 @@ const CustomerBookingOrders = () => {
       });
 
       const reviewResults = await Promise.all(reviewPromises);
-      const reviewsMap = {};
       
-      reviewResults.forEach(({ bookingId, review }) => {
-        reviewsMap[bookingId] = review;
+      // Update existing reviews state instead of replacing it
+      setBookingReviews(prev => {
+        const updated = { ...prev };
+        reviewResults.forEach(({ bookingId, review }) => {
+          updated[bookingId] = review;
+        });
+        return updated;
       });
 
-      console.log('Final reviewsMap:', reviewsMap);
-      setBookingReviews(reviewsMap);
+      console.log('Reviews loaded and updated in state');
     } catch (error) {
       console.error('Error loading booking reviews:', error);
     }
@@ -371,8 +374,15 @@ const CustomerBookingOrders = () => {
       }
 
       if (result.success) {
-        // Reload reviews for this booking
-        await loadBookingReviews([reviewDialog.booking.id]);
+        // Update only the specific booking's review in the state
+        const bookingId = reviewDialog.booking.id;
+        const reviewResult = await reviewAPI.getReviewByBookingId(bookingId);
+        
+        setBookingReviews(prev => ({
+          ...prev,
+          [bookingId]: reviewResult.success ? reviewResult.data : null
+        }));
+        
         handleCloseReviewDialog();
       } else {
         console.error('Review operation failed:', result.error);

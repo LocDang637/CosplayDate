@@ -226,7 +226,7 @@ const WalletTab = ({
       });
 
       if (result.success && result.data) {
-        const transformedTransactions = escrowAPI.transformEscrowsToTransactions(result.data.escrows || []);
+        const transformedTransactions = escrowAPI.transformEscrowsToTransactions(result.data.escrows || [], userType);
         setEscrowTransactions(transformedTransactions);
         setTotalPages(result.data.totalPages || 1);
         setTotalCount(result.data.totalCount || 0);
