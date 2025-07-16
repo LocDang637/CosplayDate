@@ -19,5 +19,6 @@ namespace CosplayDate.Application.DTOs.Review
         public string CustomerName { get; set; } = string.Empty;
         public string? CustomerAvatarUrl { get; set; }
         public string? ServiceType { get; set; }
+        public bool? IsHelpfulByCurrentUser { get; set; }  // null if not voted, true/false if voted
     }
 }

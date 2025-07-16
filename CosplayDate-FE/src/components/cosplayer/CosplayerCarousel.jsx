@@ -16,12 +16,19 @@ const CosplayerCarousel = ({
   cosplayers = [], 
   onSeeAll, 
   loading = false,
-  currentUser = null  // Add currentUser prop
+  currentUser = null,  // Add currentUser prop
+  onCosplayersUpdate = null  // Add callback for updating cosplayers
 }) => {
   const navigate = useNavigate();
   const [currentIndex, setCurrentIndex] = useState(0);
   const [favorites, setFavorites] = useState(new Set());
+  const [localCosplayers, setLocalCosplayers] = useState(cosplayers);
   const carouselRef = useRef(null);
+
+  // Update local cosplayers when prop changes
+  useEffect(() => {
+    setLocalCosplayers(cosplayers);
+  }, [cosplayers]);
 
   // Get current user from props or localStorage
   const user = currentUser || (() => {
@@ -42,7 +49,7 @@ const CosplayerCarousel = ({
   }, [user]);
 
   const handleNext = () => {
-    const maxIndex = Math.max(0, cosplayers.length - 4);
+    const maxIndex = Math.max(0, localCosplayers.length - 4);
     const nextIndex = Math.min(currentIndex + 1, maxIndex);
     setCurrentIndex(nextIndex);
     
@@ -86,6 +93,22 @@ const CosplayerCarousel = ({
     setFavorites(newFavorites);
   };
 
+  const handleFollow = (cosplayerId, isFollowing) => {
+    // Update local cosplayers state
+    setLocalCosplayers(prevCosplayers => 
+      prevCosplayers.map(cosplayer => 
+        cosplayer.id === cosplayerId 
+          ? { ...cosplayer, isFollowing }
+          : cosplayer
+      )
+    );
+
+    // Call parent callback if provided
+    if (onCosplayersUpdate) {
+      onCosplayersUpdate(cosplayerId, isFollowing);
+    }
+  };
+
   const handleSeeAllClick = () => {
     if (onSeeAll) {
       onSeeAll();
@@ -94,7 +117,7 @@ const CosplayerCarousel = ({
     }
   };
 
-  const canScrollNext = currentIndex < Math.max(0, cosplayers.length - 4);
+  const canScrollNext = currentIndex < Math.max(0, localCosplayers.length - 4);
   const canScrollPrev = currentIndex > 0;
 
   const CosplayerSkeleton = () => (
@@ -143,7 +166,7 @@ const CosplayerCarousel = ({
             Xem tất cả
           </Button>
           
-          {!loading && cosplayers.length > 4 && (
+          {!loading && localCosplayers.length > 4 && (
             <Box sx={{ display: 'flex', gap: 1 }}>
               <IconButton
                 onClick={handlePrev}
@@ -202,16 +225,18 @@ const CosplayerCarousel = ({
           Array.from({ length: 4 }).map((_, index) => (
             <CosplayerSkeleton key={index} />
           ))
-        ) : cosplayers.length > 0 ? (
-          cosplayers.map((cosplayer) => (
+        ) : localCosplayers.length > 0 ? (
+          localCosplayers.map((cosplayer) => (
             <CosplayerCard
               key={cosplayer.id}
               cosplayer={cosplayer}
               currentUser={user}  // Pass the current user properly
+              isFollowing={cosplayer.isFollowing || false}  // Use isFollowing from cosplayer data
               isFavorite={favorites.has(cosplayer.id)}
               onBooking={handleBooking}
               onMessage={handleMessage}
               onFavorite={handleFavorite}
+              onFollow={handleFollow}  // Add follow handler
             />
           ))
         ) : (

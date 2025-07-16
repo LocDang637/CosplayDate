@@ -46,7 +46,9 @@ import {
   ExpandLess,
   Warning,
   Star,
-  StarBorder
+  StarBorder,
+  Edit,
+  Delete
 } from '@mui/icons-material';
 import { format, parseISO, differenceInDays, isValid, isBefore, addDays } from 'date-fns';
 import { vi } from 'date-fns/locale';
@@ -104,7 +106,9 @@ const CosplayerBookingOrders = ({ isOwnProfile }) => {
     reviewId: null,
     bookingId: null,
     response: '',
-    loading: false
+    loading: false,
+    mode: 'create', // 'create', 'edit'
+    existingResponse: null
   });
 
   // Error handling states for edit dialog
@@ -293,13 +297,16 @@ const CosplayerBookingOrders = ({ isOwnProfile }) => {
   };
 
   // Handler functions for owner response
-  const handleOpenResponseDialog = (review, bookingId) => {
+  const handleOpenResponseDialog = (review, bookingId, mode = 'create') => {
+    const existingResponse = review?.ownerResponse;
     setOwnerResponseDialog({
       open: true,
-      reviewId: review.id,
+      reviewId: review?.id,
       bookingId: bookingId,
-      response: '',
-      loading: false
+      response: existingResponse || '',
+      loading: false,
+      mode: mode,
+      existingResponse: existingResponse
     });
   };
 
@@ -309,7 +316,9 @@ const CosplayerBookingOrders = ({ isOwnProfile }) => {
       reviewId: null,
       bookingId: null,
       response: '',
-      loading: false
+      loading: false,
+      mode: 'create',
+      existingResponse: null
     });
   };
 
@@ -328,10 +337,21 @@ const CosplayerBookingOrders = ({ isOwnProfile }) => {
     setOwnerResponseDialog(prev => ({ ...prev, loading: true }));
 
     try {
-      const result = await reviewAPI.addOwnerResponse(
-        ownerResponseDialog.reviewId,
-        ownerResponseDialog.response.trim()
-      );
+      let result;
+      
+      if (ownerResponseDialog.mode === 'edit') {
+        // Update existing response
+        result = await reviewAPI.updateOwnerResponse(
+          ownerResponseDialog.reviewId,
+          ownerResponseDialog.response.trim()
+        );
+      } else {
+        // Create new response
+        result = await reviewAPI.addOwnerResponse(
+          ownerResponseDialog.reviewId,
+          ownerResponseDialog.response.trim()
+        );
+      }
 
       if (result.success) {
         // Update the local booking reviews state
@@ -347,16 +367,45 @@ const CosplayerBookingOrders = ({ isOwnProfile }) => {
         handleCloseResponseDialog();
         
         // Show success message (optional)
-        console.log('Owner response added successfully');
+        console.log(`Owner response ${ownerResponseDialog.mode === 'edit' ? 'updated' : 'added'} successfully`);
       } else {
-        console.error('Failed to add owner response:', result.error);
+        console.error(`Failed to ${ownerResponseDialog.mode} owner response:`, result.error);
         // You can add error handling here (e.g., show toast notification)
       }
     } catch (error) {
-      console.error('Error adding owner response:', error);
+      console.error(`Error ${ownerResponseDialog.mode === 'edit' ? 'updating' : 'adding'} owner response:`, error);
       // You can add error handling here
     } finally {
       setOwnerResponseDialog(prev => ({ ...prev, loading: false }));
+    }
+  };
+
+  const handleDeleteResponse = async (reviewId, bookingId) => {
+    if (!window.confirm('Bạn có chắc chắn muốn xóa phản hồi này không?')) {
+      return;
+    }
+
+    try {
+      const result = await reviewAPI.deleteOwnerResponse(reviewId);
+
+      if (result.success) {
+        // Update the local booking reviews state
+        setBookingReviews(prev => ({
+          ...prev,
+          [bookingId]: {
+            ...prev[bookingId],
+            ownerResponse: null
+          }
+        }));
+
+        console.log('Owner response deleted successfully');
+      } else {
+        console.error('Failed to delete owner response:', result.error);
+        // You can add error handling here
+      }
+    } catch (error) {
+      console.error('Error deleting owner response:', error);
+      // You can add error handling here
     }
   };
 
@@ -438,7 +487,11 @@ const CosplayerBookingOrders = ({ isOwnProfile }) => {
       });
 
       console.log('Final reviewsMap:', reviewsMap);
-      setBookingReviews(reviewsMap);
+      // Merge with existing reviews instead of replacing
+      setBookingReviews(prev => ({
+        ...prev,
+        ...reviewsMap
+      }));
     } catch (error) {
       console.error('Error loading booking reviews:', error);
     }
@@ -963,9 +1016,45 @@ const CosplayerBookingOrders = ({ isOwnProfile }) => {
                         
                         {bookingReviews[booking.id].ownerResponse ? (
                           <Box sx={{ mt: 1, p: 1, bgcolor: 'rgba(233, 30, 99, 0.05)', borderRadius: '4px' }}>
-                            <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600 }}>
-                              Phản hồi từ Cosplayer:
-                            </Typography>
+                            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 0.5 }}>
+                              <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600 }}>
+                                Phản hồi từ Cosplayer:
+                              </Typography>
+                              <Box sx={{ display: 'flex', gap: 0.5 }}>
+                                <Tooltip title="Chỉnh sửa phản hồi">
+                                  <IconButton
+                                    size="small"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleOpenResponseDialog(bookingReviews[booking.id], booking.id, 'edit');
+                                    }}
+                                    sx={{ 
+                                      p: 0.5, 
+                                      color: '#e91e63',
+                                      '&:hover': { backgroundColor: 'rgba(233, 30, 99, 0.08)' }
+                                    }}
+                                  >
+                                    <Edit sx={{ fontSize: 14 }} />
+                                  </IconButton>
+                                </Tooltip>
+                                <Tooltip title="Xóa phản hồi">
+                                  <IconButton
+                                    size="small"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleDeleteResponse(bookingReviews[booking.id].id, booking.id);
+                                    }}
+                                    sx={{ 
+                                      p: 0.5, 
+                                      color: '#f44336',
+                                      '&:hover': { backgroundColor: 'rgba(244, 67, 54, 0.08)' }
+                                    }}
+                                  >
+                                    <Delete sx={{ fontSize: 14 }} />
+                                  </IconButton>
+                                </Tooltip>
+                              </Box>
+                            </Box>
                             <Typography variant="body2" sx={{ mt: 0.5 }}>
                               {bookingReviews[booking.id].ownerResponse}
                             </Typography>
@@ -1781,7 +1870,7 @@ const CosplayerBookingOrders = ({ isOwnProfile }) => {
         fullWidth
       >
         <DialogTitle>
-          Phản hồi đánh giá
+          {ownerResponseDialog.mode === 'edit' ? 'Chỉnh sửa phản hồi' : 'Phản hồi đánh giá'}
         </DialogTitle>
         <DialogContent>
           <Typography variant="body2" sx={{ mb: 2 }}>
@@ -1814,7 +1903,11 @@ const CosplayerBookingOrders = ({ isOwnProfile }) => {
               handleSubmitResponse();
             }}
           >
-            Gửi phản hồi
+            {ownerResponseDialog.loading ? (
+              <CircularProgress size={20} />
+            ) : (
+              ownerResponseDialog.mode === 'edit' ? 'Cập nhật' : 'Gửi phản hồi'
+            )}
           </Button>
         </DialogActions>
       </Dialog>

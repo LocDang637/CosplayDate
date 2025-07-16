@@ -37,7 +37,14 @@ namespace CosplayDate.API.Controllers
         [HttpGet("cosplayer/{cosplayerId}")]
         public async Task<IActionResult> GetReviewsForCosplayer(int cosplayerId, int page = 1, int pageSize = 10)
         {
-            var result = await _reviewService.GetReviewsForCosplayerAsync(cosplayerId, page, pageSize);
+            var currentUserId = 0;
+            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (int.TryParse(userIdClaim, out var userId))
+            {
+                currentUserId = userId;
+            }
+            
+            var result = await _reviewService.GetReviewsForCosplayerAsync(cosplayerId, currentUserId, page, pageSize);
             return Ok(result);
         }
 
@@ -89,12 +96,53 @@ namespace CosplayDate.API.Controllers
         }
 
         /// <summary>
+        /// Cosplayer cập nhật trả lời review (owner response)
+        /// </summary>
+        [HttpPut("{reviewId}/owner-response")]
+        public async Task<IActionResult> EditOwnerResponse(int reviewId, [FromBody] OwnerResponseRequestDto request)
+        {
+            var cosplayerId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
+            var result = await _reviewService.EditOwnerResponseAsync(reviewId, cosplayerId, request);
+            if (result.IsSuccess) return Ok(result);
+            return BadRequest(result);
+        }
+
+        /// <summary>
+        /// Cosplayer xóa trả lời review (owner response)
+        /// </summary>
+        [HttpDelete("{reviewId}/owner-response")]
+        public async Task<IActionResult> DeleteOwnerResponse(int reviewId)
+        {
+            var cosplayerId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
+            var result = await _reviewService.DeleteOwnerResponseAsync(reviewId, cosplayerId);
+            if (result.IsSuccess) return Ok(result);
+            return BadRequest(result);
+        }
+
+        /// <summary>
         /// Lấy review theo booking ID
         /// </summary>
         [HttpGet("booking/{bookingId}")]
         public async Task<IActionResult> GetReviewByBookingId(int bookingId)
         {
             var result = await _reviewService.GetReviewByBookingIdAsync(bookingId);
+            if (result.IsSuccess) return Ok(result);
+            return BadRequest(result);
+        }
+
+        /// <summary>
+        /// Toggle helpful vote on a review
+        /// </summary>
+        [HttpPost("{reviewId}/helpful")]
+        public async Task<IActionResult> ToggleHelpful(int reviewId, [FromBody] ToggleHelpfulRequestDto request)
+        {
+            var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
+            if (userId == 0)
+            {
+                return BadRequest(new { isSuccess = false, message = "User not found" });
+            }
+
+            var result = await _reviewService.ToggleHelpfulAsync(reviewId, userId, request);
             if (result.IsSuccess) return Ok(result);
             return BadRequest(result);
         }

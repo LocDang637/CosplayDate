@@ -10,7 +10,7 @@ namespace CosplayDate.Application.Services.Interfaces
 {
     public interface ICosplayerService
     {
-        Task<ApiResponse<GetCosplayersResponseDto>> GetCosplayersAsync(GetCosplayersRequestDto request);
+        Task<ApiResponse<GetCosplayersResponseDto>> GetCosplayersAsync(GetCosplayersRequestDto request, int currentUserId = 0);
         Task<ApiResponse<CosplayerDetailsDto>> GetCosplayerDetailsAsync(int cosplayerId, int currentUserId = 0);
         Task<ApiResponse<CosplayerDetailsDto>> GetCosplayerDetailsByUserIdAsync(int userId, int currentUserId = 0);
         Task<ApiResponse<CosplayerDetailsDto>> UpdateCosplayerProfileAsync(int userId, UpdateCosplayerProfileRequestDto request);
