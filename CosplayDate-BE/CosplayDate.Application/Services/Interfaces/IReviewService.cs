@@ -8,6 +8,7 @@ namespace CosplayDate.Application.Services.Interfaces
     public interface IReviewService
     {
         Task<ApiResponse<ReviewResponseDto>> CreateReviewAsync(int customerId, CreateReviewRequestDto request);
+        Task<ApiResponse<List<ReviewResponseDto>>> GetAllReviewsAsync(int currentUserId = 0, int page = 1, int pageSize = 10);
         Task<ApiResponse<List<ReviewResponseDto>>> GetReviewsForCosplayerAsync(int cosplayerId, int currentUserId = 0, int page = 1, int pageSize = 10);
         Task<ApiResponse<double>> GetAverageRatingForCosplayerAsync(int cosplayerId);
         Task<ApiResponse<ReviewResponseDto>> UpdateReviewAsync(int reviewId, int customerId, UpdateReviewRequestDto request);

@@ -50,11 +50,17 @@ namespace CosplayDate.API.Controllers
         /// Get user profile by ID
         /// </summary>
         [HttpGet("profile/{userId}")]
+        [AllowAnonymous]
         public async Task<IActionResult> GetUserProfile(int userId)
         {
             try
             {
-                var currentUserId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
+                var currentUserId = 0;
+                if (User.Identity?.IsAuthenticated == true)
+                {
+                    currentUserId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
+                }
+                
                 var result = await _userService.GetUserProfileAsync(userId, currentUserId);
 
                 if (result.IsSuccess)
@@ -388,6 +394,56 @@ namespace CosplayDate.API.Controllers
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error getting following");
+                return StatusCode(500, "An error occurred while retrieving following list");
+            }
+        }
+
+        /// <summary>
+        /// Get followers for a specific user (public endpoint)
+        /// </summary>
+        [HttpGet("followers/{userId}")]
+        [AllowAnonymous]
+        public async Task<IActionResult> GetUserFollowers(int userId, [FromQuery] int page = 1, [FromQuery] int pageSize = 20)
+        {
+            try
+            {
+                var result = await _userService.GetFollowersAsync(userId, page, pageSize);
+
+                if (result.IsSuccess)
+                {
+                    return Ok(result);
+                }
+
+                return BadRequest(result);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting followers for user: {UserId}", userId);
+                return StatusCode(500, "An error occurred while retrieving followers");
+            }
+        }
+
+        /// <summary>
+        /// Get users being followed by a specific user (public endpoint)
+        /// </summary>
+        [HttpGet("following/{userId}")]
+        [AllowAnonymous]
+        public async Task<IActionResult> GetUserFollowing(int userId, [FromQuery] int page = 1, [FromQuery] int pageSize = 20)
+        {
+            try
+            {
+                var result = await _userService.GetFollowingAsync(userId, page, pageSize);
+
+                if (result.IsSuccess)
+                {
+                    return Ok(result);
+                }
+
+                return BadRequest(result);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting following for user: {UserId}", userId);
                 return StatusCode(500, "An error occurred while retrieving following list");
             }
         }

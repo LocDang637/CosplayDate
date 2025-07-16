@@ -39,7 +39,7 @@ const CustomerProfilePage = () => {
   const [user, setUser] = useState(null);
   const [profileUser, setProfileUser] = useState(null);
   const [currentProfile, setCurrentProfile] = useState(null); // Add current profile state
-  const [activeTab, setActiveTab] = useState('wallet');
+  const [activeTab, setActiveTab] = useState('following'); // Default to 'following' for anonymous users
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [isOwnProfile, setIsOwnProfile] = useState(false); // Changed to state instead of computed
@@ -95,11 +95,14 @@ const CustomerProfilePage = () => {
       } catch (error) {
         console.error("❌ Error parsing stored user:", error);
         localStorage.removeItem("user");
-        navigate('/login');
-        return;
+        // Don't redirect to login for profile pages - allow anonymous viewing
+        if (!userId) {
+          navigate('/login');
+          return;
+        }
       }
     } else {
-      console.log("⚠️ No user found in localStorage");
+      console.log("⚠️ No user found in localStorage - allowing anonymous viewing");
       setUserDataLoaded(true);
     }
 
@@ -108,6 +111,15 @@ const CustomerProfilePage = () => {
       showSnackbar(location.state.message, 'success');
     }
   }, []);
+
+  // Set default tab based on user ownership status
+  useEffect(() => {
+    if (isOwnProfile) {
+      setActiveTab('wallet');
+    } else {
+      setActiveTab('following');
+    }
+  }, [isOwnProfile]);
 
   // Add this useEffect to handle URL query parameters:
   useEffect(() => {
@@ -645,19 +657,15 @@ const CustomerProfilePage = () => {
             </Menu>
           )}
 
-          {/* Only show profile tabs and content for own profile */}
-          {isOwnProfile && (
-            <>
-              <ProfileTabs
-                activeTab={activeTab}
-                onTabChange={handleTabChange}
-                isOwnProfile={isOwnProfile}
-                customTabs={customerTabs}
-              />
+          {/* Show profile tabs and content - filter tabs based on isOwnProfile */}
+          <ProfileTabs
+            activeTab={activeTab}
+            onTabChange={handleTabChange}
+            isOwnProfile={isOwnProfile}
+            customTabs={customerTabs}
+          />
 
-              <Box sx={{ minHeight: "400px" }}>{renderTabContent()}</Box>
-            </>
-          )}
+          <Box sx={{ minHeight: "400px" }}>{renderTabContent()}</Box>
         </Container>
 
         <Footer />

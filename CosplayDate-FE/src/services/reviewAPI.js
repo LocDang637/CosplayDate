@@ -29,9 +29,23 @@ const createApiInstance = () => {
     (error) => {
       console.error(`❌ Error from ${error.config?.url}:`, error.response?.data);
       if (error.response?.status === 401) {
-        localStorage.removeItem('token');
-        localStorage.removeItem('user');
-        window.location.href = '/login';
+        const currentPath = window.location.pathname;
+        const isPublicRoute = currentPath === '/' || 
+                             currentPath.startsWith('/profile/') || 
+                             currentPath.startsWith('/customer-profile/') ||
+                             currentPath.startsWith('/cosplayer/') ||
+                             currentPath.startsWith('/cosplayers') ||
+                             currentPath.startsWith('/login') ||
+                             currentPath.startsWith('/signup') ||
+                             currentPath.startsWith('/forgot-password') ||
+                             currentPath.startsWith('/reset-password');
+
+        // Only auto-redirect to login for 401 errors if not on public routes
+        if (!isPublicRoute) {
+          localStorage.removeItem('token');
+          localStorage.removeItem('user');
+          window.location.href = '/login';
+        }
       }
       return Promise.reject(error);
     }
@@ -60,6 +74,33 @@ export const reviewAPI = {
       return {
         success: false,
         error: error.response?.data?.message || 'Failed to create review',
+        data: null
+      };
+    }
+  },
+
+  // Get all reviews from all cosplayers with pagination
+  getAllReviews: async (page = 1, pageSize = 10) => {
+    try {
+      console.log(`Getting all reviews, page ${page}, pageSize ${pageSize}`);
+      
+      const response = await api.get('/Review/all', {
+        params: {
+          page,
+          pageSize
+        }
+      });
+      
+      return {
+        success: true,
+        data: response.data,
+        message: 'All reviews retrieved successfully'
+      };
+    } catch (error) {
+      console.error('Error getting all reviews:', error);
+      return {
+        success: false,
+        error: error.response?.data?.message || 'Failed to get all reviews',
         data: null
       };
     }

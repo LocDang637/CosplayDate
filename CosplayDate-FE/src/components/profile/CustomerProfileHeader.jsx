@@ -193,19 +193,11 @@ const CustomerProfileHeader = ({
       // Get user interests using the proper API function
       const result = await userAPI.getUserInterests();
       
-      if (result.success) {
-        // Use interests from API response, fallback to user.interests, fallback to empty array
-        const currentInterests = result.data?.interests || customer.interests || [];
+      if (result.success && result.data) {
+        // Use interests and availableInterests from API response
+        const currentInterests = result.data.interests || [];
+        const availableInterests = result.data.availableInterests || [];
         
-        // For available interests, we'll use a predefined list since the API doesn't provide them
-        const availableInterests = [
-          'Anime', 'Manga', 'Gaming', 'Cosplay', 'Photography', 'Art',
-          'Music', 'Dance', 'Fashion', 'Movies', 'Technology', 'Travel',
-          'Food', 'Sports', 'Reading', 'Writing', 'Drawing', 'Singing',
-          'Crafting', 'Collecting', 'Streaming', 'Conventions', 'Roleplay',
-          'Modeling', 'Editing', 'Voice Acting', 'Makeup', 'Sewing'
-        ];
-
         setInterestsDialog(prev => ({
           ...prev,
           loading: false,

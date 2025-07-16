@@ -35,13 +35,17 @@ namespace CosplayDate.API.Controllers
         /// Lấy danh sách review của cosplayer (có phân trang)
         /// </summary>
         [HttpGet("cosplayer/{cosplayerId}")]
+        [AllowAnonymous]
         public async Task<IActionResult> GetReviewsForCosplayer(int cosplayerId, int page = 1, int pageSize = 10)
         {
             var currentUserId = 0;
-            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-            if (int.TryParse(userIdClaim, out var userId))
+            if (User.Identity?.IsAuthenticated == true)
             {
-                currentUserId = userId;
+                var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                if (int.TryParse(userIdClaim, out var userId))
+                {
+                    currentUserId = userId;
+                }
             }
             
             var result = await _reviewService.GetReviewsForCosplayerAsync(cosplayerId, currentUserId, page, pageSize);
@@ -52,6 +56,7 @@ namespace CosplayDate.API.Controllers
         /// Lấy điểm trung bình rating của cosplayer
         /// </summary>
         [HttpGet("cosplayer/{cosplayerId}/average")]
+        [AllowAnonymous]
         public async Task<IActionResult> GetAverageRatingForCosplayer(int cosplayerId)
         {
             var result = await _reviewService.GetAverageRatingForCosplayerAsync(cosplayerId);
@@ -145,6 +150,24 @@ namespace CosplayDate.API.Controllers
             var result = await _reviewService.ToggleHelpfulAsync(reviewId, userId, request);
             if (result.IsSuccess) return Ok(result);
             return BadRequest(result);
+        }
+
+        /// <summary>
+        /// Lấy tất cả reviews từ tất cả cosplayers (có phân trang)
+        /// </summary>
+        [HttpGet("all")]
+        [AllowAnonymous]
+        public async Task<IActionResult> GetAllReviews(int page = 1, int pageSize = 10)
+        {
+            var currentUserId = 0;
+            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (int.TryParse(userIdClaim, out var userId))
+            {
+                currentUserId = userId;
+            }
+            
+            var result = await _reviewService.GetAllReviewsAsync(currentUserId, page, pageSize);
+            return Ok(result);
         }
     }
 }

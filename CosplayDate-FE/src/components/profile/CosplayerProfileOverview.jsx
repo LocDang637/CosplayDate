@@ -22,7 +22,8 @@ import {
   TextField,
   Alert,
   Tooltip,
-  Fade
+  Fade,
+  Pagination
 } from '@mui/material';
 import {
   TrendingUp,
@@ -77,6 +78,10 @@ const CosplayerProfileOverview = ({ user, currentProfile, isOwnProfile }) => {
   const [reviewsLoading, setReviewsLoading] = useState(true);
   const [reviewsError, setReviewsError] = useState(null);
   const [reviewsWithBookings, setReviewsWithBookings] = useState([]);
+
+  // Pagination state for reviews
+  const [currentPage, setCurrentPage] = useState(1);
+  const reviewsPerPage = 3;
 
   console.log('upcomingBooking', upcomingBooking);
   console.log('loadingBooking', loadingBooking);
@@ -292,6 +297,22 @@ const CosplayerProfileOverview = ({ user, currentProfile, isOwnProfile }) => {
       setSubmitLoading(false);
     }
   };
+
+  // Pagination handlers
+  const handlePageChange = (event, value) => {
+    setCurrentPage(value);
+  };
+
+  // Calculate pagination data
+  const totalPages = Math.ceil(reviewsWithBookings.length / reviewsPerPage);
+  const startIndex = (currentPage - 1) * reviewsPerPage;
+  const endIndex = startIndex + reviewsPerPage;
+  const currentReviews = reviewsWithBookings.slice(startIndex, endIndex);
+
+  // Reset page when reviews change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [reviewsWithBookings.length]);
 
   // ✅ FIXED: Safe price formatting
   const formatPrice = (price) => {
@@ -746,17 +767,49 @@ const CosplayerProfileOverview = ({ user, currentProfile, isOwnProfile }) => {
                 border: '1px solid rgba(233, 30, 99, 0.1)',
               }}
             >
-              <Typography variant="h6" sx={{ fontWeight: 700, mb: 3, color: 'text.primary' }}>
-                Đánh giá gần đây
-              </Typography>
-              {reviewsWithBookings.slice(0, 3).map((review, index) => (
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+                <Typography variant="h6" sx={{ fontWeight: 700, color: 'text.primary' }}>
+                  Đánh giá ({reviewsWithBookings.length})
+                </Typography>
+                {totalPages > 1 && (
+                  <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+                    Trang {currentPage} / {totalPages}
+                  </Typography>
+                )}
+              </Box>
+
+              {/* Display current page reviews */}
+              {currentReviews.map((review, index) => (
                 <RecentReview key={review.id || index} review={review} />
               ))}
-              {reviewsWithBookings.length > 3 && (
-                <Box sx={{ textAlign: 'center', mt: 2 }}>
-                  <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-                    Còn {reviewsWithBookings.length - 3} đánh giá khác...
-                  </Typography>
+
+              {/* Pagination controls */}
+              {totalPages > 1 && (
+                <Box sx={{ display: 'flex', justifyContent: 'center', mt: 3 }}>
+                  <Pagination
+                    count={totalPages}
+                    page={currentPage}
+                    onChange={handlePageChange}
+                    color="primary"
+                    variant="outlined"
+                    shape="rounded"
+                    size="medium"
+                    sx={{
+                      '& .MuiPaginationItem-root': {
+                        borderRadius: '8px',
+                        '&.Mui-selected': {
+                          background: 'linear-gradient(45deg, #E91E63, #9C27B0)',
+                          color: 'white',
+                          '&:hover': {
+                            background: 'linear-gradient(45deg, #D81B60, #8E24AA)',
+                          }
+                        },
+                        '&:not(.Mui-selected):hover': {
+                          backgroundColor: 'rgba(233, 30, 99, 0.1)',
+                        }
+                      }
+                    }}
+                  />
                 </Box>
               )}
             </Paper>

@@ -1,4 +1,5 @@
 // src/pages/CosplayerProfilePage.jsx - UPDATED VERSION with API-based isOwnProfile
+// Fixed export issue
 import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import CosplayerBookingOrders from '../components/profile/CosplayerBookingOrders';
@@ -53,6 +54,7 @@ const CosplayerProfilePage = () => {
 
   const handleFollowToggle = async () => {
     if (!user) {
+      // Redirect to login if not logged in
       navigate('/login');
       return;
     }
@@ -177,10 +179,14 @@ const CosplayerProfilePage = () => {
       } catch (error) {
         console.error('❌ Error parsing stored user:', error);
         localStorage.removeItem('user');
-        navigate('/login');
-        return;
+        // Don't redirect to login for profile pages - allow anonymous viewing
+        if (!userId) {
+          navigate('/login');
+          return;
+        }
       }
     } else {
+      console.log('⚠️ No user found in localStorage - allowing anonymous viewing');
       setUserDataLoaded(true);
     }
 
@@ -330,7 +336,7 @@ const CosplayerProfilePage = () => {
           setIsOwnProfile(apiIsOwnProfile);
 
           // Set isFollowing from API response (only for non-own profiles)
-          if (!apiIsOwnProfile) {
+          if (!apiIsOwnProfile && user) {
             setIsFollowing(apiIsFollowing || false);
           }
 

@@ -55,6 +55,7 @@ namespace CosplayDate.API.Controllers
         /// Get cosplayer details by ID - FIXED to handle both cosplayer ID and user ID
         /// </summary>
         [HttpGet("{id}")]
+        [AllowAnonymous]
         public async Task<IActionResult> GetCosplayerDetails(int id)
         {
             try

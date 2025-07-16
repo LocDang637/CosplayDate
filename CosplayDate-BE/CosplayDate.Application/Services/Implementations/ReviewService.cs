@@ -135,11 +135,67 @@ namespace CosplayDate.Application.Services.Implementations
             return ApiResponse<ReviewResponseDto>.Success(response, "Review created successfully");
         }
 
+        public async Task<ApiResponse<List<ReviewResponseDto>>> GetAllReviewsAsync(int currentUserId = 0, int page = 1, int pageSize = 10)
+        {
+            var reviews = await _unitOfWork.Reviews.GetAllAsync();
+            var paged = reviews.OrderByDescending(r => r.CreatedAt).Skip((page - 1) * pageSize).Take(pageSize).ToList();
+            var result = new List<ReviewResponseDto>();
+            
+            foreach (var review in paged)
+            {
+                var customer = await _unitOfWork.Users.GetByIdAsync(review.CustomerId);
+                var cosplayer = await _unitOfWork.Cosplayers.GetByIdAsync(review.CosplayerId);
+                var cosplayerUser = cosplayer != null ? await _unitOfWork.Users.GetByIdAsync(cosplayer.UserId) : null;
+                var tags = (await _unitOfWork.ReviewTags.FindAsync(t => t.ReviewId == review.Id)).Select(t => t.Tag).ToList();
+                
+                // Get booking data to retrieve service type
+                var booking = await _unitOfWork.Bookings.GetByIdAsync(review.BookingId);
+                
+                // Check if current user has voted on this review
+                bool? isHelpfulByCurrentUser = null;
+                if (currentUserId > 0)
+                {
+                    var userVote = await _unitOfWork.Repository<ReviewHelpfulVote>()
+                        .FirstOrDefaultAsync(v => v.ReviewId == review.Id && v.UserId == currentUserId);
+                    if (userVote != null)
+                    {
+                        isHelpfulByCurrentUser = userVote.IsHelpful;
+                    }
+                }
+                
+                result.Add(new ReviewResponseDto
+                {
+                    Id = review.Id,
+                    BookingId = review.BookingId,
+                    CustomerId = review.CustomerId,
+                    CosplayerId = review.CosplayerId,
+                    Rating = review.Rating,
+                    Comment = review.Comment,
+                    IsVerified = review.IsVerified,
+                    HelpfulCount = review.HelpfulCount,
+                    OwnerResponse = review.OwnerResponse,
+                    CreatedAt = review.CreatedAt,
+                    Tags = tags,
+                    CustomerName = customer != null ? $"{customer.FirstName} {customer.LastName}" : string.Empty,
+                    CustomerAvatarUrl = customer?.AvatarUrl,
+                    CosplayerName = cosplayerUser != null ? $"{cosplayerUser.FirstName} {cosplayerUser.LastName}" : cosplayer?.DisplayName ?? string.Empty,
+                    CosplayerAvatarUrl = cosplayerUser?.AvatarUrl,
+                    ServiceType = booking?.ServiceType,
+                    IsHelpfulByCurrentUser = isHelpfulByCurrentUser
+                });
+            }
+            return ApiResponse<List<ReviewResponseDto>>.Success(result, "All reviews loaded successfully");
+        }
+
         public async Task<ApiResponse<List<ReviewResponseDto>>> GetReviewsForCosplayerAsync(int cosplayerId, int currentUserId = 0, int page = 1, int pageSize = 10)
         {
             var reviews = await _unitOfWork.Reviews.FindAsync(r => r.CosplayerId == cosplayerId);
             var paged = reviews.OrderByDescending(r => r.CreatedAt).Skip((page - 1) * pageSize).Take(pageSize).ToList();
             var result = new List<ReviewResponseDto>();
+            
+            // Get cosplayer info once since all reviews are for the same cosplayer
+            var cosplayer = await _unitOfWork.Cosplayers.GetByIdAsync(cosplayerId);
+            var cosplayerUser = cosplayer != null ? await _unitOfWork.Users.GetByIdAsync(cosplayer.UserId) : null;
             
             foreach (var review in paged)
             {
@@ -176,6 +232,8 @@ namespace CosplayDate.Application.Services.Implementations
                     Tags = tags,
                     CustomerName = customer != null ? $"{customer.FirstName} {customer.LastName}" : string.Empty,
                     CustomerAvatarUrl = customer?.AvatarUrl,
+                    CosplayerName = cosplayerUser != null ? $"{cosplayerUser.FirstName} {cosplayerUser.LastName}" : cosplayer?.DisplayName ?? string.Empty,
+                    CosplayerAvatarUrl = cosplayerUser?.AvatarUrl,
                     ServiceType = booking?.ServiceType,
                     IsHelpfulByCurrentUser = isHelpfulByCurrentUser
                 });

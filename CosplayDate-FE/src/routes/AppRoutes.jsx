@@ -50,11 +50,7 @@ function AppRoutes() {
 
       <Route
         path="/profile/:userId"
-        element={
-          <ProtectedRoute>
-            <CosplayerProfilePage />
-          </ProtectedRoute>
-        }
+        element={<CosplayerProfilePage />}
       />
       <Route
         path="/customer-profile"
@@ -66,11 +62,7 @@ function AppRoutes() {
       />
       <Route
         path="/customer-profile/:userId"
-        element={
-          <ProtectedRoute>
-            <CustomerProfilePage />
-          </ProtectedRoute>
-        }
+        element={<CustomerProfilePage />}
       />
 
       {/* Booking routes */}

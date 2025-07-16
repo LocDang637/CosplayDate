@@ -31,9 +31,23 @@ api.interceptors.response.use(
   },
   (error) => {
     if (error.response?.status === 401) {
-      localStorage.removeItem("token");
-      localStorage.removeItem("user");
-      window.location.href = "/login";
+      const currentPath = window.location.pathname;
+      const isPublicRoute = currentPath === '/' || 
+                           currentPath.startsWith('/profile/') || 
+                           currentPath.startsWith('/customer-profile/') ||
+                           currentPath.startsWith('/cosplayer/') ||
+                           currentPath.startsWith('/cosplayers') ||
+                           currentPath.startsWith('/login') ||
+                           currentPath.startsWith('/signup') ||
+                           currentPath.startsWith('/forgot-password') ||
+                           currentPath.startsWith('/reset-password');
+
+      // Only auto-redirect to login for 401 errors if not on public routes
+      if (!isPublicRoute) {
+        localStorage.removeItem("token");
+        localStorage.removeItem("user");
+        window.location.href = "/login";
+      }
     }
     return Promise.reject(error);
   }
@@ -1114,7 +1128,7 @@ export const followAPI = {
   getFollowers: async (cosplayerId, page = 1, pageSize = 20) => {
     try {
       const response = await api.get(
-        `/users/followers?userId=${cosplayerId}&page=${page}&pageSize=${pageSize}`
+        `/users/followers/${cosplayerId}?page=${page}&pageSize=${pageSize}`
       );
       return {
         success: response.data.isSuccess,
@@ -1136,7 +1150,7 @@ export const followAPI = {
   getFollowing: async (userId, page = 1, pageSize = 20) => {
     try {
       const response = await api.get(
-        `/users/following?userId=${userId}&page=${page}&pageSize=${pageSize}`
+        `/users/following/${userId}?page=${page}&pageSize=${pageSize}`
       );
       return {
         success: response.data.isSuccess,
