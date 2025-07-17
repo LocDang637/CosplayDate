@@ -32,7 +32,7 @@ import {
   People,
   EventNote,
   AttachMoney,
-  HealthAndSafety,
+  Star,
   Refresh,
   MoreVert,
   CheckCircle,
@@ -40,7 +40,9 @@ import {
   Error as ErrorIcon,
   Groups,
   Payment,
-  Security
+  Security,
+  StarRate,
+  RateReview
 } from '@mui/icons-material';
 import { 
   LineChart, 
@@ -110,17 +112,18 @@ const AdminDashboard = () => {
           userStats: data.userStats || {},
           bookingStats: data.bookingStats || {},
           revenueStats: data.revenueStats || {},
-          systemHealth: data.systemHealth || {},
+          reviewStats: data.reviewStats || {}, // Updated to use reviewStats
           dailyTrends: data.dailyTrends || [],
           generatedAt: data.generatedAt
         };
 
-        // console.log('✅ Dashboard data loaded:', {
-        //   totalUsers: dashboardData.userStats.totalUsers,
-        //   totalBookings: dashboardData.bookingStats.totalBookings,
-        //   totalRevenue: dashboardData.revenueStats.totalRevenue,
-        //   trendsCount: dashboardData.dailyTrends.length
-        // });
+        console.log('✅ Dashboard data loaded:', {
+          totalUsers: dashboardData.userStats.totalUsers,
+          totalBookings: dashboardData.bookingStats.totalBookings,
+          totalRevenue: dashboardData.revenueStats.totalRevenue,
+          totalReviews: dashboardData.reviewStats.totalReviews,
+          trendsCount: dashboardData.dailyTrends.length
+        });
 
         setDashboardData(dashboardData);
       } else {
@@ -175,6 +178,10 @@ const AdminDashboard = () => {
 
   const formatNumber = (value) => {
     return new Intl.NumberFormat('vi-VN').format(value);
+  };
+
+  const formatRating = (rating) => {
+    return rating ? rating.toFixed(1) : '0.0';
   };
 
   const StatsCard = ({ title, value, subtitle, icon, trend, color = 'primary', loading = false }) => (
@@ -261,7 +268,7 @@ const AdminDashboard = () => {
     );
   }
 
-  const { userStats, bookingStats, revenueStats, systemHealth, dailyTrends } = dashboardData || {};
+  const { userStats, bookingStats, revenueStats, reviewStats, dailyTrends } = dashboardData || {};
 
   return (
     <Box sx={{ minHeight: '100vh', backgroundColor: '#FFE8F5' }}>
@@ -363,10 +370,11 @@ const AdminDashboard = () => {
           
           <Grid item xs={12} sm={6} md={3}>
             <StatsCard
-              title="Tình trạng hệ thống"
-              value={`${systemHealth?.systemUptime || 0}%`}
-              subtitle="Thời gian hoạt động"
-              icon={<HealthAndSafety />}
+              title="Tổng số đánh giá"
+              value={formatNumber(reviewStats?.totalReviews || 0)}
+              subtitle={`${formatRating(reviewStats?.averageRating)} ⭐ điểm trung bình`}
+              icon={<Star />}
+              trend={reviewStats?.reviewGrowthRate}
               color="info"
             />
           </Grid>
@@ -396,7 +404,7 @@ const AdminDashboard = () => {
             <Tab label="Người dùng" />
             <Tab label="Đặt lịch" />
             <Tab label="Doanh thu" />
-            <Tab label="Hệ thống" />
+            <Tab label="Đánh giá từ khách hàng" />
           </Tabs>
 
           {/* Overview Tab */}
@@ -437,40 +445,42 @@ const AdminDashboard = () => {
                   )}
                 </Grid>
 
-                {/* User Type Distribution */}
+                {/* Review Rating Distribution */}
                 <Grid item xs={12} lg={4}>
                   <Typography variant="h6" fontWeight={600} sx={{ mb: 2 }}>
-                    Phân bố người dùng
+                    Phân bố đánh giá
                   </Typography>
-                  {userStats?.totalCustomers > 0 || userStats?.totalCosplayers > 0 ? (
-                    <ResponsiveContainer width="100%" height={300}>
-                      <PieChart>
-                        <Pie
-                          data={[
-                            { name: 'Khách hàng', value: userStats.totalCustomers || 0, color: '#E91E63' },
-                            { name: 'Cosplayer', value: userStats.totalCosplayers || 0, color: '#9C27B0' }
-                          ]}
-                          cx="50%"
-                          cy="50%"
-                          outerRadius={80}
-                          dataKey="value"
-                          label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                        >
-                          {[
-                            { name: 'Khách hàng', value: userStats.totalCustomers || 0, color: '#E91E63' },
-                            { name: 'Cosplayer', value: userStats.totalCosplayers || 0, color: '#9C27B0' }
-                          ].map((entry, index) => (
-                            <Cell key={`cell-${index}`} fill={entry.color} />
-                          ))}
-                        </Pie>
-                        <Tooltip />
-                      </PieChart>
-                    </ResponsiveContainer>
-                  ) : (
-                    <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center', py: 4 }}>
-                      Không có dữ liệu phân bố người dùng
-                    </Typography>
-                  )}
+                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                    {[5, 4, 3, 2, 1].map((rating) => {
+                      const count = reviewStats?.[`rating${rating}Count`] || 0;
+                      const total = reviewStats?.totalReviews || 1;
+                      const percentage = (count / total) * 100;
+                      return (
+                        <Box key={rating} sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                          <Box sx={{ display: 'flex', alignItems: 'center', minWidth: 60 }}>
+                            <Typography variant="body2">{rating}</Typography>
+                            <StarRate sx={{ color: '#FF9800', fontSize: 16 }} />
+                          </Box>
+                          <LinearProgress
+                            variant="determinate"
+                            value={percentage}
+                            sx={{
+                              flex: 1,
+                              height: 8,
+                              borderRadius: 4,
+                              backgroundColor: 'rgba(255, 152, 0, 0.1)',
+                              '& .MuiLinearProgress-bar': {
+                                backgroundColor: '#FF9800'
+                              }
+                            }}
+                          />
+                          <Typography variant="body2" sx={{ minWidth: 40, textAlign: 'right' }}>
+                            {count}
+                          </Typography>
+                        </Box>
+                      );
+                    })}
+                  </Box>
                 </Grid>
 
                 {/* Daily Activity */}
@@ -687,6 +697,7 @@ const AdminDashboard = () => {
                         <Typography fontWeight={600}>{formatCurrency(revenueStats?.revenueThisWeek || 0)}</Typography>
                       </Box>
                       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <Typography>Tháng này</Typography>
                         <Typography fontWeight={600}>{formatCurrency(revenueStats?.revenueThisMonth || 0)}</Typography>
                       </Box>
                       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -738,142 +749,260 @@ const AdminDashboard = () => {
             </Box>
           </TabPanel>
 
-          {/* System Tab */}
+          {/* Reviews Tab - NEW IMPLEMENTATION */}
           <TabPanel value={activeTab} index={4}>
             <Box sx={{ p: 3 }}>
               <Grid container spacing={3}>
+                {/* Review Statistics Card */}
                 <Grid item xs={12} md={6}>
-                  <Card sx={{ borderRadius: '12px', p: 3 }}>
-                    <Typography variant="h6" fontWeight={600} sx={{ mb: 3 }}>
-                      Tình trạng hệ thống
+                  <Card sx={{ 
+                    borderRadius: '12px', 
+                    p: 3,
+                    background: 'linear-gradient(145deg, rgba(255, 152, 0, 0.05) 0%, rgba(255, 193, 7, 0.05) 100%)',
+                    border: '1px solid rgba(255, 152, 0, 0.2)'
+                  }}>
+                    <Typography variant="h6" fontWeight={600} sx={{ mb: 3, color: '#FF9800' }}>
+                      📊 Thống kê đánh giá
                     </Typography>
                     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
                       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <Typography>Uptime hệ thống</Typography>
+                        <Typography>Tổng số đánh giá</Typography>
                         <Chip 
-                          label={`${systemHealth?.systemUptime || 0}%`} 
-                          color="success" 
+                          label={formatNumber(reviewStats?.totalReviews || 0)} 
+                          sx={{ backgroundColor: '#FF9800', color: 'white' }}
+                          icon={<RateReview />}
+                        />
+                      </Box>
+                      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <Typography>Đánh giá đã xác thực</Typography>
+                        <Chip 
+                          label={formatNumber(reviewStats?.verifiedReviews || 0)} 
+                          color="success"
                           icon={<CheckCircle />}
                         />
                       </Box>
                       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <Typography>Escrow đang hoạt động</Typography>
-                        <Typography fontWeight={600}>{formatNumber(systemHealth?.activeEscrows || 0)}</Typography>
+                        <Typography>Đánh giá trong tháng</Typography>
+                        <Chip label={formatNumber(reviewStats?.reviewsThisMonth || 0)} color="info" />
                       </Box>
                       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <Typography>Tổng tiền Escrow</Typography>
-                        <Typography fontWeight={600}>{formatCurrency(systemHealth?.totalEscrowAmount || 0)}</Typography>
+                        <Typography>Có phản hồi từ Cosplayer</Typography>
+                        <Chip label={formatNumber(reviewStats?.reviewsWithResponse || 0)} color="secondary" />
                       </Box>
                       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <Typography>Thanh toán chờ xử lý</Typography>
+                        <Typography>Tỷ lệ phản hồi</Typography>
                         <Chip 
-                          label={systemHealth?.pendingPayments || 0} 
-                          color={(systemHealth?.pendingPayments || 0) > 20 ? 'warning' : 'info'}
-                          icon={<Pending />}
+                          label={`${reviewStats?.responseRate || 0}%`}
+                          color={reviewStats?.responseRate > 70 ? 'success' : reviewStats?.responseRate > 40 ? 'warning' : 'error'}
                         />
                       </Box>
-                      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <Typography>Thanh toán thất bại</Typography>
-                        <Chip 
-                          label={systemHealth?.failedPayments || 0} 
-                          color={(systemHealth?.failedPayments || 0) > 10 ? 'error' : 'default'}
-                          icon={<ErrorIcon />}
-                        />
-                      </Box>
-                      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <Typography>Backup cuối cùng</Typography>
+                    </Box>
+                  </Card>
+                </Grid>
+
+                {/* Rating Distribution Card */}
+                <Grid item xs={12} md={6}>
+                  <Card sx={{ 
+                    borderRadius: '12px', 
+                    p: 3,
+                    background: 'linear-gradient(145deg, rgba(255, 152, 0, 0.05) 0%, rgba(255, 193, 7, 0.05) 100%)',
+                    border: '1px solid rgba(255, 152, 0, 0.2)'
+                  }}>
+                    <Typography variant="h6" fontWeight={600} sx={{ mb: 3, color: '#FF9800' }}>
+                      ⭐ Phân bố đánh giá chi tiết
+                    </Typography>
+                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                      {[5, 4, 3, 2, 1].map((rating) => {
+                        const count = reviewStats?.[`rating${rating}Count`] || 0;
+                        const total = reviewStats?.totalReviews || 1;
+                        const percentage = total > 0 ? (count / total) * 100 : 0;
+                        return (
+                          <Box key={rating} sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                            <Box sx={{ display: 'flex', alignItems: 'center', minWidth: 80 }}>
+                              <Typography variant="body2" fontWeight={600}>{rating}</Typography>
+                              <StarRate sx={{ color: '#FF9800', fontSize: 18, ml: 0.5 }} />
+                            </Box>
+                            <LinearProgress
+                              variant="determinate"
+                              value={percentage}
+                              sx={{
+                                flex: 1,
+                                height: 10,
+                                borderRadius: 5,
+                                backgroundColor: 'rgba(255, 152, 0, 0.1)',
+                                '& .MuiLinearProgress-bar': {
+                                  backgroundColor: '#FF9800',
+                                  borderRadius: 5
+                                }
+                              }}
+                            />
+                            <Box sx={{ minWidth: 80, textAlign: 'right' }}>
+                              <Typography variant="body2" fontWeight={600}>
+                                {count} ({percentage.toFixed(1)}%)
+                              </Typography>
+                            </Box>
+                          </Box>
+                        );
+                      })}
+                      <Box sx={{ 
+                        display: 'flex', 
+                        justifyContent: 'center', 
+                        alignItems: 'center', 
+                        gap: 1, 
+                        mt: 2,
+                        p: 2,
+                        backgroundColor: 'rgba(255, 152, 0, 0.1)',
+                        borderRadius: 2
+                      }}>
+                        <StarRate sx={{ color: '#FF9800', fontSize: 24 }} />
+                        <Typography variant="h5" fontWeight={700} color="#FF9800">
+                          {formatRating(reviewStats?.averageRating)}
+                        </Typography>
                         <Typography variant="body2" color="text.secondary">
-                          {systemHealth?.lastBackup ? new Date(systemHealth.lastBackup).toLocaleString('vi-VN') : 'Không có dữ liệu'}
+                          điểm trung bình
                         </Typography>
                       </Box>
                     </Box>
                   </Card>
                 </Grid>
 
+                {/* Quality Metrics */}
                 <Grid item xs={12} md={6}>
-                  <Card sx={{ borderRadius: '12px', p: 3 }}>
-                    <Typography variant="h6" fontWeight={600} sx={{ mb: 3 }}>
-                      Cảnh báo hệ thống
+                  <Card sx={{ 
+                    borderRadius: '12px', 
+                    p: 3,
+                    background: 'linear-gradient(145deg, rgba(76, 175, 80, 0.05) 0%, rgba(139, 195, 74, 0.05) 100%)',
+                    border: '1px solid rgba(76, 175, 80, 0.2)'
+                  }}>
+                    <Typography variant="h6" fontWeight={600} sx={{ mb: 3, color: '#4CAF50' }}>
+                      📈 Chỉ số chất lượng
                     </Typography>
-                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                      {(systemHealth?.failedPayments || 0) > 5 && (
-                        <Alert severity="warning" sx={{ borderRadius: '8px' }}>
-                          Có {systemHealth.failedPayments} thanh toán thất bại cần xem xét
-                        </Alert>
-                      )}
-                      
-                      {(systemHealth?.pendingPayments || 0) > 50 && (
-                        <Alert severity="info" sx={{ borderRadius: '8px' }}>
-                          Có {systemHealth.pendingPayments} thanh toán chờ xử lý
-                        </Alert>
-                      )}
-                      
-                      {(systemHealth?.systemUptime || 100) < 99.5 && (
-                        <Alert severity="error" sx={{ borderRadius: '8px' }}>
-                          Uptime hệ thống thấp: {systemHealth?.systemUptime || 0}%
-                        </Alert>
-                      )}
+                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+                      {/* Positive Reviews */}
+                      <Box>
+                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+                          <Typography variant="body2" color="text.secondary">
+                            Đánh giá tích cực (4-5 ⭐)
+                          </Typography>
+                          <Typography variant="body2" fontWeight={600} color="success.main">
+                            {formatNumber((reviewStats?.rating5Count || 0) + (reviewStats?.rating4Count || 0))}
+                          </Typography>
+                        </Box>
+                        <LinearProgress
+                          variant="determinate"
+                          value={reviewStats?.totalReviews > 0 ? 
+                            (((reviewStats?.rating5Count || 0) + (reviewStats?.rating4Count || 0)) / reviewStats.totalReviews) * 100 : 0}
+                          sx={{
+                            height: 8,
+                            borderRadius: 4,
+                            backgroundColor: 'rgba(76, 175, 80, 0.1)',
+                            '& .MuiLinearProgress-bar': { backgroundColor: '#4CAF50' }
+                          }}
+                        />
+                      </Box>
 
-                      {(systemHealth?.activeEscrows || 0) > 100 && (
-                        <Alert severity="warning" sx={{ borderRadius: '8px' }}>
-                          Có {systemHealth.activeEscrows} giao dịch escrow đang hoạt động
-                        </Alert>
-                      )}
+                      {/* Neutral Reviews */}
+                      <Box>
+                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+                          <Typography variant="body2" color="text.secondary">
+                            Đánh giá trung tính (3 ⭐)
+                          </Typography>
+                          <Typography variant="body2" fontWeight={600} color="warning.main">
+                            {formatNumber(reviewStats?.rating3Count || 0)}
+                          </Typography>
+                        </Box>
+                        <LinearProgress
+                          variant="determinate"
+                          value={reviewStats?.totalReviews > 0 ? 
+                            ((reviewStats?.rating3Count || 0) / reviewStats.totalReviews) * 100 : 0}
+                          sx={{
+                            height: 8,
+                            borderRadius: 4,
+                            backgroundColor: 'rgba(255, 152, 0, 0.1)',
+                            '& .MuiLinearProgress-bar': { backgroundColor: '#FF9800' }
+                          }}
+                        />
+                      </Box>
 
-                      {/* Show success message if no issues */}
-                      {(systemHealth?.failedPayments || 0) <= 5 && 
-                       (systemHealth?.pendingPayments || 0) <= 50 && 
-                       (systemHealth?.systemUptime || 100) >= 99.5 && (
-                        <Alert severity="success" sx={{ borderRadius: '8px' }}>
-                          Hệ thống đang hoạt động bình thường
-                        </Alert>
-                      )}
+                      {/* Negative Reviews */}
+                      <Box>
+                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+                          <Typography variant="body2" color="text.secondary">
+                            Đánh giá tiêu cực (1-2 ⭐)
+                          </Typography>
+                          <Typography variant="body2" fontWeight={600} color="error.main">
+                            {formatNumber((reviewStats?.rating1Count || 0) + (reviewStats?.rating2Count || 0))}
+                          </Typography>
+                        </Box>
+                        <LinearProgress
+                          variant="determinate"
+                          value={reviewStats?.totalReviews > 0 ? 
+                            (((reviewStats?.rating1Count || 0) + (reviewStats?.rating2Count || 0)) / reviewStats.totalReviews) * 100 : 0}
+                          sx={{
+                            height: 8,
+                            borderRadius: 4,
+                            backgroundColor: 'rgba(244, 67, 54, 0.1)',
+                            '& .MuiLinearProgress-bar': { backgroundColor: '#F44336' }
+                          }}
+                        />
+                      </Box>
                     </Box>
                   </Card>
                 </Grid>
 
-                {/* System Metrics Chart */}
-                <Grid item xs={12}>
-                  <Card sx={{ borderRadius: '12px', p: 3 }}>
-                    <Typography variant="h6" fontWeight={600} sx={{ mb: 3 }}>
-                      Hoạt động hệ thống (Dữ liệu từ API)
+                {/* Trend Analysis */}
+                <Grid item xs={12} md={6}>
+                  <Card sx={{ 
+                    borderRadius: '12px', 
+                    p: 3,
+                    background: 'linear-gradient(145deg, rgba(33, 150, 243, 0.05) 0%, rgba(63, 81, 181, 0.05) 100%)',
+                    border: '1px solid rgba(33, 150, 243, 0.2)'
+                  }}>
+                    <Typography variant="h6" fontWeight={600} sx={{ mb: 3, color: '#2196F3' }}>
+                      📉 Phân tích xu hướng
                     </Typography>
-                    {dailyTrends && dailyTrends.length > 0 ? (
-                      <ResponsiveContainer width="100%" height={300}>
-                        <LineChart data={dailyTrends.slice(-7)}>
-                          <CartesianGrid strokeDasharray="3 3" />
-                          <XAxis dataKey="date" />
-                          <YAxis />
-                          <Tooltip />
-                          <Legend />
-                          <Line 
-                            type="monotone" 
-                            dataKey="newUsers" 
-                            stroke="#E91E63" 
-                            name="Người dùng mới"
-                            strokeWidth={2}
-                          />
-                          <Line 
-                            type="monotone" 
-                            dataKey="newBookings" 
-                            stroke="#9C27B0" 
-                            name="Đặt lịch mới"
-                            strokeWidth={2}
-                          />
-                          <Line 
-                            type="monotone" 
-                            dataKey="completedBookings" 
-                            stroke="#4CAF50" 
-                            name="Hoàn thành"
-                            strokeWidth={2}
-                          />
-                        </LineChart>
-                      </ResponsiveContainer>
-                    ) : (
-                      <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center', py: 4 }}>
-                        Không có dữ liệu hoạt động hệ thống
-                      </Typography>
-                    )}
+                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <Typography>Tăng trưởng đánh giá</Typography>
+                        <Chip
+                          label={`${reviewStats?.reviewGrowthRate > 0 ? '+' : ''}${reviewStats?.reviewGrowthRate || 0}%`}
+                          color={reviewStats?.reviewGrowthRate > 0 ? 'success' : 'error'}
+                          icon={reviewStats?.reviewGrowthRate > 0 ? <TrendingUp /> : <TrendingDown />}
+                        />
+                      </Box>
+                      
+                      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <Typography>Đánh giá tuần này</Typography>
+                        <Typography fontWeight={600}>{formatNumber(reviewStats?.reviewsThisWeek || 0)}</Typography>
+                      </Box>
+                      
+                      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <Typography>Đánh giá hôm nay</Typography>
+                        <Typography fontWeight={600}>{formatNumber(reviewStats?.reviewsToday || 0)}</Typography>
+                      </Box>
+
+                      {/* Activity Correlation Analysis */}
+                      <Box sx={{ 
+                        mt: 2, 
+                        p: 2, 
+                        backgroundColor: 'rgba(33, 150, 243, 0.1)', 
+                        borderRadius: 2 
+                      }}>
+                        <Typography variant="body2" fontWeight={600} color="primary.main" sx={{ mb: 1 }}>
+                          Phân tích tương quan hoạt động:
+                        </Typography>
+                        <Typography variant="body2" color="text.secondary">
+                          • Tỷ lệ đánh giá/booking hoàn thành: {bookingStats?.completedBookings > 0 ? 
+                            ((reviewStats?.totalReviews || 0) / bookingStats.completedBookings * 100).toFixed(1) : 0}%
+                        </Typography>
+                        <Typography variant="body2" color="text.secondary">
+                          • Tỷ lệ phản hồi từ Cosplayer: {reviewStats?.responseRate || 0}%
+                        </Typography>
+                        <Typography variant="body2" color="text.secondary">
+                          • Điểm trung bình hệ thống: {formatRating(reviewStats?.averageRating)} ⭐
+                        </Typography>
+                      </Box>
+                    </Box>
                   </Card>
                 </Grid>
               </Grid>
@@ -996,7 +1125,7 @@ const AdminDashboard = () => {
               fullWidth
               variant="outlined"
               size="large"
-              startIcon={<Security />}
+              startIcon={<Star />}
               sx={{
                 py: 2,
                 borderRadius: '12px',
@@ -1008,7 +1137,7 @@ const AdminDashboard = () => {
                 }
               }}
             >
-              Cài đặt bảo mật
+              Quản lý đánh giá
             </Button>
           </Grid>
         </Grid>

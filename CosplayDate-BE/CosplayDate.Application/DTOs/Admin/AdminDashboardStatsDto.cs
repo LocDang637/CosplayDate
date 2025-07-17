@@ -8,14 +8,31 @@ using System.Threading.Tasks;
 
 namespace CosplayDate.Application.DTOs.Admin
 {
+    public class ReviewStatsDto
+    {
+        public int TotalReviews { get; set; }
+        public int VerifiedReviews { get; set; }
+        public int ReviewsToday { get; set; }
+        public int ReviewsThisWeek { get; set; }
+        public int ReviewsThisMonth { get; set; }
+        public double AverageRating { get; set; }
+        public int Rating5Count { get; set; }
+        public int Rating4Count { get; set; }
+        public int Rating3Count { get; set; }
+        public int Rating2Count { get; set; }
+        public int Rating1Count { get; set; }
+        public double ReviewGrowthRate { get; set; }
+        public int ReviewsWithResponse { get; set; }
+        public double ResponseRate { get; set; }
+    }
     public class AdminDashboardStatsDto
     {
-        public UserStatsDto UserStats { get; set; } = new();
-        public BookingStatsDto BookingStats { get; set; } = new();
-        public RevenueStatsDto RevenueStats { get; set; } = new();
-        public SystemHealthDto SystemHealth { get; set; } = new();
+        public UserStatsDto UserStats { get; set; } = null!;
+        public BookingStatsDto BookingStats { get; set; } = null!;
+        public RevenueStatsDto RevenueStats { get; set; } = null!;
+        public ReviewStatsDto ReviewStats { get; set; } = null!;
         public List<DailyStatsDto> DailyTrends { get; set; } = new();
-        public DateTime GeneratedAt { get; set; } = DateTime.UtcNow;
+        public DateTime GeneratedAt { get; set; }
     }
 
     public class UserStatsDto

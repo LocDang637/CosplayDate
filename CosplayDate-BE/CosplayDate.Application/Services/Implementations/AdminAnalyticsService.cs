@@ -30,7 +30,7 @@ namespace CosplayDate.Application.Services.Implementations
                 var userStats = await GetUserStatsInternalAsync();
                 var bookingStats = await GetBookingStatsInternalAsync();
                 var revenueStats = await GetRevenueStatsInternalAsync();
-                var systemHealth = await GetSystemHealthInternalAsync();
+                var reviewStats = await GetReviewStatsInternalAsync(); // Changed from systemHealth
                 var dailyTrends = await GetDailyTrendsInternalAsync(DateTime.Today.AddDays(-30), DateTime.Today);
 
                 var dashboardStats = new AdminDashboardStatsDto
@@ -38,7 +38,7 @@ namespace CosplayDate.Application.Services.Implementations
                     UserStats = userStats,
                     BookingStats = bookingStats,
                     RevenueStats = revenueStats,
-                    SystemHealth = systemHealth,
+                    ReviewStats = reviewStats, // Changed from SystemHealth
                     DailyTrends = dailyTrends,
                     GeneratedAt = DateTime.UtcNow
                 };
@@ -94,6 +94,21 @@ namespace CosplayDate.Application.Services.Implementations
             }
         }
 
+        // New method to replace GetSystemHealthAsync
+        public async Task<ApiResponse<ReviewStatsDto>> GetReviewStatsAsync()
+        {
+            try
+            {
+                var stats = await GetReviewStatsInternalAsync();
+                return ApiResponse<ReviewStatsDto>.Success(stats, "Review statistics retrieved successfully");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error retrieving review statistics");
+                return ApiResponse<ReviewStatsDto>.Error("Failed to retrieve review statistics");
+            }
+        }
+
         public async Task<ApiResponse<List<DailyStatsDto>>> GetDailyTrendsAsync(DateTime? fromDate = null, DateTime? toDate = null)
         {
             try
@@ -111,6 +126,8 @@ namespace CosplayDate.Application.Services.Implementations
             }
         }
 
+        // Keep the old method for backward compatibility, but mark as obsolete
+        [Obsolete("Use GetReviewStatsAsync instead")]
         public async Task<ApiResponse<SystemHealthDto>> GetSystemHealthAsync()
         {
             try
@@ -285,6 +302,63 @@ namespace CosplayDate.Application.Services.Implementations
             };
         }
 
+        // New method to replace GetSystemHealthInternalAsync
+        private async Task<ReviewStatsDto> GetReviewStatsInternalAsync()
+        {
+            var allReviews = await _unitOfWork.Reviews.GetAllAsync();
+            var reviewsList = allReviews.ToList();
+
+            var today = DateTime.Today;
+            var weekAgo = today.AddDays(-7);
+            var monthAgo = today.AddDays(-30);
+
+            var totalReviews = reviewsList.Count;
+            var verifiedReviews = reviewsList.Count(r => r.IsVerified == true);
+            var reviewsToday = reviewsList.Count(r => r.CreatedAt?.Date == today);
+            var reviewsThisWeek = reviewsList.Count(r => r.CreatedAt >= weekAgo);
+            var reviewsThisMonth = reviewsList.Count(r => r.CreatedAt >= monthAgo);
+
+            // Calculate average rating
+            var averageRating = reviewsList.Count > 0 ?
+                Math.Round(reviewsList.Average(r => r.Rating), 2) : 0.0;
+
+            // Rating distribution
+            var rating5Count = reviewsList.Count(r => r.Rating == 5);
+            var rating4Count = reviewsList.Count(r => r.Rating == 4);
+            var rating3Count = reviewsList.Count(r => r.Rating == 3);
+            var rating2Count = reviewsList.Count(r => r.Rating == 2);
+            var rating1Count = reviewsList.Count(r => r.Rating == 1);
+
+            // Calculate growth rate
+            var reviewsLastMonth = reviewsList.Count(r => r.CreatedAt < monthAgo);
+            var reviewGrowthRate = reviewsLastMonth > 0 ?
+                ((double)(reviewsThisMonth) / reviewsLastMonth) * 100 : 0;
+
+            // Reviews with responses from cosplayers
+            var reviewsWithResponse = reviewsList.Count(r => !string.IsNullOrEmpty(r.OwnerResponse));
+            var responseRate = totalReviews > 0 ?
+                ((double)reviewsWithResponse / totalReviews) * 100 : 0;
+
+            return new ReviewStatsDto
+            {
+                TotalReviews = totalReviews,
+                VerifiedReviews = verifiedReviews,
+                ReviewsToday = reviewsToday,
+                ReviewsThisWeek = reviewsThisWeek,
+                ReviewsThisMonth = reviewsThisMonth,
+                AverageRating = averageRating,
+                Rating5Count = rating5Count,
+                Rating4Count = rating4Count,
+                Rating3Count = rating3Count,
+                Rating2Count = rating2Count,
+                Rating1Count = rating1Count,
+                ReviewGrowthRate = Math.Round(reviewGrowthRate, 2),
+                ReviewsWithResponse = reviewsWithResponse,
+                ResponseRate = Math.Round(responseRate, 2)
+            };
+        }
+
+        // Keep the old method for backward compatibility
         private async Task<SystemHealthDto> GetSystemHealthInternalAsync()
         {
             // Get escrow statistics
