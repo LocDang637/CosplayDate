@@ -216,7 +216,7 @@ const CosplayerLeaderboard = ({ title = "Bảng xếp hạng Cosplayer" }) => {
                 
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                   <Rating
-                    value={cosplayer.rating || 4.5}
+                    value={cosplayer.rating || 0}
                     precision={0.1}
                     size="small"
                     readOnly

@@ -164,16 +164,17 @@ const CustomerProfilePage = () => {
           return;
         }
 
-        // console.log('🔍 Loading user profile for:', targetUserId);
+        console.log('🔍 Loading user profile for:', targetUserId);
 
         // First get user profile to determine isOwnProfile
         const userProfileResult = await userAPI.getUserProfile(targetUserId);
 
-        // console.log('👤 User Profile API Result:', {
-        //   success: userProfileResult.success,
-        //   isOwnProfile: userProfileResult.data?.isOwnProfile,
-        //   userType: userProfileResult.data?.userType,
-        // });
+        console.log('👤 User Profile API Result:', {
+          success: userProfileResult.success,
+          isOwnProfile: userProfileResult.data?.isOwnProfile,
+          userType: userProfileResult.data?.userType,
+          fullData: userProfileResult.data,
+        });
 
         if (userProfileResult.success && userProfileResult.data) {
           const { isOwnProfile: apiIsOwnProfile, userType } = userProfileResult.data;
@@ -181,12 +182,13 @@ const CustomerProfilePage = () => {
           // Set isOwnProfile from API response
           setIsOwnProfile(apiIsOwnProfile);
 
-          // console.log('✅ States set from API:', {
-          //   isOwnProfile: apiIsOwnProfile,
-          //   userType: userType
-          // });
+          console.log('✅ States set from API:', {
+            isOwnProfile: apiIsOwnProfile,
+            userType: userType
+          });
 
           // Handle non-customer users
+          console.log('🔍 Checking user type:', userType, 'Expected: Customer');
           if (userType !== 'Customer') {
             if (apiIsOwnProfile) {
               // console.log('🎭 Own profile but not customer, redirecting to cosplayer profile');

@@ -329,6 +329,14 @@ const CosplayerProfilePage = () => {
         //   isFollowing: userProfileResult.data?.isFollowing // Log this
         // });
 
+        console.log('👤 User Profile API Result:', {
+          success: userProfileResult.success,
+          isOwnProfile: userProfileResult.data?.isOwnProfile,
+          userType: userProfileResult.data?.userType,
+          isFollowing: userProfileResult.data?.isFollowing,
+          fullData: userProfileResult.data,
+        });
+
         if (userProfileResult.success && userProfileResult.data) {
           const { isOwnProfile: apiIsOwnProfile, userType, isFollowing: apiIsFollowing } = userProfileResult.data;
 
@@ -346,6 +354,7 @@ const CosplayerProfilePage = () => {
           // });
 
           // Handle non-cosplayer users
+          console.log('🔍 Checking user type:', userType, 'Expected: Cosplayer');
           if (userType !== 'Cosplayer') {
             if (apiIsOwnProfile) {
               // console.log('👤 Own profile but not cosplayer, redirecting to customer profile');

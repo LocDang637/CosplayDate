@@ -1673,7 +1673,7 @@ const CosplayerBookingOrders = ({ isOwnProfile }) => {
                     null
             }
           >
-            Xác nhận {
+            {
               statusDialog.newStatus === 'Confirmed' ? 'xác nhận' :
                 statusDialog.newStatus === 'Cancelled' ? 'hủy' :
                   statusDialog.newStatus === 'Completed' ? 'hoàn thành' :

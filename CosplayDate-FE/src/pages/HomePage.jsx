@@ -13,13 +13,13 @@ import {
 import { ThemeProvider } from '@mui/material/styles';
 import { cosplayTheme } from '../theme/cosplayTheme';
 import Header from '../components/layout/Header';
-import CosplayerSearchFilters from '../components/cosplayer/CosplayerSearchFilters';
 import CosplayerCarousel from '../components/cosplayer/CosplayerCarousel';
 import CosplayerLeaderboard from '../components/common/CosplayerLeaderboard';
 import CosplayNews from '../components/common/CosplayNews';
 import UserComments from '../components/common/UserComments';
 import Footer from '../components/layout/Footer';
 import { cosplayerAPI } from '../services/cosplayerAPI';
+import { userAPI } from '../services/api';
 
 const HomePage = () => {
   const location = useLocation();
@@ -74,7 +74,36 @@ const HomePage = () => {
       if (result.success && result.data && result.data.cosplayers) {
         // The API now returns structured data with cosplayers array
         const availableCosplayers = result.data.cosplayers.filter(cosplayer => cosplayer.isAvailable !== false);
-        setCosplayers(availableCosplayers);
+        
+        // For each cosplayer, get additional user profile data using getUserProfile
+        const cosplayersWithUserProfile = await Promise.all(
+          availableCosplayers.map(async (cosplayer) => {
+            try {
+              if (cosplayer.userId) {
+                const userProfileResult = await userAPI.getUserProfile(cosplayer.userId);
+                if (userProfileResult.success && userProfileResult.data) {
+                  const enrichedCosplayer = {
+                    ...cosplayer,
+                    userProfile: userProfileResult.data
+                  };
+                  console.log('🔍 HomePage - Enriched cosplayer data:', {
+                    cosplayerId: cosplayer.id,
+                    userId: cosplayer.userId,
+                    displayName: cosplayer.displayName,
+                    hasUserProfile: !!userProfileResult.data
+                  });
+                  return enrichedCosplayer;
+                }
+              }
+              return cosplayer;
+            } catch (error) {
+              console.error(`Failed to load user profile for cosplayer ${cosplayer.id}:`, error);
+              return cosplayer;
+            }
+          })
+        );
+        
+        setCosplayers(cosplayersWithUserProfile);
       } else {
         setCosplayers([]);
         console.warn('No cosplayers data received');
@@ -93,16 +122,6 @@ const HomePage = () => {
     localStorage.removeItem('token');
     setWelcomeMessage('Đã đăng xuất thành công.');
     setShowWelcomeMessage(true);
-  };
-
-  const handleSearch = (filters) => {
-    navigate('/cosplayers', {
-      state: { filters }
-    });
-  };
-
-  const handleFiltersChange = (filters) => {
-    // Real-time filter change handling if needed
   };
 
   const handleSeeAll = () => {
@@ -240,13 +259,6 @@ const HomePage = () => {
             )}
           </Container>
         </Box>
-
-        <Container maxWidth="lg" sx={{ py: 4 }}>
-          <CosplayerSearchFilters
-            onSearch={handleSearch}
-            onFiltersChange={handleFiltersChange}
-          />
-        </Container>
 
         <Container maxWidth="lg" sx={{ py: 2 }}>
           <CosplayerCarousel
