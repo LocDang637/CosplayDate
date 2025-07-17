@@ -100,7 +100,7 @@ const CustomerBookingOrders = () => {
   useEffect(() => {
     if (bookings.length > 0) {
       const calculatedStats = calculateStatsFromBookings(bookings);
-      console.log('Recalculating stats from bookings:', calculatedStats);
+      // console.log('Recalculating stats from bookings:', calculatedStats);
       setStats(calculatedStats);
     }
   }, [bookings]);
@@ -128,11 +128,11 @@ const CustomerBookingOrders = () => {
 
   const loadBookingReviews = async (bookingIds) => {
     try {
-      console.log('Loading reviews for booking IDs:', bookingIds);
+      // console.log('Loading reviews for booking IDs:', bookingIds);
       
       const reviewPromises = bookingIds.map(async (bookingId) => {
         const result = await reviewAPI.getReviewByBookingId(bookingId);
-        console.log(`Review result for booking ${bookingId}:`, result);
+        // console.log(`Review result for booking ${bookingId}:`, result);
         return {
           bookingId,
           review: result.success ? result.data : null
@@ -150,7 +150,7 @@ const CustomerBookingOrders = () => {
         return updated;
       });
 
-      console.log('Reviews loaded and updated in state');
+      // console.log('Reviews loaded and updated in state');
     } catch (error) {
       console.error('Error loading booking reviews:', error);
     }
@@ -178,9 +178,9 @@ const CustomerBookingOrders = () => {
         pageSize: 20, // Get more results for client-side filtering
       };
 
-      console.log('Loading bookings with params:', params);
+      // console.log('Loading bookings with params:', params);
       const result = await bookingAPI.getBookings(params);
-      console.log('Booking API result:', result);
+      // console.log('Booking API result:', result);
 
       if (result.success && result.data) {
         // Handle different response structures
@@ -217,9 +217,9 @@ const CustomerBookingOrders = () => {
           };
         }
 
-        console.log('Processed bookings data:', bookingsData);
-        console.log('Stats data from API:', statsData);
-        console.log('Pagination data:', paginationData);
+        // console.log('Processed bookings data:', bookingsData);
+        // console.log('Stats data from API:', statsData);
+        // console.log('Pagination data:', paginationData);
 
         // Set the data
         setBookings(bookingsData || []);
@@ -229,7 +229,7 @@ const CustomerBookingOrders = () => {
         if (Object.keys(statsData).length === 0) {
           // Calculate from bookings data
           calculatedStats = calculateStatsFromBookings(bookingsData);
-          console.log('Stats calculated from bookings:', calculatedStats);
+          // console.log('Stats calculated from bookings:', calculatedStats);
         } else {
           // Use API stats with proper property names
           calculatedStats = {
@@ -239,17 +239,17 @@ const CustomerBookingOrders = () => {
             completed: statsData.completedBookings || statsData.completed || 0,
             cancelled: statsData.cancelledBookings || statsData.cancelled || 0
           };
-          console.log('Stats used from API:', calculatedStats);
+          // console.log('Stats used from API:', calculatedStats);
         }
 
-        console.log('Final calculated stats:', calculatedStats);
+        // console.log('Final calculated stats:', calculatedStats);
         setStats(calculatedStats);
 
         // Set pagination
         setTotalPages(paginationData.totalPages || 1);
         setTotalCount(paginationData.totalCount || bookingsData.length || 0);
 
-        console.log('Final bookings count:', bookingsData.length);
+        // console.log('Final bookings count:', bookingsData.length);
 
         // Load reviews for completed bookings
         const completedBookingIds = bookingsData
@@ -605,7 +605,7 @@ const CustomerBookingOrders = () => {
                 {/* Line 4: Review (compact view) - Only show for completed bookings */}
                 {booking.status === 'Completed' && (
                   <Box sx={{ mt: 0.5 }}>
-                    {console.log(`Compact view - Review data for booking ${booking.id}:`, bookingReviews[booking.id])}
+                    {// console.log(`Compact view - Review data for booking ${booking.id}:`, bookingReviews[booking.id])}
                     {bookingReviews[booking.id] ? (
                       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                         <Typography variant="body2" color="text.secondary">
@@ -749,7 +749,7 @@ const CustomerBookingOrders = () => {
                 <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1 }}>
                   Đánh giá của bạn
                 </Typography>
-                {console.log(`Review data for booking ${booking.id}:`, bookingReviews[booking.id])}
+                {// console.log(`Review data for booking ${booking.id}:`, bookingReviews[booking.id])}
                 {bookingReviews[booking.id] ? (
                   <Paper sx={{ p: 2, bgcolor: 'rgba(233, 30, 99, 0.02)', borderRadius: '8px' }}>
                     <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 2 }}>

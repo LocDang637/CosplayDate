@@ -246,7 +246,7 @@ const MediaUploadDialog = ({
           window.URL.revokeObjectURL(video.src);
           const duration = Math.round(video.duration);
           setFormData(prev => ({ ...prev, duration }));
-          console.log('Video duration detected:', duration, 'seconds');
+          // console.log('Video duration detected:', duration, 'seconds');
         };
         video.src = URL.createObjectURL(file);
         setPreview(null);
@@ -301,7 +301,7 @@ const MediaUploadDialog = ({
     
     // Create a unique upload identifier to prevent duplicates
     const uploadId = Date.now() + '-' + Math.random().toString(36).substr(2, 9);
-    console.log('Starting upload with ID:', uploadId);
+    // console.log('Starting upload with ID:', uploadId);
     
     // Simulate upload progress
     const progressInterval = setInterval(() => {
@@ -339,7 +339,7 @@ const MediaUploadDialog = ({
         });
       }
 
-      console.log('Upload completed for ID:', uploadId, 'Result:', result);
+      // console.log('Upload completed for ID:', uploadId, 'Result:', result);
 
       clearInterval(progressInterval);
       setUploadProgress(100);

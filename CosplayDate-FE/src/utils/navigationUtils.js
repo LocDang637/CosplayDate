@@ -19,11 +19,11 @@ export const getProfilePath = (user) => {
   
   const userType = user.userType || user.role; // Support both possible field names
   
-  console.log('🔍 getProfilePath Debug:', {
-    userId: userId,
-    userType: userType,
-    originalUser: user
-  });
+  // console.log('🔍 getProfilePath Debug:', {
+  //   userId: userId,
+  //   userType: userType,
+  //   originalUser: user
+  // });
   
   switch (userType) {
     case 'Customer':

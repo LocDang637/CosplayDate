@@ -92,7 +92,7 @@ const ProfileGallery = ({
   ]);
   const [availableTags] = useState([]);
 
-  console.log('📷 CardMediaGallery received:', {
+  // console.log('📷 CardMediaGallery received:', {
     photosCount: photos.length,
     videosCount: videos.length,
     photos: photos.slice(0, 2), // Log first 2 for debugging
@@ -196,7 +196,7 @@ const ProfileGallery = ({
   };
 
   const handleEditMedia = (media) => {
-    console.log('📝 Edit media called with:', media);
+    // console.log('📝 Edit media called with:', media);
     setSelectedMediaForMenu(media);
     setEditFormData({
       title: media.title || '',
@@ -216,7 +216,7 @@ const ProfileGallery = ({
       setEditLoading(true);
       setError(null);
 
-      console.log('💾 Saving media with:', {
+      // console.log('💾 Saving media with:', {
         selectedMedia: selectedMediaForMenu,
         mediaId: selectedMediaForMenu.id,
         editFormData,
@@ -225,7 +225,7 @@ const ProfileGallery = ({
 
       // Check for ID in different possible field names
       const mediaId = selectedMediaForMenu.id || selectedMediaForMenu.photoId || selectedMediaForMenu.videoId || selectedMediaForMenu.mediaId;
-      console.log('🆔 Media ID found:', mediaId);
+      // console.log('🆔 Media ID found:', mediaId);
 
       if (!mediaId) {
         console.error('❌ No media ID found in any expected field:', selectedMediaForMenu);
@@ -245,7 +245,7 @@ const ProfileGallery = ({
           displayOrder: Number(selectedMediaForMenu.displayOrder) || 0 // Keep current displayOrder
         };
 
-        console.log('📤 Updating video with data:', requestData);
+        // console.log('📤 Updating video with data:', requestData);
         result = await cosplayerMediaAPI.updateVideo(mediaId, requestData);
       } else {
         // Update photo
@@ -258,7 +258,7 @@ const ProfileGallery = ({
           tags: Array.isArray(editFormData.tags) ? editFormData.tags : []
         };
 
-        console.log('📤 Updating photo with data:', requestData);
+        // console.log('📤 Updating photo with data:', requestData);
         result = await cosplayerMediaAPI.updatePhoto(mediaId, requestData);
       }
 
@@ -272,7 +272,7 @@ const ProfileGallery = ({
           onMediaUpdate();
         }
 
-        console.log(`✅ ${selectedMediaForMenu.isVideo ? 'Video' : 'Photo'} updated successfully`);
+        // console.log(`✅ ${selectedMediaForMenu.isVideo ? 'Video' : 'Photo'} updated successfully`);
       } else {
         setError(result.message || `Không thể cập nhật ${selectedMediaForMenu.isVideo ? 'video' : 'ảnh'}`);
         console.error(`❌ Failed to update ${selectedMediaForMenu.isVideo ? 'video' : 'photo'}:`, result.message);
@@ -294,8 +294,8 @@ const ProfileGallery = ({
 
       // Check for ID in different possible field names
       const mediaId = selectedMediaForMenu.id || selectedMediaForMenu.photoId || selectedMediaForMenu.videoId || selectedMediaForMenu.mediaId;
-      console.log('🗑️ Deleting media with ID:', mediaId);
-      console.log('🗑️ Selected media object:', selectedMediaForMenu);
+      // console.log('🗑️ Deleting media with ID:', mediaId);
+      // console.log('🗑️ Selected media object:', selectedMediaForMenu);
 
       if (!mediaId) {
         console.error('❌ No media ID found:', selectedMediaForMenu);
@@ -320,7 +320,7 @@ const ProfileGallery = ({
           onMediaUpdate();
         }
 
-        console.log('✅ Media deleted successfully');
+        // console.log('✅ Media deleted successfully');
       } else {
         setError(result.message || 'Không thể xóa media');
         console.error('❌ Failed to delete media:', result.message);
@@ -371,7 +371,7 @@ const ProfileGallery = ({
             position: 'relative',
             display: photo.isVideo && !photo.photoUrl ? 'none' : 'block'
           }}
-          onLoad={() => console.log('✅ CardMedia loaded:', photo.photoUrl || photo.url)}
+          onLoad={() => // console.log('✅ CardMedia loaded:', photo.photoUrl || photo.url)}
           onError={(e) => {
             console.error('❌ CardMedia failed:', photo.photoUrl || photo.url);
             e.target.style.backgroundColor = '#f5f5f5';

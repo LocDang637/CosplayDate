@@ -52,7 +52,7 @@ const CustomerProfilePage = () => {
     severity: "success",
   });
 
-  console.log('userId:', userId, 'isOwnProfile:', isOwnProfile);
+  // console.log('userId:', userId, 'isOwnProfile:', isOwnProfile);
 
   // ✅ FIXED: Stable user ID comparison logic
   const getCurrentUserId = useCallback(() => {
@@ -66,11 +66,11 @@ const CustomerProfilePage = () => {
     if (storedUser) {
       try {
         const parsedUser = JSON.parse(storedUser);
-        console.log("📱 Loaded user from localStorage:", parsedUser);
+        // console.log("📱 Loaded user from localStorage:", parsedUser);
         setUser(parsedUser);
         setUserDataLoaded(true);
 
-        console.log('👤 User loaded:', {
+        // console.log('👤 User loaded:', {
           id: parsedUser.id || parsedUser.userId,
           userType: parsedUser.userType,
           urlUserId: userId
@@ -79,7 +79,7 @@ const CustomerProfilePage = () => {
         // Handle route corrections for own profile without userId
         if (!userId && parsedUser.userType === 'Customer' && (parsedUser.id || parsedUser.userId)) {
           const userIdValue = parsedUser.id || parsedUser.userId;
-          console.log('🔄 Redirecting to customer profile with user ID:', userIdValue);
+          // console.log('🔄 Redirecting to customer profile with user ID:', userIdValue);
           navigate(`/customer-profile/${userIdValue}`, { replace: true });
           return;
         }
@@ -87,7 +87,7 @@ const CustomerProfilePage = () => {
         // Check for wrong URL corrections (cosplayer on customer route)
         if (userId && parsedUser.userType === 'Cosplayer' &&
           parseInt(userId) === parseInt(parsedUser.id || parsedUser.userId)) {
-          console.log('🔄 Cosplayer on customer route, redirecting to cosplayer profile');
+          // console.log('🔄 Cosplayer on customer route, redirecting to cosplayer profile');
           navigate(`/profile/${userId}`, { replace: true });
           return;
         }
@@ -102,7 +102,7 @@ const CustomerProfilePage = () => {
         }
       }
     } else {
-      console.log("⚠️ No user found in localStorage - allowing anonymous viewing");
+      // console.log("⚠️ No user found in localStorage - allowing anonymous viewing");
       setUserDataLoaded(true);
     }
 
@@ -164,12 +164,12 @@ const CustomerProfilePage = () => {
           return;
         }
 
-        console.log('🔍 Loading user profile for:', targetUserId);
+        // console.log('🔍 Loading user profile for:', targetUserId);
 
         // First get user profile to determine isOwnProfile
         const userProfileResult = await userAPI.getUserProfile(targetUserId);
 
-        console.log('👤 User Profile API Result:', {
+        // console.log('👤 User Profile API Result:', {
           success: userProfileResult.success,
           isOwnProfile: userProfileResult.data?.isOwnProfile,
           userType: userProfileResult.data?.userType,
@@ -181,7 +181,7 @@ const CustomerProfilePage = () => {
           // Set isOwnProfile from API response
           setIsOwnProfile(apiIsOwnProfile);
 
-          console.log('✅ States set from API:', {
+          // console.log('✅ States set from API:', {
             isOwnProfile: apiIsOwnProfile,
             userType: userType
           });
@@ -189,11 +189,11 @@ const CustomerProfilePage = () => {
           // Handle non-customer users
           if (userType !== 'Customer') {
             if (apiIsOwnProfile) {
-              console.log('🎭 Own profile but not customer, redirecting to cosplayer profile');
+              // console.log('🎭 Own profile but not customer, redirecting to cosplayer profile');
               navigate(`/profile/${targetUserId}`, { replace: true });
               return;
             } else {
-              console.log('❌ Viewing non-customer profile');
+              // console.log('❌ Viewing non-customer profile');
               setError('This user is not a customer');
               setLoading(false);
               return;
@@ -204,7 +204,7 @@ const CustomerProfilePage = () => {
           await loadCustomerProfile(targetUserId, apiIsOwnProfile, userType);
 
         } else {
-          console.log('❌ User profile loading failed:', userProfileResult.message);
+          // console.log('❌ User profile loading failed:', userProfileResult.message);
           setError(userProfileResult.message || 'User profile not found');
           setLoading(false);
         }
@@ -222,7 +222,7 @@ const CustomerProfilePage = () => {
   // ✅ NEW: Separate function to load customer-specific data
   const loadCustomerProfile = async (targetUserId, apiIsOwnProfile, userType) => {
     try {
-      console.log('👤 Loading customer profile for:', {
+      // console.log('👤 Loading customer profile for:', {
         targetUserId,
         isOwnProfile: apiIsOwnProfile,
         userType
@@ -240,7 +240,7 @@ const CustomerProfilePage = () => {
 
       const [result, currentProfileResult] = await Promise.all(promises);
 
-      console.log('📊 Customer API Result:', {
+      // console.log('📊 Customer API Result:', {
         success: result.success,
         hasData: !!result.data,
         error: result.message
@@ -262,7 +262,7 @@ const CustomerProfilePage = () => {
         // Set current profile data for private info (wallet, etc.)
         if (currentProfileResult?.success && currentProfileResult.data) {
           setCurrentProfile(currentProfileResult.data);
-          console.log('💼 Current profile loaded:', currentProfileResult.data);
+          // console.log('💼 Current profile loaded:', currentProfileResult.data);
         }
 
         // Update local storage if it's own profile
@@ -275,9 +275,9 @@ const CustomerProfilePage = () => {
           setUser(updatedUser);
         }
 
-        console.log('✅ Customer profile loaded successfully');
+        // console.log('✅ Customer profile loaded successfully');
       } else {
-        console.log('❌ Customer profile loading failed:', result.message);
+        // console.log('❌ Customer profile loading failed:', result.message);
         setError(result.message || "Failed to load customer profile");
       }
     } catch (err) {

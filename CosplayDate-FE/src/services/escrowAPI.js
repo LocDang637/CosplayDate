@@ -40,7 +40,7 @@ export const getEscrowHistory = async (params = {}) => {
 
     const url = `${API_BASE_URL}/Escrow/history${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
     
-    console.log('📊 Fetching escrow history from:', url);
+    // console.log('📊 Fetching escrow history from:', url);
 
     const response = await fetch(url, {
       method: 'GET',
@@ -61,7 +61,7 @@ export const getEscrowHistory = async (params = {}) => {
     }
 
     const data = await response.json();
-    console.log('✅ Escrow history response:', data);
+    // console.log('✅ Escrow history response:', data);
 
     return {
       success: true,

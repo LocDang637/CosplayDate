@@ -92,10 +92,10 @@ const AdminDashboard = () => {
       });
 
       // Call your actual admin dashboard API endpoint
-      console.log('🔄 Fetching dashboard statistics...');
+      // console.log('🔄 Fetching dashboard statistics...');
       const response = await api.get('/admin/dashboard/stats');
 
-      console.log('✅ Dashboard API Response:', {
+      // console.log('✅ Dashboard API Response:', {
         status: response.status,
         isSuccess: response.data?.isSuccess,
         hasData: !!response.data?.data
@@ -115,7 +115,7 @@ const AdminDashboard = () => {
           generatedAt: data.generatedAt
         };
 
-        console.log('✅ Dashboard data loaded:', {
+        // console.log('✅ Dashboard data loaded:', {
           totalUsers: dashboardData.userStats.totalUsers,
           totalBookings: dashboardData.bookingStats.totalBookings,
           totalRevenue: dashboardData.revenueStats.totalRevenue,

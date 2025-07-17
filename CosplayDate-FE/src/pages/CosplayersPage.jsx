@@ -121,7 +121,7 @@ const CosplayersPage = () => {
       try {
         const parsedUser = JSON.parse(storedUser);
         setUser(parsedUser);
-        console.log('CosplayersPage - User loaded:', parsedUser);
+        // console.log('CosplayersPage - User loaded:', parsedUser);
       } catch (error) {
         console.error('Error parsing stored user:', error);
       }
@@ -169,8 +169,8 @@ const CosplayersPage = () => {
         ...(filters.isAvailable !== null && { isAvailable: filters.isAvailable })
       };
 
-      console.log('API Query Params:', queryParams);
-      console.log('Selected tags filter:', filters.tags);
+      // console.log('API Query Params:', queryParams);
+      // console.log('Selected tags filter:', filters.tags);
 
       const result = await cosplayerAPI.getCosplayers(queryParams);
 
@@ -212,8 +212,8 @@ const CosplayersPage = () => {
           setAvailableCategories(data.availableCategories);
         }
 
-        console.log('Available tags (static):', staticTags);
-        console.log('Current filters:', filters);
+        // console.log('Available tags (static):', staticTags);
+        // console.log('Current filters:', filters);
       } else {
         setError(result.message);
         setCosplayers([]);

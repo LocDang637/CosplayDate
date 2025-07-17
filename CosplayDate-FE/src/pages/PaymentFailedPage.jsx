@@ -44,7 +44,7 @@ const PaymentFailedPage = () => {
     
     setFailureReason(reason);
 
-    console.log('❌ Payment failed parameters:', {
+    // console.log('❌ Payment failed parameters:', {
       reason,
       allParams: Object.fromEntries(searchParams.entries())
     });

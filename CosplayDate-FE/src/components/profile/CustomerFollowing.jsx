@@ -43,11 +43,11 @@ const CustomerFollowing = ({ customerId, isOwnProfile }) => {
       setLoading(true);
       setError(null);
 
-      console.log('🔍 Loading following for customer:', customerId, 'page:', page);
+      // console.log('🔍 Loading following for customer:', customerId, 'page:', page);
 
       const result = await followAPI.getFollowing(customerId, page, pageSize);
 
-      console.log('📊 Following API result:', result);
+      // console.log('📊 Following API result:', result);
 
       if (result.success && result.data) {
         const { following: followingData, totalCount: total, totalPages: pages, currentPage: current } = result.data;
@@ -57,13 +57,13 @@ const CustomerFollowing = ({ customerId, isOwnProfile }) => {
         setTotalPages(pages || 1);
         setCurrentPage(current || 1);
         
-        console.log('✅ Following loaded successfully:', {
+        // console.log('✅ Following loaded successfully:', {
           count: followingData?.length || 0,
           totalCount: total,
           totalPages: pages
         });
       } else {
-        console.log('❌ Following loading failed:', result.message);
+        // console.log('❌ Following loading failed:', result.message);
         setError(result.message || 'Failed to load following');
         setFollowing([]);
       }

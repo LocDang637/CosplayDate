@@ -107,12 +107,12 @@ const WalletTab = ({
 
   // Load initial data
   useEffect(() => {
-    console.log("🔄 WalletTab initial load - userType:", userType, "balance prop:", balance);
+    // console.log("🔄 WalletTab initial load - userType:", userType, "balance prop:", balance);
     loadWalletData();
   }, []);
 
   useEffect(() => {
-    console.log("🔄 WalletTab balance prop changed:", balance);
+    // console.log("🔄 WalletTab balance prop changed:", balance);
     // Only update if we haven't loaded from API yet and balance is greater than 0
     if (balance > 0) {
       setWalletBalance(balance);
@@ -130,7 +130,7 @@ const WalletTab = ({
         setWalletBalance(actualBalance);
         onBalanceUpdate?.(actualBalance);
         
-        console.log("✅ Wallet balance loaded:", actualBalance);
+        // console.log("✅ Wallet balance loaded:", actualBalance);
       } else {
         console.error("❌ Failed to load wallet balance:", result.message);
       }
@@ -145,7 +145,7 @@ const WalletTab = ({
     setError("");
 
     try {
-      console.log("🔄 Loading payment packages...");
+      // console.log("🔄 Loading payment packages...");
       const result = await paymentAPI.getTopUpPackages();
 
       if (result.success && Array.isArray(result.data)) {
@@ -170,23 +170,17 @@ const WalletTab = ({
           throw new Error("Không có gói thanh toán hợp lệ");
         }
 
-        console.log("✅ Valid packages loaded:", validPackages.length);
+        // console.log("✅ Valid packages loaded:", validPackages.length);
         setPackages(validPackages);
 
         // Auto-select popular package
         const popularPackage = validPackages.find((pkg) => pkg.Popular);
         if (popularPackage) {
           setSelectedPackage(popularPackage);
-          console.log(
-            "📌 Auto-selected popular package:",
-            popularPackage.Package
-          );
+          // console.log("📌 Auto-selected popular package:", popularPackage.Package);
         } else if (validPackages.length > 0) {
           setSelectedPackage(validPackages[0]);
-          console.log(
-            "📌 Auto-selected first package:",
-            validPackages[0].Package
-          );
+          // console.log("📌 Auto-selected first package:", validPackages[0].Package););
         }
       } else {
         throw new Error(
@@ -209,7 +203,7 @@ const WalletTab = ({
     setError('');
 
     try {
-      console.log('📊 Loading escrow history with params:', params);
+      // console.log('📊 Loading escrow history with params:', params);
 
       const result = await escrowAPI.getEscrowHistory({
         page: currentPage,
@@ -232,7 +226,7 @@ const WalletTab = ({
         setTotalCount(result.data.totalCount || 0);
         setEscrowSummary(result.data.summary);
 
-        console.log('✅ Transactions loaded:', transformedTransactions.length);
+        // console.log('✅ Transactions loaded:', transformedTransactions.length);
       } else {
         setError(result.message || 'Failed to load transaction history');
         setEscrowTransactions([]);
@@ -334,7 +328,7 @@ const WalletTab = ({
   const handlePackageSelect = (pkg) => {
     if (pkg && pkg.PayAmount && pkg.ReceiveAmount) {
       setSelectedPackage(pkg);
-      console.log("📦 Package selected:", pkg.Package);
+      // console.log("📦 Package selected:", pkg.Package);
     }
   };
 
@@ -369,11 +363,11 @@ const WalletTab = ({
         Package: selectedPackage.Package,
       };
 
-      console.log("🔄 Creating payment for package:", selectedPackage.Package);
+      // console.log("🔄 Creating payment for package:", selectedPackage.Package);
 
       const result = await paymentAPI.createTopUp(paymentData);
 
-      console.log("💳 Payment creation result:", result);
+      // console.log("💳 Payment creation result:", result);
 
       if (result.success) {
         // ===== UPDATED: Handle your specific response structure =====
@@ -386,11 +380,7 @@ const WalletTab = ({
           try {
             const url = new URL(checkoutUrl);
 
-            console.log("🔍 Validating checkout URL:", {
-              protocol: url.protocol,
-              hostname: url.hostname,
-              fullUrl: checkoutUrl,
-            });
+            // console.log("🔍 Validating checkout URL:", { protocol: url.protocol, hostname: url.hostname, fullUrl: checkoutUrl });
 
             // Enhanced URL validation for PayOS
             if (
@@ -400,7 +390,7 @@ const WalletTab = ({
                 url.hostname.includes("dev.payos") ||
                 url.hostname === "pay.payos.vn")
             ) {
-              console.log("✅ Valid PayOS URL, redirecting...");
+              // console.log("✅ Valid PayOS URL, redirecting...");
 
               // Store payment info for success page
               sessionStorage.setItem(
@@ -440,10 +430,7 @@ const WalletTab = ({
           );
 
           // Log the full response for debugging
-          console.log(
-            "🔍 Full payment response for debugging:",
-            JSON.stringify(result, null, 2)
-          );
+          // console.log("🔍 Full payment response for debugging:", JSON.stringify(result, null, 2));
         }
       } else {
         setError(result.message || "Không thể tạo thanh toán");
@@ -458,7 +445,7 @@ const WalletTab = ({
 
   const handleWithdraw = () => {
     // Handle withdrawal logic
-    console.log("Withdraw:", withdrawAmount);
+    // console.log("Withdraw:", withdrawAmount);
     setWithdrawDialog(false);
     setWithdrawAmount("");
     showSnackbar("Yêu cầu rút tiền đã được gửi", "success");

@@ -188,7 +188,7 @@ const CustomerProfileHeader = ({
     setInterestsDialog(prev => ({ ...prev, open: true, loading: true, error: '' }));
 
     try {
-      console.log('Fetching user interests using API...');
+      // console.log('Fetching user interests using API...');
       
       // Get user interests using the proper API function
       const result = await userAPI.getUserInterests();
@@ -253,7 +253,7 @@ const CustomerProfileHeader = ({
     setInterestsDialog(prev => ({ ...prev, loading: true, error: '' }));
 
     try {
-      console.log('Updating user interests using API...');
+      // console.log('Updating user interests using API...');
       
       // Use the proper API function to update interests
       const result = await userAPI.updateUserInterests(interestsDialog.selectedInterests);
@@ -264,7 +264,7 @@ const CustomerProfileHeader = ({
 
         setInterestsDialog(prev => ({ ...prev, open: false, loading: false }));
 
-        console.log('Interests updated successfully');
+        // console.log('Interests updated successfully');
       } else {
         setInterestsDialog(prev => ({
           ...prev,

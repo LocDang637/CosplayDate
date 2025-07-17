@@ -191,12 +191,12 @@ const SignUpPage = () => {
         dateOfBirth: formData.dateOfBirth
       };
 
-      console.log('Registering user:', registrationData);
+      // console.log('Registering user:', registrationData);
       
       const result = await authAPI.register(registrationData);
       
       if (result.success) {
-        console.log('✅ Registration successful!', result.data);
+        // console.log('✅ Registration successful!', result.data);
         
         // Move to email verification step
         setStep('verification');
@@ -220,7 +220,7 @@ const SignUpPage = () => {
   };
 
   const handleEmailVerified = async (code) => {
-    console.log('Verifying email with code:', code);
+    // console.log('Verifying email with code:', code);
     
     try {
       const verificationData = {
@@ -231,7 +231,7 @@ const SignUpPage = () => {
       const result = await authAPI.verifyEmail(verificationData);
       
       if (result.success) {
-        console.log('✅ Email verified successfully!', result.data);
+        // console.log('✅ Email verified successfully!', result.data);
         
         // Navigate to login with success message
         navigate('/login', { 
@@ -253,12 +253,12 @@ const SignUpPage = () => {
 
   const handleResendVerificationCode = async () => {
     try {
-      console.log('Resending verification code to:', formData.email);
+      // console.log('Resending verification code to:', formData.email);
       
       const result = await authAPI.resendVerification(formData.email.trim().toLowerCase());
       
       if (result.success) {
-        console.log('✅ Verification code resent successfully!');
+        // console.log('✅ Verification code resent successfully!');
         return result;
       } else {
         console.error('❌ Failed to resend verification code:', result.message);

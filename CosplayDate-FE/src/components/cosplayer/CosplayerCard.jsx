@@ -60,7 +60,7 @@ const CosplayerCard = ({
   const user = getCurrentUser();
 
   // Debug log
-  console.log('CosplayerCard - Current user:', user);
+  // console.log('CosplayerCard - Current user:', user);
 
   // Check if current user is a customer (not a cosplayer)
   const isCustomer = user && user.userType === 'Customer';
@@ -68,7 +68,7 @@ const CosplayerCard = ({
   // Initialize follow state with prop value
   useEffect(() => {
     const newFollowState = Boolean(isFollowing);
-    console.log(`CosplayerCard ${cosplayer.id} - isFollowing prop changed:`, isFollowing, '-> state:', newFollowState);
+    // console.log(`CosplayerCard ${cosplayer.id} - isFollowing prop changed:`, isFollowing, '-> state:', newFollowState);
     setFollowState(newFollowState);
   }, [isFollowing, cosplayer.id]);
 
@@ -104,7 +104,7 @@ const CosplayerCard = ({
   const handleBookingClick = (e) => {
     e.stopPropagation();
 
-    console.log('Booking clicked - User:', user, 'Is Customer:', isCustomer);
+    // console.log('Booking clicked - User:', user, 'Is Customer:', isCustomer);
 
     if (!user) {
       // Navigate to login page with redirect message

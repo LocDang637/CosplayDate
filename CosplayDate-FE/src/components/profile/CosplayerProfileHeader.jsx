@@ -92,7 +92,7 @@ const CosplayerProfileHeader = ({
   const loggedInUser = getCurrentUser();
 
   // Debug log
-  console.log('CosplayerProfileHeader - Current user:', loggedInUser);
+  // console.log('CosplayerProfileHeader - Current user:', loggedInUser);
 
   // Check if current user is a customer (not a cosplayer)
   const isCustomer = loggedInUser && loggedInUser.userType === 'Customer';
@@ -165,7 +165,7 @@ const CosplayerProfileHeader = ({
   };
 
   const handleBookingClick = () => {
-    console.log('Booking clicked - User:', loggedInUser, 'Is Customer:', isCustomer);
+    // console.log('Booking clicked - User:', loggedInUser, 'Is Customer:', isCustomer);
 
     if (!loggedInUser) {
       // Navigate to login page with redirect message

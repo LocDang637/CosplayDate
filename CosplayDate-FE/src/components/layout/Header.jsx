@@ -61,14 +61,14 @@ const Header = ({ user = null, onLogout }) => {
   };
 
   const handleNavigation = (path) => {
-    console.log('🔄 Header: Navigating to:', path);
+    // console.log('🔄 Header: Navigating to:', path);
     navigate(path);
     handleProfileMenuClose();
     setMobileMenuOpen(false);
   };
 
   const handleLogout = () => {
-    console.log('👋 Header: Logging out');
+    // console.log('👋 Header: Logging out');
     onLogout?.();
     handleProfileMenuClose();
     navigate('/');
@@ -85,7 +85,7 @@ const Header = ({ user = null, onLogout }) => {
     const userId = user.userId;
     const userType = (user.userType || user.role || '').toLowerCase();
 
-    console.log('🔍 Header Profile Path Debug:', {
+    // console.log('🔍 Header Profile Path Debug:', {
       userId: userId,
       userType: userType,
       fullUser: user
@@ -95,16 +95,16 @@ const Header = ({ user = null, onLogout }) => {
     if (userType === 'cosplayer') {
       // For cosplayers, use cosplayer profile route with USER ID
       const profilePath = userId ? `/profile/${userId}` : '/profile';
-      console.log('🎭 Header: Cosplayer profile path:', profilePath);
+      // console.log('🎭 Header: Cosplayer profile path:', profilePath);
       return profilePath;
     } else if (userType === 'customer') {
       // For customers, use customer profile route with USER ID  
       const profilePath = userId ? `/customer-profile/${userId}` : '/customer-profile';
-      console.log('👤 Header: Customer profile path:', profilePath);
+      // console.log('👤 Header: Customer profile path:', profilePath);
       return profilePath;
     } else {
       // ✅ FIXED: Better fallback logic
-      console.log('👤 Header: Defaulting to customer profile');
+      // console.log('👤 Header: Defaulting to customer profile');
       return userId ? `/customer-profile/${userId}` : '/customer-profile';
     }
   };
@@ -119,7 +119,7 @@ const Header = ({ user = null, onLogout }) => {
       }
 
       const profilePath = getProfilePath();
-      console.log('📱 Header: Profile navigation to:', profilePath);
+      // console.log('📱 Header: Profile navigation to:', profilePath);
       handleNavigation(profilePath);
 
     } catch (error) {
@@ -127,7 +127,7 @@ const Header = ({ user = null, onLogout }) => {
       // Fallback to safe route based on user type
       const userType = (user.userType || '').toLowerCase();
       const safeFallback = userType === 'cosplayer' ? '/profile' : '/customer-profile';
-      console.log('🔄 Header: Using safe fallback:', safeFallback);
+      // console.log('🔄 Header: Using safe fallback:', safeFallback);
       handleNavigation(safeFallback);
     }
   };
@@ -156,10 +156,10 @@ const Header = ({ user = null, onLogout }) => {
     const handleClick = () => {
       try {
         if (item.action) {
-          console.log('🔄 Header: Executing action for:', item.label);
+          // console.log('🔄 Header: Executing action for:', item.label);
           item.action();
         } else if (item.path) {
-          console.log('🔄 Header: Navigating to path:', item.path);
+          // console.log('🔄 Header: Navigating to path:', item.path);
           handleNavigation(item.path);
         }
       } catch (error) {
@@ -431,10 +431,10 @@ const Header = ({ user = null, onLogout }) => {
             onClick={() => {
               try {
                 if (item.action) {
-                  console.log('🔄 Header Menu: Executing action for:', item.label);
+                  // console.log('🔄 Header Menu: Executing action for:', item.label);
                   item.action();
                 } else if (item.path) {
-                  console.log('🔄 Header Menu: Navigating to:', item.path);
+                  // console.log('🔄 Header Menu: Navigating to:', item.path);
                   handleNavigation(item.path);
                 }
               } catch (error) {

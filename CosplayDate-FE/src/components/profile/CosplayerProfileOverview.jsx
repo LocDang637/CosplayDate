@@ -83,8 +83,8 @@ const CosplayerProfileOverview = ({ user, currentProfile, isOwnProfile }) => {
   const [currentPage, setCurrentPage] = useState(1);
   const reviewsPerPage = 3;
 
-  console.log('upcomingBooking', upcomingBooking);
-  console.log('loadingBooking', loadingBooking);
+  // console.log('upcomingBooking', upcomingBooking);
+  // console.log('loadingBooking', loadingBooking);
 
   useEffect(() => {
     const fetchUpcomingBooking = async () => {
@@ -96,7 +96,7 @@ const CosplayerProfileOverview = ({ user, currentProfile, isOwnProfile }) => {
         setLoadingBooking(true);
         const response = await bookingAPI.getUpcomingBookings();
         // Add console.log to debug
-        console.log('API Response:', response);
+        // console.log('API Response:', response);
         
         if (response.success && response.data?.bookings && response.data.bookings.length > 0) {
           // Filter for only "Confirmed" status bookings
@@ -104,7 +104,7 @@ const CosplayerProfileOverview = ({ user, currentProfile, isOwnProfile }) => {
             booking.status && booking.status.toLowerCase() === 'confirmed'
           );
           
-          console.log('Confirmed bookings:', confirmedBookings);
+          // console.log('Confirmed bookings:', confirmedBookings);
           
           if (confirmedBookings.length > 0) {
             // Find the next upcoming booking by sorting by date and time
@@ -121,20 +121,20 @@ const CosplayerProfileOverview = ({ user, currentProfile, isOwnProfile }) => {
               .filter(booking => booking.dateTime > now) // Only future bookings
               .sort((a, b) => a.dateTime - b.dateTime); // Sort by earliest first
             
-            console.log('Future upcoming bookings:', upcomingBookings);
+            // console.log('Future upcoming bookings:', upcomingBookings);
             
             if (upcomingBookings.length > 0) {
               setUpcomingBooking(upcomingBookings[0]); // Get the earliest upcoming booking
             } else {
-              console.log('No future confirmed bookings found');
+              // console.log('No future confirmed bookings found');
               setUpcomingBooking(null);
             }
           } else {
-            console.log('No confirmed bookings found');
+            // console.log('No confirmed bookings found');
             setUpcomingBooking(null);
           }
         } else {
-          console.log('No upcoming bookings found or API error');
+          // console.log('No upcoming bookings found or API error');
           setUpcomingBooking(null);
         }
       } catch (error) {
@@ -186,7 +186,7 @@ const CosplayerProfileOverview = ({ user, currentProfile, isOwnProfile }) => {
         setReviews(reviewsData);
         
         // No need to fetch booking details anymore since serviceType is now included in the review response
-        console.log('Reviews with service type:', reviewsData);
+        // console.log('Reviews with service type:', reviewsData);
         setReviewsWithBookings(reviewsData);
       } else {
         setReviewsError(result.message || 'Không thể tải đánh giá');

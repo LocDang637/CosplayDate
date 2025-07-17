@@ -75,7 +75,7 @@ export const authAPI = {
 
   login: async (credentials) => {
     try {
-      console.log("🔄 Making login API call...");
+      // console.log("🔄 Making login API call...");
       const response = await api.post("/auth/login", credentials);
 
       if (response.data.isSuccess === true && response.data.data?.token) {
@@ -103,7 +103,7 @@ export const authAPI = {
         localStorage.setItem("token", token);
         localStorage.setItem("user", JSON.stringify(normalizedUserData));
 
-        console.log("🔄 Login successful, user data:", normalizedUserData);
+        // console.log("🔄 Login successful, user data:", normalizedUserData);
         return {
           success: true,
           data: {
@@ -422,7 +422,7 @@ export const authAPI = {
         newPassword: resetData.password, // Changed from 'password' to 'newPassword'
       };
 
-      console.log("🔄 Sending reset password request:", {
+      // console.log("🔄 Sending reset password request:", {
         email: requestData.email,
         code: requestData.code,
         newPassword: "[HIDDEN]",
@@ -430,7 +430,7 @@ export const authAPI = {
 
       const response = await api.post("/auth/reset-password", requestData);
 
-      console.log("✅ Reset password API response:", response.data);
+      // console.log("✅ Reset password API response:", response.data);
 
       return {
         success: response.data.isSuccess,
@@ -443,7 +443,7 @@ export const authAPI = {
       if (error.response) {
         const { status, data } = error.response;
 
-        console.log("❌ Error response:", {
+        // console.log("❌ Error response:", {
           status,
           data,
           message: data?.message,

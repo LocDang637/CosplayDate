@@ -43,11 +43,11 @@ const CosplayerFollowers = ({ cosplayerId, isOwnProfile }) => {
       setLoading(true);
       setError(null);
 
-      console.log('🔍 Loading followers for cosplayer:', cosplayerId, 'page:', page);
+      // console.log('🔍 Loading followers for cosplayer:', cosplayerId, 'page:', page);
 
       const result = await followAPI.getFollowers(cosplayerId, page, pageSize);
 
-      console.log('📊 Followers API result:', result);
+      // console.log('📊 Followers API result:', result);
 
       if (result.success && result.data) {
         const { followers: followersData, totalCount: total, totalPages: pages, currentPage: current } = result.data;
@@ -57,13 +57,13 @@ const CosplayerFollowers = ({ cosplayerId, isOwnProfile }) => {
         setTotalPages(pages || 1);
         setCurrentPage(current || 1);
         
-        console.log('✅ Followers loaded successfully:', {
+        // console.log('✅ Followers loaded successfully:', {
           count: followersData?.length || 0,
           totalCount: total,
           totalPages: pages
         });
       } else {
-        console.log('❌ Followers loading failed:', result.message);
+        // console.log('❌ Followers loading failed:', result.message);
         setError(result.message || 'Failed to load followers');
         setFollowers([]);
       }

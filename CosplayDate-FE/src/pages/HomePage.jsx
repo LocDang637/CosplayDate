@@ -63,7 +63,7 @@ const HomePage = () => {
         sortOrder: 'desc'
       });
 
-      console.log('HomePage - API Result:', {
+      // console.log('HomePage - API Result:', {
         success: result.success,
         dataType: typeof result.data,
         hasCosplayers: !!result.data?.cosplayers,

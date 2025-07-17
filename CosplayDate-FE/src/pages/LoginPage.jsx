@@ -59,7 +59,7 @@ const LoginPage = () => {
   const getRedirectPath = (userData) => {
     const userType = userData.userType || userData.role;
     
-    console.log('🔍 Determining redirect path for user:', {
+    // console.log('🔍 Determining redirect path for user:', {
       userType,
       email: userData.email,
       firstName: userData.firstName
@@ -67,16 +67,16 @@ const LoginPage = () => {
     
     switch (userType) {
       case 'Admin':
-        console.log('🎯 Admin user detected - redirecting to admin dashboard');
+        // console.log('🎯 Admin user detected - redirecting to admin dashboard');
         return '/admin/dashboard';
       case 'Cosplayer':
-        console.log('🎭 Cosplayer user detected - redirecting to homepage');
+        // console.log('🎭 Cosplayer user detected - redirecting to homepage');
         return '/';
       case 'Customer':
-        console.log('👤 Customer user detected - redirecting to homepage');
+        // console.log('👤 Customer user detected - redirecting to homepage');
         return '/';
       default:
-        console.log('❓ Unknown user type - redirecting to homepage');
+        // console.log('❓ Unknown user type - redirecting to homepage');
         return '/';
     }
   };
@@ -99,7 +99,7 @@ const LoginPage = () => {
   };
 
   const handleSuccessfulLogin = (userData, token = null) => {
-    console.log('✅ Login successful!', {
+    // console.log('✅ Login successful!', {
       user: userData,
       userType: userData.userType || userData.role,
       hasToken: !!token
@@ -115,7 +115,7 @@ const LoginPage = () => {
     const redirectPath = getRedirectPath(userData);
     const welcomeMessage = getWelcomeMessage(userData);
     
-    console.log('🚀 Redirecting to:', redirectPath);
+    // console.log('🚀 Redirecting to:', redirectPath);
     
     // Navigate to appropriate page with welcome message
     navigate(redirectPath, { 
@@ -127,7 +127,7 @@ const LoginPage = () => {
   };
 
   const handleUnverifiedUser = (userData) => {
-    console.log('⚠️ User not verified, redirecting to verification');
+    // console.log('⚠️ User not verified, redirecting to verification');
 
     // Store user data with email for verification step
     const userWithEmail = {
@@ -163,11 +163,11 @@ const LoginPage = () => {
         password: password
       };
 
-      console.log('Sending login request with credentials:', { email: credentials.email, password: '***' });
+      // console.log('Sending login request with credentials:', { email: credentials.email, password: '***' });
 
       const result = await authAPI.login(credentials);
 
-      console.log('Login API result:', {
+      // console.log('Login API result:', {
         success: result.success,
         message: result.message,
         hasUser: !!result.data?.user,
@@ -180,7 +180,7 @@ const LoginPage = () => {
       if (result.success) {
         const { user, token, isVerified } = result.data;
 
-        console.log('Processing successful result:', {
+        // console.log('Processing successful result:', {
           isVerified,
           hasToken: !!token,
           userEmail: user?.email,
@@ -189,11 +189,11 @@ const LoginPage = () => {
 
         if (isVerified && token) {
           // Case 1: Login successful and verified
-          console.log('✅ Case 1: User is verified, proceeding to login');
+          // console.log('✅ Case 1: User is verified, proceeding to login');
           handleSuccessfulLogin(user, token);
         } else if (!isVerified) {
           // Case 2: Login successful but not verified
-          console.log('⚠️ Case 2: User not verified, going to verification step');
+          // console.log('⚠️ Case 2: User not verified, going to verification step');
 
           // Ensure we have the email for verification
           const userWithEmail = {
@@ -213,14 +213,14 @@ const LoginPage = () => {
         // Case 3: Invalid credentials or other errors
         if (result.errors && Object.keys(result.errors).length > 0) {
           // Handle field-specific errors
-          console.log('Field-specific errors:', result.errors);
+          // console.log('Field-specific errors:', result.errors);
           if (result.errors.email) setEmailError(result.errors.email);
           if (result.errors.password) setPasswordError(result.errors.password);
         } else {
           // Handle different types of login errors based on message content
           const message = result.message.toLowerCase();
 
-          console.log('Processing error message:', message);
+          // console.log('Processing error message:', message);
 
           if (message.includes('email') || message.includes('not found') || message.includes('không tìm thấy')) {
             setEmailError(result.message);
@@ -245,7 +245,7 @@ const LoginPage = () => {
   };
 
   const handleEmailVerified = async (code) => {
-    console.log('Verifying email with code:', code);
+    // console.log('Verifying email with code:', code);
 
     try {
       const verificationData = {
@@ -256,7 +256,7 @@ const LoginPage = () => {
       const result = await authAPI.verifyEmail(verificationData);
 
       if (result.success) {
-        console.log('✅ Email verified successfully!');
+        // console.log('✅ Email verified successfully!');
         const verifiedUser = { ...pendingUser, isVerified: true };
         handleSuccessfulLogin(verifiedUser, result.data.token);
       } else {
@@ -271,7 +271,7 @@ const LoginPage = () => {
 
   const handleResendVerificationCode = async () => {
     try {
-      console.log('Resending verification code to:', pendingUser.email);
+      // console.log('Resending verification code to:', pendingUser.email);
 
       const result = await authAPI.resendVerification(pendingUser.email);
 

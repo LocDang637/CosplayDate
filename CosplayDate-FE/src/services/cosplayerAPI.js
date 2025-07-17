@@ -65,7 +65,7 @@ export const cosplayerAPI = {
 
       const response = await api.get(`/cosplayers?${queryParams}`);
 
-      console.log('API Response structure:', {
+      // console.log('API Response structure:', {
         hasData: !!response.data,
         hasDataData: !!response.data?.data,
         hasCosplayers: !!response.data?.data?.cosplayers,
@@ -141,11 +141,11 @@ export const cosplayerAPI = {
   // ✅ FIXED: Better error handling and user ID support for cosplayer details
   getCosplayerDetails: async (id) => {
     try {
-      console.log('🔍 API: Getting cosplayer details for ID:', id);
+      // console.log('🔍 API: Getting cosplayer details for ID:', id);
 
       const response = await api.get(`/cosplayers/${id}`);
 
-      console.log('✅ API: Raw response:', {
+      // console.log('✅ API: Raw response:', {
         status: response.status,
         data: response.data,
         dataStructure: {
@@ -157,7 +157,7 @@ export const cosplayerAPI = {
 
       // ✅ FIXED: Handle the specific backend response format {isSuccess: true, data: {...}}
       if (response.data && response.data.isSuccess === true && response.data.data) {
-        console.log('✅ API: Extracted cosplayer data:', response.data.data);
+        // console.log('✅ API: Extracted cosplayer data:', response.data.data);
         return {
           success: true,
           data: response.data.data,
@@ -166,7 +166,7 @@ export const cosplayerAPI = {
       }
       // Handle case where isSuccess is not explicitly true but data exists
       else if (response.data && response.data.data) {
-        console.log('✅ API: Extracted data without explicit isSuccess:', response.data.data);
+        // console.log('✅ API: Extracted data without explicit isSuccess:', response.data.data);
         return {
           success: true,
           data: response.data.data,
@@ -175,7 +175,7 @@ export const cosplayerAPI = {
       }
       // Handle direct data response (fallback)
       else if (response.data && (response.data.id || response.data.displayName)) {
-        console.log('✅ API: Using direct response data:', response.data);
+        // console.log('✅ API: Using direct response data:', response.data);
         return {
           success: true,
           data: response.data,
@@ -184,7 +184,7 @@ export const cosplayerAPI = {
       }
       // Handle explicit failure response
       else if (response.data && response.data.isSuccess === false) {
-        console.log('❌ API: Backend returned isSuccess: false');
+        // console.log('❌ API: Backend returned isSuccess: false');
         return {
           success: false,
           message: response.data.message || 'Failed to load cosplayer details',
@@ -251,12 +251,12 @@ export const cosplayerAPI = {
         };
       }
 
-      console.log('🔍 API: Getting current cosplayer profile for user:', userId);
+      // console.log('🔍 API: Getting current cosplayer profile for user:', userId);
 
       // Use the regular endpoint - backend now handles both cosplayer ID and user ID
       const response = await api.get(`/cosplayers/${userId}`);
 
-      console.log('✅ API: Current cosplayer profile response:', {
+      // console.log('✅ API: Current cosplayer profile response:', {
         status: response.status,
         hasData: !!response.data
       });
@@ -288,7 +288,7 @@ export const cosplayerAPI = {
   // ✅ FIXED: Add method to check if user has cosplayer profile without triggering redirects
   checkCosplayerProfile: async (userId) => {
     try {
-      console.log('🔍 API: Checking cosplayer profile for user:', userId);
+      // console.log('🔍 API: Checking cosplayer profile for user:', userId);
 
       // First try to get cosplayer details
       const result = await cosplayerAPI.getCosplayerDetails(userId);
@@ -343,11 +343,11 @@ export const cosplayerAPI = {
   // Convert customer to cosplayer
   becomeCosplayer: async (cosplayerData) => {
     try {
-      console.log('🔄 API: Converting to cosplayer with data:', cosplayerData);
+      // console.log('🔄 API: Converting to cosplayer with data:', cosplayerData);
 
       const response = await api.post('/cosplayers/become-cosplayer', cosplayerData);
 
-      console.log('✅ API: Become cosplayer response:', {
+      // console.log('✅ API: Become cosplayer response:', {
         status: response.status,
         data: response.data,
         isSuccess: response.data?.isSuccess
@@ -356,7 +356,7 @@ export const cosplayerAPI = {
       if (response.status === 200 || response.status === 201) {
         if (response.data?.isSuccess === true) {
           // Success case - clear old token and session
-          console.log('✅ Successfully became a cosplayer, clearing old session...');
+          // console.log('✅ Successfully became a cosplayer, clearing old session...');
 
           // Clear the old token and user data
           localStorage.removeItem('token');
@@ -370,7 +370,7 @@ export const cosplayerAPI = {
           };
         }
         else if (response.data?.isSuccess === false) {
-          console.log('❌ API: Backend returned failure:', response.data);
+          // console.log('❌ API: Backend returned failure:', response.data);
           return {
             success: false,
             message: response.data.message || 'Failed to become a cosplayer',
