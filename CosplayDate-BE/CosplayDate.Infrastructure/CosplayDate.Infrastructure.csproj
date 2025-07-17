@@ -16,6 +16,7 @@
     <Folder Include="Data\Context\" />
     <Folder Include="Data\Configurations\" />
     <Folder Include="Extensions\" />
+    <Folder Include="Migrations\" />
   </ItemGroup>
 
   <ItemGroup>
