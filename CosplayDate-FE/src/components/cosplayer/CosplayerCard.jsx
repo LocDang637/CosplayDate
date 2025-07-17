@@ -161,7 +161,7 @@ const CosplayerCard = ({
       let result;
       if (followState) {
         // Unfollow
-        result = await userAPI.unfollowUser(cosplayer.id);
+        result = await userAPI.unfollowUser(cosplayer.userId);
         if (result.success) {
           setFollowState(false);
           // Call parent callback if provided
@@ -174,7 +174,7 @@ const CosplayerCard = ({
         }
       } else {
         // Follow
-        result = await userAPI.followUser(cosplayer.id);
+        result = await userAPI.followUser(cosplayer.userId);
         if (result.success) {
           setFollowState(true);
           // Call parent callback if provided
