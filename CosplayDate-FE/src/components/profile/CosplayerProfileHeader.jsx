@@ -92,7 +92,7 @@ const CosplayerProfileHeader = ({
   const loggedInUser = getCurrentUser();
 
   // Debug log
-  console.log('CosplayerProfileHeader - Current user:', loggedInUser);
+  // console.log('CosplayerProfileHeader - Current user:', loggedInUser);
 
   // Check if current user is a customer (not a cosplayer)
   const isCustomer = loggedInUser && loggedInUser.userType === 'Customer';
@@ -165,7 +165,7 @@ const CosplayerProfileHeader = ({
   };
 
   const handleBookingClick = () => {
-    console.log('Booking clicked - User:', loggedInUser, 'Is Customer:', isCustomer);
+    // console.log('Booking clicked - User:', loggedInUser, 'Is Customer:', isCustomer);
 
     if (!loggedInUser) {
       // Navigate to login page with redirect message
@@ -576,29 +576,31 @@ const CosplayerProfileHeader = ({
           </MenuItem>
           
           {/* Only show these options for own profile */}
-          {isOwnProfile ? (
+          {isOwnProfile && (
             <MenuItem onClick={() => { handleMenuClose(); handleEditClick(); }}>
               <ListItemIcon>
                 <Edit fontSize="small" />
               </ListItemIcon>
               <ListItemText primary="Chỉnh sửa hồ sơ" />
             </MenuItem>
-          ) : (
-            <>
-              <MenuItem onClick={handleFollowClick} disabled={!loggedInUser}>
-                <ListItemIcon>
-                  {isFollowing ? <PersonRemove fontSize="small" /> : <PersonAdd fontSize="small" />}
-                </ListItemIcon>
-                <ListItemText primary={isFollowing ? 'Bỏ theo dõi' : 'Theo dõi'} />
-              </MenuItem>
-              
-              <MenuItem onClick={handleBookingClick}>
-                <ListItemIcon>
-                  <Event fontSize="small" />
-                </ListItemIcon>
-                <ListItemText primary="Đặt lịch ngay" />
-              </MenuItem>
-            </>
+          )}
+          
+          {!isOwnProfile && (
+            <MenuItem onClick={handleFollowClick} disabled={!loggedInUser}>
+              <ListItemIcon>
+                {isFollowing ? <PersonRemove fontSize="small" /> : <PersonAdd fontSize="small" />}
+              </ListItemIcon>
+              <ListItemText primary={isFollowing ? 'Bỏ theo dõi' : 'Theo dõi'} />
+            </MenuItem>
+          )}
+          
+          {!isOwnProfile && (
+            <MenuItem onClick={handleBookingClick}>
+              <ListItemIcon>
+                <Event fontSize="small" />
+              </ListItemIcon>
+              <ListItemText primary="Đặt lịch ngay" />
+            </MenuItem>
           )}
         </Menu>
 

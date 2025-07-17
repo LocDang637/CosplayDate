@@ -71,7 +71,7 @@ const UserComments = ({ title = "Đánh giá từ người dùng" }) => {
   };
 
   const handleReply = (reviewId) => {
-    console.log('Reply to review:', reviewId);
+    // console.log('Reply to review:', reviewId);
     // Handle reply logic here
   };
 

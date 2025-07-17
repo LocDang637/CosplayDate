@@ -9,13 +9,13 @@ const PaymentRedirectHandler = () => {
   useEffect(() => {
     const fullPath = location.pathname + location.search;
     
-    console.log('🔄 Handling malformed payment URL:', fullPath);
-    console.log('📍 Path:', location.pathname);
-    console.log('🔍 Search:', location.search);
+    // console.log('🔄 Handling malformed payment URL:', fullPath);
+    // console.log('📍 Path:', location.pathname);
+    // console.log('🔍 Search:', location.search);
     
     // Handle malformed PayOS URLs
     if (location.pathname.includes('/payment/cancel')) {
-      console.log('🔄 Processing cancel payment URL...');
+      // console.log('🔄 Processing cancel payment URL...');
       
       // Extract parameters from the malformed URL
       let queryParams = '';
@@ -39,7 +39,7 @@ const PaymentRedirectHandler = () => {
         queryParams = location.search.substring(1);
       }
       
-      console.log('📝 Extracted query params:', queryParams);
+      // console.log('📝 Extracted query params:', queryParams);
       
       // Redirect to proper cancel route
       navigate(`/payment/cancel?${queryParams}`, { replace: true });
@@ -47,7 +47,7 @@ const PaymentRedirectHandler = () => {
     }
     
     if (location.pathname.includes('/payment/success')) {
-      console.log('🔄 Processing success payment URL...');
+      // console.log('🔄 Processing success payment URL...');
       
       // Extract parameters from the malformed URL
       let queryParams = '';
@@ -71,7 +71,7 @@ const PaymentRedirectHandler = () => {
         queryParams = location.search.substring(1);
       }
       
-      console.log('📝 Extracted query params:', queryParams);
+      // console.log('📝 Extracted query params:', queryParams);
       
       // Redirect to proper success route
       navigate(`/payment/success?${queryParams}`, { replace: true });
@@ -80,7 +80,7 @@ const PaymentRedirectHandler = () => {
 
     // Handle any other malformed payment URLs
     if (location.pathname.startsWith('/payment/')) {
-      console.log('❓ Unknown payment URL format, trying to extract parameters...');
+      // console.log('❓ Unknown payment URL format, trying to extract parameters...');
       
       // Try to extract any orderCode from the path
       const orderCodeMatch = fullPath.match(/orderCode=([^&]+)/i);
@@ -94,10 +94,10 @@ const PaymentRedirectHandler = () => {
         
         // Determine if it's success or cancel based on status
         if (statusMatch && statusMatch[1].toLowerCase().includes('cancel')) {
-          console.log('🔄 Redirecting to cancel based on status');
+          // console.log('🔄 Redirecting to cancel based on status');
           navigate(`/payment/cancel?${queryParams}`, { replace: true });
         } else {
-          console.log('🔄 Redirecting to success as default');
+          // console.log('🔄 Redirecting to success as default');
           navigate(`/payment/success?${queryParams}`, { replace: true });
         }
         return;
@@ -105,7 +105,7 @@ const PaymentRedirectHandler = () => {
     }
 
     // If we can't parse it, redirect to home
-    console.log('❌ Could not parse payment URL, redirecting to home');
+    // console.log('❌ Could not parse payment URL, redirecting to home');
     navigate('/', { replace: true });
   }, [location.pathname, location.search, navigate]);
 

@@ -40,12 +40,12 @@ const ForgotPasswordPage = () => {
     setApiError('');
     
     try {
-      console.log('Sending reset code to:', email);
+      // console.log('Sending reset code to:', email);
       
       const result = await authAPI.forgotPassword({ email: email.trim().toLowerCase() });
       
       if (result.success) {
-        console.log('✅ Reset code sent successfully');
+        // console.log('✅ Reset code sent successfully');
         setStep('verification');
       } else {
         console.error('❌ Failed to send reset code:', result.message);
@@ -68,7 +68,7 @@ const ForgotPasswordPage = () => {
   };
 
   const handleCodeVerified = async (code) => {
-    console.log('Password reset code verified:', code);
+    // console.log('Password reset code verified:', code);
     // Navigate to reset password page with email and code
     navigate('/reset-password', { state: { email, code } });
   };
@@ -76,7 +76,7 @@ const ForgotPasswordPage = () => {
   const handleResendCode = async () => {
     setLoading(true);
     try {
-      console.log('Resending reset code to:', email);
+      // console.log('Resending reset code to:', email);
       
       const result = await authAPI.forgotPassword({ email: email.trim().toLowerCase() });
       

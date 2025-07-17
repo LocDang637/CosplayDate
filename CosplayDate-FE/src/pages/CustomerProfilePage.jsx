@@ -52,7 +52,7 @@ const CustomerProfilePage = () => {
     severity: "success",
   });
 
-  console.log('userId:', userId, 'isOwnProfile:', isOwnProfile);
+  // console.log('userId:', userId, 'isOwnProfile:', isOwnProfile);
 
   // ✅ FIXED: Stable user ID comparison logic
   const getCurrentUserId = useCallback(() => {
@@ -60,26 +60,31 @@ const CustomerProfilePage = () => {
     return user.id || user.userId;
   }, [user?.id, user?.userId]);
 
+  // Reset anchorEl when user or profile ownership changes to prevent menu anchoring issues
+  useEffect(() => {
+    setAnchorEl(null);
+  }, [user, isOwnProfile]);
+
   // ✅ FIXED: Initialize user data only once
   useEffect(() => {
     const storedUser = localStorage.getItem("user");
     if (storedUser) {
       try {
         const parsedUser = JSON.parse(storedUser);
-        console.log("📱 Loaded user from localStorage:", parsedUser);
+        // console.log("📱 Loaded user from localStorage:", parsedUser);
         setUser(parsedUser);
         setUserDataLoaded(true);
 
-        console.log('👤 User loaded:', {
-          id: parsedUser.id || parsedUser.userId,
-          userType: parsedUser.userType,
-          urlUserId: userId
-        });
+        // console.log('👤 User loaded:', {
+        //   id: parsedUser.id || parsedUser.userId,
+        //   userType: parsedUser.userType,
+        //   urlUserId: userId
+        // });
 
         // Handle route corrections for own profile without userId
         if (!userId && parsedUser.userType === 'Customer' && (parsedUser.id || parsedUser.userId)) {
           const userIdValue = parsedUser.id || parsedUser.userId;
-          console.log('🔄 Redirecting to customer profile with user ID:', userIdValue);
+          // console.log('🔄 Redirecting to customer profile with user ID:', userIdValue);
           navigate(`/customer-profile/${userIdValue}`, { replace: true });
           return;
         }
@@ -87,7 +92,7 @@ const CustomerProfilePage = () => {
         // Check for wrong URL corrections (cosplayer on customer route)
         if (userId && parsedUser.userType === 'Cosplayer' &&
           parseInt(userId) === parseInt(parsedUser.id || parsedUser.userId)) {
-          console.log('🔄 Cosplayer on customer route, redirecting to cosplayer profile');
+          // console.log('🔄 Cosplayer on customer route, redirecting to cosplayer profile');
           navigate(`/profile/${userId}`, { replace: true });
           return;
         }
@@ -102,7 +107,7 @@ const CustomerProfilePage = () => {
         }
       }
     } else {
-      console.log("⚠️ No user found in localStorage - allowing anonymous viewing");
+      // console.log("⚠️ No user found in localStorage - allowing anonymous viewing");
       setUserDataLoaded(true);
     }
 
@@ -164,16 +169,17 @@ const CustomerProfilePage = () => {
           return;
         }
 
-        console.log('🔍 Loading user profile for:', targetUserId);
+        // console.log('🔍 Loading user profile for:', targetUserId);
 
         // First get user profile to determine isOwnProfile
         const userProfileResult = await userAPI.getUserProfile(targetUserId);
 
-        console.log('👤 User Profile API Result:', {
-          success: userProfileResult.success,
-          isOwnProfile: userProfileResult.data?.isOwnProfile,
-          userType: userProfileResult.data?.userType,
-        });
+        // console.log('👤 User Profile API Result:', {
+        //   success: userProfileResult.success,
+        //   isOwnProfile: userProfileResult.data?.isOwnProfile,
+        //   userType: userProfileResult.data?.userType,
+        //   fullData: userProfileResult.data,
+        // });
 
         if (userProfileResult.success && userProfileResult.data) {
           const { isOwnProfile: apiIsOwnProfile, userType } = userProfileResult.data;
@@ -181,19 +187,20 @@ const CustomerProfilePage = () => {
           // Set isOwnProfile from API response
           setIsOwnProfile(apiIsOwnProfile);
 
-          console.log('✅ States set from API:', {
-            isOwnProfile: apiIsOwnProfile,
-            userType: userType
-          });
+          // console.log('✅ States set from API:', {
+          //   isOwnProfile: apiIsOwnProfile,
+          //   userType: userType
+          // });
 
           // Handle non-customer users
+          // console.log('🔍 Checking user type:', userType, 'Expected: Customer');
           if (userType !== 'Customer') {
             if (apiIsOwnProfile) {
-              console.log('🎭 Own profile but not customer, redirecting to cosplayer profile');
+              // console.log('🎭 Own profile but not customer, redirecting to cosplayer profile');
               navigate(`/profile/${targetUserId}`, { replace: true });
               return;
             } else {
-              console.log('❌ Viewing non-customer profile');
+              // console.log('❌ Viewing non-customer profile');
               setError('This user is not a customer');
               setLoading(false);
               return;
@@ -204,7 +211,7 @@ const CustomerProfilePage = () => {
           await loadCustomerProfile(targetUserId, apiIsOwnProfile, userType);
 
         } else {
-          console.log('❌ User profile loading failed:', userProfileResult.message);
+          // console.log('❌ User profile loading failed:', userProfileResult.message);
           setError(userProfileResult.message || 'User profile not found');
           setLoading(false);
         }
@@ -222,11 +229,11 @@ const CustomerProfilePage = () => {
   // ✅ NEW: Separate function to load customer-specific data
   const loadCustomerProfile = async (targetUserId, apiIsOwnProfile, userType) => {
     try {
-      console.log('👤 Loading customer profile for:', {
-        targetUserId,
-        isOwnProfile: apiIsOwnProfile,
-        userType
-      });
+      // console.log('👤 Loading customer profile for:', {
+      //   targetUserId,
+      //   isOwnProfile: apiIsOwnProfile,
+      //   userType
+      // });
 
       // Load customer details and current profile data in parallel
       const promises = [
@@ -240,11 +247,11 @@ const CustomerProfilePage = () => {
 
       const [result, currentProfileResult] = await Promise.all(promises);
 
-      console.log('📊 Customer API Result:', {
-        success: result.success,
-        hasData: !!result.data,
-        error: result.message
-      });
+      // console.log('📊 Customer API Result:', {
+      //   success: result.success,
+      //   hasData: !!result.data,
+      //   error: result.message
+      // });
 
       if (result.success && result.data) {
         // ✅ FIX: Ensure the profile data has both avatar fields
@@ -262,7 +269,7 @@ const CustomerProfilePage = () => {
         // Set current profile data for private info (wallet, etc.)
         if (currentProfileResult?.success && currentProfileResult.data) {
           setCurrentProfile(currentProfileResult.data);
-          console.log('💼 Current profile loaded:', currentProfileResult.data);
+          // console.log('💼 Current profile loaded:', currentProfileResult.data);
         }
 
         // Update local storage if it's own profile
@@ -275,9 +282,9 @@ const CustomerProfilePage = () => {
           setUser(updatedUser);
         }
 
-        console.log('✅ Customer profile loaded successfully');
+        // console.log('✅ Customer profile loaded successfully');
       } else {
-        console.log('❌ Customer profile loading failed:', result.message);
+        // console.log('❌ Customer profile loading failed:', result.message);
         setError(result.message || "Failed to load customer profile");
       }
     } catch (err) {
@@ -318,7 +325,10 @@ const CustomerProfilePage = () => {
 
   // Avatar menu handlers
   const handleAvatarClick = (event) => {
-    setAnchorEl(event.currentTarget);
+    // Ensure the event target is valid before setting anchorEl
+    if (event?.currentTarget && document.contains(event.currentTarget)) {
+      setAnchorEl(event.currentTarget);
+    }
   };
 
   const handleMenuClose = () => {
@@ -612,7 +622,7 @@ const CustomerProfilePage = () => {
           {isOwnProfile && (
             <Menu
               anchorEl={anchorEl}
-              open={Boolean(anchorEl)}
+              open={Boolean(anchorEl) && isOwnProfile}
               onClose={handleMenuClose}
               anchorOrigin={{
                 vertical: 'bottom',
@@ -622,6 +632,8 @@ const CustomerProfilePage = () => {
                 vertical: 'top',
                 horizontal: 'center',
               }}
+              disableAutoFocus
+              disableRestoreFocus
               MenuListProps={{
                 'aria-labelledby': 'avatar-menu',
               }}

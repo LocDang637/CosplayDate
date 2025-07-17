@@ -31,8 +31,8 @@ const BookingServiceSelect = ({
 
   // Debug logging
   React.useEffect(() => {
-    console.log('BookingServiceSelect - Cosplayer data:', cosplayer);
-    console.log('BookingServiceSelect - Services data:', services);
+    // console.log('BookingServiceSelect - Cosplayer data:', cosplayer);
+    // console.log('BookingServiceSelect - Services data:', services);
   }, [cosplayer, services]);
 
   // Fetch average rating on component mount

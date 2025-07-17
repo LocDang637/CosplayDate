@@ -75,7 +75,7 @@ export const authAPI = {
 
   login: async (credentials) => {
     try {
-      console.log("🔄 Making login API call...");
+      // console.log("🔄 Making login API call...");
       const response = await api.post("/auth/login", credentials);
 
       if (response.data.isSuccess === true && response.data.data?.token) {
@@ -89,8 +89,9 @@ export const authAPI = {
           firstName: userData.firstName,
           lastName: userData.lastName,
           userType: userData.userType,
-          // Add any other fields that might be missing
+          // Add consistent avatar field mapping
           avatar: userData.avatar || userData.avatarUrl || null,
+          avatarUrl: userData.avatar || userData.avatarUrl || null, // Ensure both fields are available
           isVerified: true,
           location: userData.location || null,
           bio: userData.bio || null,
@@ -103,7 +104,7 @@ export const authAPI = {
         localStorage.setItem("token", token);
         localStorage.setItem("user", JSON.stringify(normalizedUserData));
 
-        console.log("🔄 Login successful, user data:", normalizedUserData);
+        // console.log("🔄 Login successful, user data:", normalizedUserData);
         return {
           success: true,
           data: {
@@ -422,15 +423,15 @@ export const authAPI = {
         newPassword: resetData.password, // Changed from 'password' to 'newPassword'
       };
 
-      console.log("🔄 Sending reset password request:", {
-        email: requestData.email,
-        code: requestData.code,
-        newPassword: "[HIDDEN]",
-      });
+      // console.log("🔄 Sending reset password request:", {
+      //   email: requestData.email,
+      //   code: requestData.code,
+      //   newPassword: "[HIDDEN]",
+      // });
 
       const response = await api.post("/auth/reset-password", requestData);
 
-      console.log("✅ Reset password API response:", response.data);
+      // console.log("✅ Reset password API response:", response.data);
 
       return {
         success: response.data.isSuccess,
@@ -443,11 +444,11 @@ export const authAPI = {
       if (error.response) {
         const { status, data } = error.response;
 
-        console.log("❌ Error response:", {
-          status,
-          data,
-          message: data?.message,
-        });
+        // console.log("❌ Error response:", {
+        //   status,
+        //   data,
+        //   message: data?.message,
+        // });
 
         switch (status) {
           case 400:

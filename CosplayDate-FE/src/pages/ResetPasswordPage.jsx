@@ -90,7 +90,7 @@ const ResetPasswordPage = () => {
     setApiError('');
     
     try {
-      console.log('Resetting password for:', email, 'with code:', code);
+      // console.log('Resetting password for:', email, 'with code:', code);
       
       const resetData = {
         email: email.trim().toLowerCase(),
@@ -101,7 +101,7 @@ const ResetPasswordPage = () => {
       const result = await authAPI.resetPassword(resetData);
       
       if (result.success) {
-        console.log('✅ Password reset successful');
+        // console.log('✅ Password reset successful');
         
         // Navigate to login with success message
         navigate('/login', { 

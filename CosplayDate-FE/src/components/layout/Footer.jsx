@@ -27,17 +27,17 @@ import {
 
 const Footer = () => {
   const handleEmailSignup = () => {
-    console.log('Đã nhấn đăng ký email');
+    // console.log('Đã nhấn đăng ký email');
     // Xử lý logic đăng ký email
   };
 
   const handleSocialClick = (platform) => {
-    console.log(`Đã nhấn ${platform}`);
+    // console.log(`Đã nhấn ${platform}`);
     // Xử lý liên kết mạng xã hội
   };
 
   const handleLinkClick = (page) => {
-    console.log(`Đã nhấn trang ${page}`);
+    // console.log(`Đã nhấn trang ${page}`);
     // Xử lý điều hướng trang
   };
 

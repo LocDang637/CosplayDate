@@ -60,7 +60,7 @@ const CosplayerCard = ({
   const user = getCurrentUser();
 
   // Debug log
-  console.log('CosplayerCard - Current user:', user);
+  // console.log('CosplayerCard - Current user:', user);
 
   // Check if current user is a customer (not a cosplayer)
   const isCustomer = user && user.userType === 'Customer';
@@ -68,7 +68,7 @@ const CosplayerCard = ({
   // Initialize follow state with prop value
   useEffect(() => {
     const newFollowState = Boolean(isFollowing);
-    console.log(`CosplayerCard ${cosplayer.id} - isFollowing prop changed:`, isFollowing, '-> state:', newFollowState);
+    // console.log(`CosplayerCard ${cosplayer.id} - isFollowing prop changed:`, isFollowing, '-> state:', newFollowState);
     setFollowState(newFollowState);
   }, [isFollowing, cosplayer.id]);
 
@@ -98,13 +98,20 @@ const CosplayerCard = ({
   };
 
   const handleViewProfile = () => {
-    navigate(`/profile/${cosplayer.id}`);
+    // Use userId instead of cosplayer.id to ensure correct user profile lookup
+    const targetUserId = cosplayer.userId || cosplayer.id;
+    // console.log('🔍 CosplayerCard - Navigating to profile with userId:', targetUserId, 'from cosplayer:', {
+    //   cosplayerId: cosplayer.id,
+    //   userId: cosplayer.userId,
+    //   displayName: cosplayer.displayName
+    // });
+    navigate(`/profile/${targetUserId}`);
   };
 
   const handleBookingClick = (e) => {
     e.stopPropagation();
 
-    console.log('Booking clicked - User:', user, 'Is Customer:', isCustomer);
+    // console.log('Booking clicked - User:', user, 'Is Customer:', isCustomer);
 
     if (!user) {
       // Navigate to login page with redirect message
@@ -154,7 +161,7 @@ const CosplayerCard = ({
       let result;
       if (followState) {
         // Unfollow
-        result = await userAPI.unfollowUser(cosplayer.id);
+        result = await userAPI.unfollowUser(cosplayer.userId);
         if (result.success) {
           setFollowState(false);
           // Call parent callback if provided
@@ -167,7 +174,7 @@ const CosplayerCard = ({
         }
       } else {
         // Follow
-        result = await userAPI.followUser(cosplayer.id);
+        result = await userAPI.followUser(cosplayer.userId);
         if (result.success) {
           setFollowState(true);
           // Call parent callback if provided

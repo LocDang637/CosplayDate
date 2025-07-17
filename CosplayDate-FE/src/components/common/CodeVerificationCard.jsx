@@ -90,7 +90,7 @@ const CodeVerificationCard = ({
     setSuccessMessage('');
 
     try {
-      console.log('Verifying code:', codeToVerify, 'for purpose:', purpose);
+      // console.log('Verifying code:', codeToVerify, 'for purpose:', purpose);
       
       // Call the parent component's verification handler
       await onCodeVerified?.(codeToVerify);
@@ -135,7 +135,7 @@ const CodeVerificationCard = ({
     setSuccessMessage('');
     
     try {
-      console.log('Resending verification code...');
+      // console.log('Resending verification code...');
       
       // Call the parent component's resend handler
       await onResendCode?.();

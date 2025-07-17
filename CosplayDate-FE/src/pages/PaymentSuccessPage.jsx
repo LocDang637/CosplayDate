@@ -57,12 +57,12 @@ const PaymentSuccessPage = () => {
     const status = searchParams.get('status');
     const amount = searchParams.get('amount');
 
-    console.log('🔍 Payment success parameters:', {
-      transactionId,
-      status,
-      amount,
-      allParams: Object.fromEntries(searchParams.entries())
-    });
+    // console.log('🔍 Payment success parameters:', {
+    //   transactionId,
+    //   status,
+    //   amount,
+    //   allParams: Object.fromEntries(searchParams.entries())
+    // });
 
     if (!transactionId) {
       setError('Không tìm thấy thông tin giao dịch');
@@ -71,11 +71,11 @@ const PaymentSuccessPage = () => {
 
     // ===== UPDATED: Try verification with fallback =====
     try {
-      console.log('🔄 Attempting transaction verification...');
+      // console.log('🔄 Attempting transaction verification...');
       const result = await paymentAPI.verifyTransaction(transactionId);
       
       if (result.success) {
-        console.log('✅ Transaction verified successfully');
+        // console.log('✅ Transaction verified successfully');
         setPaymentData({
           transactionId,
           status: 'success',
@@ -96,7 +96,7 @@ const PaymentSuccessPage = () => {
     }
 
     // ===== FALLBACK: Use URL parameters and refresh balance =====
-    console.log('🔄 Using fallback verification...');
+    // console.log('🔄 Using fallback verification...');
     
     // Set payment data from URL parameters
     setPaymentData({
@@ -111,7 +111,7 @@ const PaymentSuccessPage = () => {
     // Try to refresh balance as fallback
     try {
       await refreshWalletBalance();
-      console.log('✅ Fallback balance refresh successful');
+      // console.log('✅ Fallback balance refresh successful');
     } catch (balanceError) {
       console.warn('⚠️ Balance refresh also failed:', balanceError);
       
@@ -145,7 +145,7 @@ const refreshWalletBalance = async () => {
       setUser(updatedUser);
       localStorage.setItem('user', JSON.stringify(updatedUser));
       
-      console.log('💰 Wallet balance updated via refresh endpoint:', newBalance);
+      // console.log('💰 Wallet balance updated via refresh endpoint:', newBalance);
       return;
     }
 
@@ -162,7 +162,7 @@ const refreshWalletBalance = async () => {
       setUser(updatedUser);
       localStorage.setItem('user', JSON.stringify(updatedUser));
       
-      console.log('💰 Wallet balance updated via balance endpoint:', newBalance);
+      // console.log('💰 Wallet balance updated via balance endpoint:', newBalance);
     }
   } catch (error) {
     console.warn('⚠️ Could not refresh wallet balance:', error);

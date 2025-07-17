@@ -17,13 +17,13 @@ const createApiInstance = () => {
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
-    console.log(`📤 ${config.method.toUpperCase()} ${config.url}`, config.data || config.params);
+    // // console.log(`📤 ${config.method.toUpperCase()} ${config.url}`, config.data || config.params);
     return config;
   });
 
   instance.interceptors.response.use(
     (response) => {
-      console.log(`✅ Response from ${response.config.url}:`, response.data);
+      // // console.log(`✅ Response from ${response.config.url}:`, response.data);
       return response;
     },
     (error) => {
@@ -60,7 +60,7 @@ export const reviewAPI = {
   // Create a new review
   createReview: async (reviewData) => {
     try {
-      console.log('Creating review with data:', reviewData);
+      // // console.log('Creating review with data:', reviewData);
       
       const response = await api.post('/Review', reviewData);
       
@@ -82,7 +82,7 @@ export const reviewAPI = {
   // Get all reviews from all cosplayers with pagination
   getAllReviews: async (page = 1, pageSize = 10) => {
     try {
-      console.log(`Getting all reviews, page ${page}, pageSize ${pageSize}`);
+      // // console.log(`Getting all reviews, page ${page}, pageSize ${pageSize}`);
       
       const response = await api.get('/Review/all', {
         params: {
@@ -109,7 +109,7 @@ export const reviewAPI = {
   // Get reviews for a specific cosplayer with pagination
   getCosplayerReviews: async (cosplayerId, page = 1, pageSize = 10) => {
     try {
-      console.log(`Getting reviews for cosplayer ${cosplayerId}, page ${page}, pageSize ${pageSize}`);
+      // console.log(`Getting reviews for cosplayer ${cosplayerId}, page ${page}, pageSize ${pageSize}`);
       
       const response = await api.get(`/Review/cosplayer/${cosplayerId}`, {
         params: {
@@ -136,7 +136,7 @@ export const reviewAPI = {
   // Get review for a specific booking
   getReviewByBookingId: async (bookingId) => {
     try {
-      console.log(`Getting review for booking ${bookingId}`);
+      // console.log(`Getting review for booking ${bookingId}`);
       
       const response = await api.get(`/Review/booking/${bookingId}`);
       
@@ -171,7 +171,7 @@ export const reviewAPI = {
   // Get average rating for a specific cosplayer
   getCosplayerAverageRating: async (cosplayerId) => {
     try {
-      console.log(`Getting average rating for cosplayer ${cosplayerId}`);
+      // console.log(`Getting average rating for cosplayer ${cosplayerId}`);
       
       const response = await api.get(`/Review/cosplayer/${cosplayerId}/average`);
       
@@ -193,7 +193,7 @@ export const reviewAPI = {
   // Update a review
   updateReview: async (reviewId, reviewData) => {
     try {
-      console.log(`Updating review ${reviewId} with data:`, reviewData);
+      // console.log(`Updating review ${reviewId} with data:`, reviewData);
       
       const response = await api.put(`/Review/${reviewId}`, reviewData);
       
@@ -215,7 +215,7 @@ export const reviewAPI = {
   // Delete a review
   deleteReview: async (reviewId) => {
     try {
-      console.log(`Deleting review ${reviewId}`);
+      // console.log(`Deleting review ${reviewId}`);
       
       const response = await api.delete(`/Review/${reviewId}`);
       
@@ -237,7 +237,7 @@ export const reviewAPI = {
   // Add owner response to a review
   addOwnerResponse: async (reviewId, response) => {
     try {
-      console.log(`Adding owner response to review ${reviewId}:`, response);
+      // console.log(`Adding owner response to review ${reviewId}:`, response);
       
       const apiResponse = await api.post(`/Review/${reviewId}/owner-response`, {
         response
@@ -261,7 +261,7 @@ export const reviewAPI = {
   // Update owner response for a review
   updateOwnerResponse: async (reviewId, response) => {
     try {
-      console.log(`Updating owner response for review ${reviewId}:`, response);
+      // console.log(`Updating owner response for review ${reviewId}:`, response);
       
       const apiResponse = await api.put(`/Review/${reviewId}/owner-response`, {
         response
@@ -285,7 +285,7 @@ export const reviewAPI = {
   // Delete owner response for a review
   deleteOwnerResponse: async (reviewId) => {
     try {
-      console.log(`Deleting owner response for review ${reviewId}`);
+      // console.log(`Deleting owner response for review ${reviewId}`);
       
       const apiResponse = await api.delete(`/Review/${reviewId}/owner-response`);
       
@@ -307,7 +307,7 @@ export const reviewAPI = {
   // Toggle helpful vote on a review
   toggleHelpful: async (reviewId, isHelpful) => {
     try {
-      console.log(`Toggling helpful vote for review ${reviewId}:`, { isHelpful });
+      // console.log(`Toggling helpful vote for review ${reviewId}:`, { isHelpful });
       
       const apiResponse = await api.post(`/Review/${reviewId}/helpful`, {
         isHelpful

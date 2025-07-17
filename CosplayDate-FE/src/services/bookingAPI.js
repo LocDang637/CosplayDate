@@ -17,13 +17,13 @@ const createApiInstance = () => {
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
-    console.log(`📤 ${config.method.toUpperCase()} ${config.url}`, config.data || config.params);
+    // console.log(`📤 ${config.method.toUpperCase()} ${config.url}`, config.data || config.params);
     return config;
   });
 
   instance.interceptors.response.use(
     (response) => {
-      console.log(`✅ Response from ${response.config.url}:`, response.data);
+      // console.log(`✅ Response from ${response.config.url}:`, response.data);
       return response;
     },
     (error) => {
@@ -46,7 +46,7 @@ export const bookingAPI = {
   // Create a new booking
   createBooking: async (bookingData) => {
     try {
-      console.log('Creating booking with data:', bookingData);
+      // console.log('Creating booking with data:', bookingData);
       
       // Validate required fields
       const requiredFields = ['cosplayerId', 'serviceType', 'bookingDate', 'startTime', 'endTime', 'location'];
@@ -151,7 +151,7 @@ export const bookingAPI = {
   // Update booking - FIXED with proper request body
   updateBooking: async (bookingId, updateData) => {
     try {
-      console.log(`Updating booking ${bookingId} with data:`, updateData);
+      // console.log(`Updating booking ${bookingId} with data:`, updateData);
 
       // Ensure all date/time fields are in correct format
       const requestBody = {
@@ -183,7 +183,7 @@ export const bookingAPI = {
   // Cancel booking - FIXED with proper request body
   cancelBooking: async (bookingId, reason = '') => {
     try {
-      console.log(`Cancelling booking ${bookingId} with reason:`, reason);
+      // console.log(`Cancelling booking ${bookingId} with reason:`, reason);
 
       // API expects { cancellationReason: string }
       const requestBody = {
@@ -211,7 +211,7 @@ export const bookingAPI = {
   // Confirm booking (for cosplayer) - FIXED
   confirmBooking: async (bookingId) => {
     try {
-      console.log(`Confirming booking ${bookingId}`);
+      // console.log(`Confirming booking ${bookingId}`);
 
       // No request body needed
       const response = await api.post(`/Booking/${bookingId}/confirm`, {});
@@ -235,7 +235,7 @@ export const bookingAPI = {
   // Complete booking - FIXED
   completeBooking: async (bookingId) => {
     try {
-      console.log(`Completing booking ${bookingId}`);
+      // console.log(`Completing booking ${bookingId}`);
 
       // No request body needed
       const response = await api.post(`/Booking/${bookingId}/complete`, {});
@@ -282,7 +282,7 @@ export const bookingAPI = {
       // Ensure cosplayerId is an integer
       const id = parseInt(cosplayerId);
 
-      console.log('Calculating price:', { cosplayerId: id, startTime, endTime });
+      // console.log('Calculating price:', { cosplayerId: id, startTime, endTime });
 
       // Make GET request with query parameters
       const response = await api.get('/Booking/calculate-price', {
@@ -293,7 +293,7 @@ export const bookingAPI = {
         }
       });
 
-      console.log('Price calculation response:', response.data);
+      // console.log('Price calculation response:', response.data);
 
       // Handle the specific response format
       if (response.data.isSuccess) {

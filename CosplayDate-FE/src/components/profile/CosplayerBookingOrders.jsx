@@ -205,7 +205,7 @@ const CosplayerBookingOrders = ({ isOwnProfile }) => {
         specialNotes: editDialog.formData.specialNotes.trim() || ''
       };
 
-      console.log('Updating booking with data:', updateData);
+      // console.log('Updating booking with data:', updateData);
 
       const result = await bookingAPI.updateBooking(editDialog.booking.id, updateData);
 
@@ -214,7 +214,7 @@ const CosplayerBookingOrders = ({ isOwnProfile }) => {
         setEditDialog({ open: false, booking: null, formData: {} });
         clearEditErrors();
         // Optional: Show success message
-        console.log('Booking updated successfully');
+        // console.log('Booking updated successfully');
       } else {
         console.error('Failed to update booking:', result.message);
         setEditErrors(prev => ({ ...prev, generalError: result.message || 'Failed to update booking' }));
@@ -367,7 +367,7 @@ const CosplayerBookingOrders = ({ isOwnProfile }) => {
         handleCloseResponseDialog();
         
         // Show success message (optional)
-        console.log(`Owner response ${ownerResponseDialog.mode === 'edit' ? 'updated' : 'added'} successfully`);
+        // console.log(`Owner response ${ownerResponseDialog.mode === 'edit' ? 'updated' : 'added'} successfully`);
       } else {
         console.error(`Failed to ${ownerResponseDialog.mode} owner response:`, result.error);
         // You can add error handling here (e.g., show toast notification)
@@ -398,7 +398,7 @@ const CosplayerBookingOrders = ({ isOwnProfile }) => {
           }
         }));
 
-        console.log('Owner response deleted successfully');
+        // console.log('Owner response deleted successfully');
       } else {
         console.error('Failed to delete owner response:', result.error);
         // You can add error handling here
@@ -468,11 +468,11 @@ const CosplayerBookingOrders = ({ isOwnProfile }) => {
 
   const loadBookingReviews = async (bookingIds) => {
     try {
-      console.log('Loading reviews for booking IDs:', bookingIds);
+      // console.log('Loading reviews for booking IDs:', bookingIds);
       
       const reviewPromises = bookingIds.map(async (bookingId) => {
         const result = await reviewAPI.getReviewByBookingId(bookingId);
-        console.log(`Review result for booking ${bookingId}:`, result);
+        // console.log(`Review result for booking ${bookingId}:`, result);
         return {
           bookingId,
           review: result.success ? result.data : null
@@ -486,7 +486,7 @@ const CosplayerBookingOrders = ({ isOwnProfile }) => {
         reviewsMap[bookingId] = review;
       });
 
-      console.log('Final reviewsMap:', reviewsMap);
+      // console.log('Final reviewsMap:', reviewsMap);
       // Merge with existing reviews instead of replacing
       setBookingReviews(prev => ({
         ...prev,
@@ -555,7 +555,7 @@ const CosplayerBookingOrders = ({ isOwnProfile }) => {
       let result;
       const bookingId = statusDialog.booking.id;
 
-      console.log(`Updating status for booking ${bookingId} to ${statusDialog.newStatus}`);
+      // console.log(`Updating status for booking ${bookingId} to ${statusDialog.newStatus}`);
 
       // Call appropriate API based on new status
       switch (statusDialog.newStatus) {
@@ -584,7 +584,7 @@ const CosplayerBookingOrders = ({ isOwnProfile }) => {
         
         setStatusDialog({ open: false, booking: null, newStatus: '', showConfirm: false, cancellationReason: '' });
         // Optionally show success message
-        console.log(`Booking status updated to ${statusDialog.newStatus} successfully`);
+        // console.log(`Booking status updated to ${statusDialog.newStatus} successfully`);
       } else {
         console.error('Failed to update status:', result.message);
         setError(result.message || 'Failed to update booking status');
@@ -840,7 +840,7 @@ const CosplayerBookingOrders = ({ isOwnProfile }) => {
                     <>
                       <Typography variant="body2" color="text.secondary">•</Typography>
                       {/* Debug: Log the review data in compact view */}
-                      {console.log(`Compact view - Review data for booking ${booking.id}:`, bookingReviews[booking.id])}
+                      {/* {// console.log(`Compact view - Review data for booking ${booking.id}:`, bookingReviews[booking.id])} */}
                       {bookingReviews[booking.id] ? (
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
                           <Star sx={{ fontSize: 16, color: '#ffc107' }} />
@@ -878,7 +878,7 @@ const CosplayerBookingOrders = ({ isOwnProfile }) => {
                 Thông tin khách hàng
               </Typography>
               <Grid container spacing={2}>
-                <Grid item xs={12} sm={6}>
+                <Grid size={{ xs: 12, sm: 6 }}>
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                     <Avatar src={booking.customer?.avatarUrl} sx={{ width: 32, height: 32 }}>
                       {booking.customer?.name?.charAt(0)}
@@ -893,14 +893,14 @@ const CosplayerBookingOrders = ({ isOwnProfile }) => {
                     </Box>
                   </Box>
                 </Grid>
-                <Grid item xs={12} sm={6}>
+                <Grid size={{ xs: 12, sm: 6 }}>
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                     <Email sx={{ fontSize: 18, color: 'text.secondary' }} />
                     <Typography variant="body2">{booking.customer?.email}</Typography>
                   </Box>
                 </Grid>
                 {booking.customer?.phone && (
-                  <Grid item xs={12} sm={6}>
+                  <Grid size={{ xs: 12, sm: 6 }}>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                       <Phone sx={{ fontSize: 18, color: 'text.secondary' }} />
                       <Typography variant="body2">{booking.customer?.phone}</Typography>
@@ -916,28 +916,28 @@ const CosplayerBookingOrders = ({ isOwnProfile }) => {
                 Chi tiết đặt lịch
               </Typography>
               <Grid container spacing={2}>
-                <Grid item xs={12} sm={6}>
+                <Grid size={{ xs: 12, sm: 6 }}>
                   <Typography variant="caption" color="text.secondary">Mã đặt lịch</Typography>
                   <Typography variant="body2">{booking.bookingCode}</Typography>
                 </Grid>
-                <Grid item xs={12} sm={6}>
+                <Grid size={{ xs: 12, sm: 6 }}>
                   <Typography variant="caption" color="text.secondary">Thời lượng</Typography>
                   <Typography variant="body2">{formatDuration(booking.duration)}</Typography>
                 </Grid>
-                <Grid item xs={12} sm={6}>
+                <Grid size={{ xs: 12, sm: 6 }}>
                   <Typography variant="caption" color="text.secondary">Ngày tạo</Typography>
                   <Typography variant="body2">
                     {format(createdDate, 'dd/MM/yyyy HH:mm')}
                   </Typography>
                 </Grid>
                 {booking.paymentMethod && (
-                  <Grid item xs={12} sm={6}>
+                  <Grid size={{ xs: 12, sm: 6 }}>
                     <Typography variant="caption" color="text.secondary">Phương thức thanh toán</Typography>
                     <Typography variant="body2">{booking.paymentMethod}</Typography>
                   </Grid>
                 )}
                 {daysUntilBooking > 0 && (
-                  <Grid item xs={12}>
+                  <Grid size={{ xs: 12 }}>
                     <Typography variant="caption" color="text.secondary">Thời gian còn lại</Typography>
                     <Typography variant="body2" color="primary">
                       Còn {daysUntilBooking} ngày
@@ -954,7 +954,7 @@ const CosplayerBookingOrders = ({ isOwnProfile }) => {
                   Đánh giá của khách hàng
                 </Typography>
                 {/* Debug: Log the review data */}
-                {console.log(`Review data for booking ${booking.id}:`, bookingReviews[booking.id])}
+                {/* {// console.log(`Review data for booking ${booking.id}:`, bookingReviews[booking.id])} */}
                 {bookingReviews[booking.id] ? (
                   <Paper sx={{ p: 2, bgcolor: 'grey.50', borderRadius: '8px' }}>
                     <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 2 }}>
@@ -1117,7 +1117,7 @@ const CosplayerBookingOrders = ({ isOwnProfile }) => {
               <Box sx={{ mt: 2 }}>
                 {booking.status === 'Pending' && (
                   <Grid container spacing={1}>
-                    <Grid item xs={12}>
+                    <Grid size={{ xs: 12 }}>
                       <Button
                         size="small"
                         variant="outlined"
@@ -1139,7 +1139,7 @@ const CosplayerBookingOrders = ({ isOwnProfile }) => {
                         Chỉnh sửa
                       </Button>
                     </Grid>
-                    <Grid item xs={6}>
+                    <Grid size={{ xs: 6 }}>
                       <Button
                         variant="contained"
                         size="small"
@@ -1157,7 +1157,7 @@ const CosplayerBookingOrders = ({ isOwnProfile }) => {
                         Xác nhận
                       </Button>
                     </Grid>
-                    <Grid item xs={6}>
+                    <Grid size={{ xs: 6 }}>
                       <Button
                         variant="outlined"
                         size="small"
@@ -1206,7 +1206,7 @@ const CosplayerBookingOrders = ({ isOwnProfile }) => {
     <Box>
       {/* Stats Overview */}
       <Grid container spacing={2} sx={{ mb: 3 }}>
-        <Grid item xs={6} sm={3}>
+        <Grid size={{ xs: 6, sm: 3 }}>
           <Paper sx={{ p: 2, textAlign: 'center', borderRadius: '12px' }}>
             <Typography variant="h4" sx={{ fontWeight: 'bold', color: 'primary.main' }}>
               {stats.total || 0}
@@ -1216,7 +1216,7 @@ const CosplayerBookingOrders = ({ isOwnProfile }) => {
             </Typography>
           </Paper>
         </Grid>
-        <Grid item xs={6} sm={3}>
+        <Grid size={{ xs: 6, sm: 3 }}>
           <Paper sx={{ p: 2, textAlign: 'center', borderRadius: '12px' }}>
             <Typography variant="h4" sx={{ fontWeight: 'bold', color: 'warning.main' }}>
               {stats.pending || 0}
@@ -1226,7 +1226,7 @@ const CosplayerBookingOrders = ({ isOwnProfile }) => {
             </Typography>
           </Paper>
         </Grid>
-        <Grid item xs={6} sm={3}>
+        <Grid size={{ xs: 6, sm: 3 }}>
           <Paper sx={{ p: 2, textAlign: 'center', borderRadius: '12px' }}>
             <Typography variant="h4" sx={{ fontWeight: 'bold', color: 'info.main' }}>
               {stats.confirmed || 0}
@@ -1236,7 +1236,7 @@ const CosplayerBookingOrders = ({ isOwnProfile }) => {
             </Typography>
           </Paper>
         </Grid>
-        <Grid item xs={6} sm={3}>
+        <Grid size={{ xs: 6, sm: 3 }}>
           <Paper sx={{ p: 2, textAlign: 'center', borderRadius: '12px' }}>
             <Typography variant="h4" sx={{ fontWeight: 'bold', color: 'success.main' }}>
               {stats.completed || 0}
@@ -1271,7 +1271,7 @@ const CosplayerBookingOrders = ({ isOwnProfile }) => {
         </Box>
 
         <Grid container spacing={2}>
-          <Grid item xs={12} md={4}>
+          <Grid size={{ xs: 12, md: 4 }}>
             <TextField
               sx={{ width: 320 }}
               placeholder="Tìm kiếm theo tên, email, mã đặt..."
@@ -1289,7 +1289,7 @@ const CosplayerBookingOrders = ({ isOwnProfile }) => {
             />
           </Grid>
 
-          <Grid item xs={6} md={2}>
+          <Grid size={{ xs: 6, md: 2 }}>
             <FormControl fullWidth size="small">
               <InputLabel>Trạng thái</InputLabel>
               <Select
@@ -1323,7 +1323,7 @@ const CosplayerBookingOrders = ({ isOwnProfile }) => {
             </FormControl>
           </Grid>
 
-          <Grid item xs={6} md={2}>
+          <Grid size={{ xs: 6, md: 2 }}>
             <FormControl fullWidth size="small">
               <InputLabel>Thanh toán</InputLabel>
               <Select
@@ -1352,7 +1352,7 @@ const CosplayerBookingOrders = ({ isOwnProfile }) => {
             </FormControl>
           </Grid>
 
-          <Grid item xs={6} md={2}>
+          <Grid size={{ xs: 6, md: 2 }}>
             <FormControl fullWidth size="small">
               <InputLabel>Sắp xếp theo</InputLabel>
               <Select
@@ -1368,7 +1368,7 @@ const CosplayerBookingOrders = ({ isOwnProfile }) => {
             </FormControl>
           </Grid>
 
-          <Grid item xs={6} md={2}>
+          <Grid size={{ xs: 6, md: 2 }}>
             <FormControl fullWidth size="small">
               <InputLabel>Thứ tự</InputLabel>
               <Select
@@ -1491,7 +1491,7 @@ const CosplayerBookingOrders = ({ isOwnProfile }) => {
         )}
 
         <MenuItem onClick={() => {
-          console.log('Message customer', selectedBooking);
+          // console.log('Message customer', selectedBooking);
           handleMenuClose();
         }}>
           <Message sx={{ mr: 1 }} /> Nhắn tin
@@ -1500,7 +1500,7 @@ const CosplayerBookingOrders = ({ isOwnProfile }) => {
         <Divider />
 
         <MenuItem onClick={() => {
-          console.log('View customer profile', selectedBooking);
+          // console.log('View customer profile', selectedBooking);
           handleMenuClose();
         }}>
           <Person sx={{ mr: 1 }} /> Xem hồ sơ khách
@@ -1673,7 +1673,7 @@ const CosplayerBookingOrders = ({ isOwnProfile }) => {
                     null
             }
           >
-            Xác nhận {
+            {
               statusDialog.newStatus === 'Confirmed' ? 'xác nhận' :
                 statusDialog.newStatus === 'Cancelled' ? 'hủy' :
                   statusDialog.newStatus === 'Completed' ? 'hoàn thành' :
@@ -1720,7 +1720,7 @@ const CosplayerBookingOrders = ({ isOwnProfile }) => {
             <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={vi}>
               <Grid container spacing={2}>
                 {/* Date and Time Row */}
-                <Grid item xs={4}>
+                <Grid size={{ xs: 4 }}>
                   <DatePicker
                     label="Ngày đặt"
                     value={editDialog.formData.bookingDate}
@@ -1743,7 +1743,7 @@ const CosplayerBookingOrders = ({ isOwnProfile }) => {
                 </Grid>
 
                 {/* Start Time */}
-                <Grid item xs={4}>
+                <Grid size={{ xs: 4 }}>
                   <TextField
                     fullWidth
                     size="small"
@@ -1762,7 +1762,7 @@ const CosplayerBookingOrders = ({ isOwnProfile }) => {
                 </Grid>
 
                 {/* End Time */}
-                <Grid item xs={4}>
+                <Grid size={{ xs: 4 }}>
                   <TextField
                     fullWidth
                     size="small"
@@ -1781,7 +1781,7 @@ const CosplayerBookingOrders = ({ isOwnProfile }) => {
                 </Grid>
 
                 {/* Location - Force new row */}
-                <Grid item xs={12} sx={{ width: '100%' }}>
+                <Grid size={{ xs: 12 }} sx={{ width: '100%' }}>
                   <TextField
                     fullWidth
                     size="small"
@@ -1798,7 +1798,7 @@ const CosplayerBookingOrders = ({ isOwnProfile }) => {
                 </Grid>
 
                 {/* Special Notes - Force new row */}
-                <Grid item xs={12} sx={{ width: '100%' }}>
+                <Grid size={{ xs: 12 }} sx={{ width: '100%' }}>
                   <TextField
                     fullWidth
                     size="small"

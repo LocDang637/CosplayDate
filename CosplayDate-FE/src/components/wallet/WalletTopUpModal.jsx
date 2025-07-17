@@ -48,7 +48,7 @@ const WalletTopUpModal = ({ open, onClose, onSuccess }) => {
     setSelectedPackage(null);
     
     try {
-      console.log('🔄 Loading packages in modal...');
+      // console.log('🔄 Loading packages in modal...');
       const result = await paymentAPI.getTopUpPackages();
       
       if (result.success && Array.isArray(result.data)) {
@@ -73,7 +73,7 @@ const WalletTopUpModal = ({ open, onClose, onSuccess }) => {
           return;
         }
 
-        console.log('✅ Valid packages for modal:', validPackages.length);
+        // console.log('✅ Valid packages for modal:', validPackages.length);
         setPackages(validPackages);
         
         // Auto-select popular or first package
@@ -118,7 +118,7 @@ const WalletTopUpModal = ({ open, onClose, onSuccess }) => {
   const handlePackageSelect = (pkg) => {
     if (pkg && pkg.PayAmount && pkg.ReceiveAmount) {
       setSelectedPackage(pkg);
-      console.log('📦 Modal package selected:', pkg.Package);
+      // console.log('📦 Modal package selected:', pkg.Package);
     }
   };
 
@@ -153,7 +153,7 @@ const WalletTopUpModal = ({ open, onClose, onSuccess }) => {
         Package: selectedPackage.Package
       };
 
-      console.log('🔄 Modal creating payment for:', selectedPackage.Package);
+      // console.log('🔄 Modal creating payment for:', selectedPackage.Package);
 
       const result = await paymentAPI.createTopUp(paymentData);
 
@@ -165,7 +165,7 @@ const WalletTopUpModal = ({ open, onClose, onSuccess }) => {
             
             // Additional security check
             if (url.protocol === 'https:' && (url.hostname.includes('payos') || url.hostname.includes('pay.os'))) {
-              console.log('✅ Modal redirecting to PayOS checkout');
+              // console.log('✅ Modal redirecting to PayOS checkout');
               onClose(); // Close modal before redirect
               if (onSuccess) {
                 onSuccess(selectedPackage);

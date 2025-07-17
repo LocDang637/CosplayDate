@@ -198,7 +198,7 @@ const EditCosplayerDialog = ({ open, onClose, cosplayer, onUpdateSuccess }) => {
       setError('');
 
       // Debug token before making the request
-      console.log('🔍 Checking token before update...');
+      // console.log('🔍 Checking token before update...');
       debugToken();
 
       // Check if token has valid cosplayer claims
@@ -254,7 +254,7 @@ const EditCosplayerDialog = ({ open, onClose, cosplayer, onUpdateSuccess }) => {
       }
 
       // Update both user profile and cosplayer profile
-      console.log('Updating profiles...');
+      // console.log('Updating profiles...');
 
       // 1. Update user profile first
       const userUpdateData = {

@@ -45,6 +45,7 @@ import { format, parseISO, differenceInDays, isValid } from 'date-fns';
 import { vi } from 'date-fns/locale';
 import { bookingAPI } from '../../services/bookingAPI';
 import { reviewAPI } from '../../services/reviewAPI';
+import { cosplayerAPI } from '../../services/cosplayerAPI';
 import { useNavigate } from 'react-router-dom';
 
 const CustomerBookingOrders = () => {
@@ -100,7 +101,7 @@ const CustomerBookingOrders = () => {
   useEffect(() => {
     if (bookings.length > 0) {
       const calculatedStats = calculateStatsFromBookings(bookings);
-      console.log('Recalculating stats from bookings:', calculatedStats);
+      // console.log('Recalculating stats from bookings:', calculatedStats);
       setStats(calculatedStats);
     }
   }, [bookings]);
@@ -128,11 +129,11 @@ const CustomerBookingOrders = () => {
 
   const loadBookingReviews = async (bookingIds) => {
     try {
-      console.log('Loading reviews for booking IDs:', bookingIds);
+      // console.log('Loading reviews for booking IDs:', bookingIds);
       
       const reviewPromises = bookingIds.map(async (bookingId) => {
         const result = await reviewAPI.getReviewByBookingId(bookingId);
-        console.log(`Review result for booking ${bookingId}:`, result);
+        // console.log(`Review result for booking ${bookingId}:`, result);
         return {
           bookingId,
           review: result.success ? result.data : null
@@ -150,7 +151,7 @@ const CustomerBookingOrders = () => {
         return updated;
       });
 
-      console.log('Reviews loaded and updated in state');
+      // console.log('Reviews loaded and updated in state');
     } catch (error) {
       console.error('Error loading booking reviews:', error);
     }
@@ -178,9 +179,9 @@ const CustomerBookingOrders = () => {
         pageSize: 20, // Get more results for client-side filtering
       };
 
-      console.log('Loading bookings with params:', params);
+      // console.log('Loading bookings with params:', params);
       const result = await bookingAPI.getBookings(params);
-      console.log('Booking API result:', result);
+      // console.log('Booking API result:', result);
 
       if (result.success && result.data) {
         // Handle different response structures
@@ -217,9 +218,9 @@ const CustomerBookingOrders = () => {
           };
         }
 
-        console.log('Processed bookings data:', bookingsData);
-        console.log('Stats data from API:', statsData);
-        console.log('Pagination data:', paginationData);
+        // console.log('Processed bookings data:', bookingsData);
+        // console.log('Stats data from API:', statsData);
+        // console.log('Pagination data:', paginationData);
 
         // Set the data
         setBookings(bookingsData || []);
@@ -229,7 +230,7 @@ const CustomerBookingOrders = () => {
         if (Object.keys(statsData).length === 0) {
           // Calculate from bookings data
           calculatedStats = calculateStatsFromBookings(bookingsData);
-          console.log('Stats calculated from bookings:', calculatedStats);
+          // console.log('Stats calculated from bookings:', calculatedStats);
         } else {
           // Use API stats with proper property names
           calculatedStats = {
@@ -239,17 +240,17 @@ const CustomerBookingOrders = () => {
             completed: statsData.completedBookings || statsData.completed || 0,
             cancelled: statsData.cancelledBookings || statsData.cancelled || 0
           };
-          console.log('Stats used from API:', calculatedStats);
+          // console.log('Stats used from API:', calculatedStats);
         }
 
-        console.log('Final calculated stats:', calculatedStats);
+        // console.log('Final calculated stats:', calculatedStats);
         setStats(calculatedStats);
 
         // Set pagination
         setTotalPages(paginationData.totalPages || 1);
         setTotalCount(paginationData.totalCount || bookingsData.length || 0);
 
-        console.log('Final bookings count:', bookingsData.length);
+        // console.log('Final bookings count:', bookingsData.length);
 
         // Load reviews for completed bookings
         const completedBookingIds = bookingsData
@@ -605,7 +606,7 @@ const CustomerBookingOrders = () => {
                 {/* Line 4: Review (compact view) - Only show for completed bookings */}
                 {booking.status === 'Completed' && (
                   <Box sx={{ mt: 0.5 }}>
-                    {console.log(`Compact view - Review data for booking ${booking.id}:`, bookingReviews[booking.id])}
+                    {/* Compact view - Review data for booking */}
                     {bookingReviews[booking.id] ? (
                       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                         <Typography variant="body2" color="text.secondary">
@@ -653,7 +654,34 @@ const CustomerBookingOrders = () => {
                   cursor: 'pointer',
                   '&:hover': { opacity: 0.8 }
                 }}
-                onClick={() => navigate(`/profile/${booking.cosplayer?.id}`)}
+                onClick={async () => {
+                  // First get cosplayer details to obtain the correct userId
+                  const cosplayerId = booking.cosplayerId;
+                  
+                  if (!cosplayerId) {
+                    console.error('No cosplayerId found in booking data');
+                    return;
+                  }
+
+                  try {
+                    console.log('Getting cosplayer details for cosplayerId:', cosplayerId);
+                    
+                    // Call getCosplayerDetails API to get the userId
+                    const cosplayerResult = await cosplayerAPI.getCosplayerDetails(cosplayerId);
+                    
+                    if (cosplayerResult.success && cosplayerResult.data?.userId) {
+                      const userId = cosplayerResult.data.userId;
+                      console.log('Found userId from cosplayer details:', userId);
+                      
+                      // Navigate to profile page with the correct userId
+                      navigate(`/profile/${userId}`);
+                    } else {
+                      console.error('Failed to get cosplayer details or userId not found:', cosplayerResult);
+                    }
+                  } catch (error) {
+                    console.error('Error fetching cosplayer details:', error);
+                  }
+                }}
               >
                 <Avatar
                   src={booking.cosplayer?.avatarUrl || booking.cosplayer?.avatar}
@@ -685,16 +713,16 @@ const CustomerBookingOrders = () => {
                 Chi tiết đặt lịch
               </Typography>
               <Grid container spacing={2}>
-                <Grid item xs={12} sm={6}>
+                <Grid size={{ xs: 12, sm: 6 }}>
                   <Typography variant="caption" color="text.secondary">Mã đặt lịch</Typography>
                   <Typography variant="body2">{booking.bookingCode || 'N/A'}</Typography>
                 </Grid>
-                <Grid item xs={12} sm={6}>
+                <Grid size={{ xs: 12, sm: 6 }}>
                   <Typography variant="caption" color="text.secondary">Thời lượng</Typography>
                   <Typography variant="body2">{booking.duration || 'N/A'} phút</Typography>
                 </Grid>
                 {(booking.specialNotes || booking.notes) && (
-                  <Grid item xs={12}>
+                  <Grid size={{ xs: 12 }}>
                     <Typography variant="caption" color="text.secondary">Ghi chú</Typography>
                     <Typography variant="body2">{booking.specialNotes || booking.notes}</Typography>
                   </Grid>
@@ -716,19 +744,19 @@ const CustomerBookingOrders = () => {
                     mb: 1
                   }}>
                     <Grid container spacing={1}>
-                      <Grid item xs={6}>
+                      <Grid size={{ xs: 6 }}>
                         <Typography variant="caption" color="text.secondary">Mã thanh toán</Typography>
                         <Typography variant="body2">{payment.paymentCode || 'N/A'}</Typography>
                       </Grid>
-                      <Grid item xs={6}>
+                      <Grid size={{ xs: 6 }}>
                         <Typography variant="caption" color="text.secondary">Phương thức</Typography>
                         <Typography variant="body2">{payment.paymentMethod || 'N/A'}</Typography>
                       </Grid>
-                      <Grid item xs={6}>
+                      <Grid size={{ xs: 6 }}>
                         <Typography variant="caption" color="text.secondary">Trạng thái</Typography>
                         <Typography variant="body2">{payment.status || 'N/A'}</Typography>
                       </Grid>
-                      <Grid item xs={6}>
+                      <Grid size={{ xs: 6 }}>
                         <Typography variant="caption" color="text.secondary">Số tiền</Typography>
                         <Typography variant="body2">
                           {new Intl.NumberFormat('vi-VN', {
@@ -749,7 +777,7 @@ const CustomerBookingOrders = () => {
                 <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1 }}>
                   Đánh giá của bạn
                 </Typography>
-                {console.log(`Review data for booking ${booking.id}:`, bookingReviews[booking.id])}
+                {/* Review data for booking */}
                 {bookingReviews[booking.id] ? (
                   <Paper sx={{ p: 2, bgcolor: 'rgba(233, 30, 99, 0.02)', borderRadius: '8px' }}>
                     <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 2 }}>
@@ -955,7 +983,7 @@ const CustomerBookingOrders = () => {
     <Box>
       {/* Stats Summary */}
       <Grid container spacing={2} sx={{ mb: 3 }}>
-        <Grid item xs={6} sm={3}>
+        <Grid size={{ xs: 6, sm: 3 }}>
           <Paper sx={{ p: 2, textAlign: 'center', borderRadius: '12px' }}>
             <Typography variant="h4" sx={{ fontWeight: 'bold', color: 'primary.main' }}>
               {stats.total || 0}
@@ -965,7 +993,7 @@ const CustomerBookingOrders = () => {
             </Typography>
           </Paper>
         </Grid>
-        <Grid item xs={6} sm={3}>
+        <Grid size={{ xs: 6, sm: 3 }}>
           <Paper sx={{ p: 2, textAlign: 'center', borderRadius: '12px' }}>
             <Typography variant="h4" sx={{ fontWeight: 'bold', color: 'warning.main' }}>
               {stats.pending || 0}
@@ -975,7 +1003,7 @@ const CustomerBookingOrders = () => {
             </Typography>
           </Paper>
         </Grid>
-        <Grid item xs={6} sm={3}>
+        <Grid size={{ xs: 6, sm: 3 }}>
           <Paper sx={{ p: 2, textAlign: 'center', borderRadius: '12px' }}>
             <Typography variant="h4" sx={{ fontWeight: 'bold', color: 'info.main' }}>
               {stats.confirmed || 0}
@@ -985,7 +1013,7 @@ const CustomerBookingOrders = () => {
             </Typography>
           </Paper>
         </Grid>
-        <Grid item xs={6} sm={3}>
+        <Grid size={{ xs: 6, sm: 3 }}>
           <Paper sx={{ p: 2, textAlign: 'center', borderRadius: '12px' }}>
             <Typography variant="h4" sx={{ fontWeight: 'bold', color: 'success.main' }}>
               {stats.completed || 0}
@@ -1020,7 +1048,7 @@ const CustomerBookingOrders = () => {
         </Box>
 
         <Grid container spacing={2}>
-          <Grid item xs={12} md={4}>
+          <Grid size={{ xs: 12, md: 4 }}>
             <TextField
               fullWidth
               placeholder="Tìm kiếm theo tên, email, mã đặt..."
@@ -1039,7 +1067,7 @@ const CustomerBookingOrders = () => {
             />
           </Grid>
 
-          <Grid item xs={6} md={2}>
+          <Grid size={{ xs: 6, md: 2 }}>
             <FormControl fullWidth size="small">
               <InputLabel>Trạng thái</InputLabel>
               <Select
@@ -1073,7 +1101,7 @@ const CustomerBookingOrders = () => {
             </FormControl>
           </Grid>
 
-          <Grid item xs={6} md={2}>
+          <Grid size={{ xs: 6, md: 2 }}>
             <FormControl fullWidth size="small">
               <InputLabel>Thanh toán</InputLabel>
               <Select
@@ -1102,7 +1130,7 @@ const CustomerBookingOrders = () => {
             </FormControl>
           </Grid>
 
-          <Grid item xs={6} md={2}>
+          <Grid size={{ xs: 6, md: 2 }}>
             <FormControl fullWidth size="small">
               <InputLabel>Sắp xếp theo</InputLabel>
               <Select
@@ -1118,7 +1146,7 @@ const CustomerBookingOrders = () => {
             </FormControl>
           </Grid>
 
-          <Grid item xs={6} md={2}>
+          <Grid size={{ xs: 6, md: 2 }}>
             <FormControl fullWidth size="small">
               <InputLabel>Thứ tự</InputLabel>
               <Select
