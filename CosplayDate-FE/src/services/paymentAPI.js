@@ -24,7 +24,7 @@ export const paymentAPI = {
   // ===== FIXED: createTopUp for your specific response format =====
   createTopUp: async (packageData) => {
     try {
-      console.log('🔄 Creating top-up payment...');
+      // console.log('🔄 Creating top-up payment...');
       
       if (!packageData || !packageData.Package) {
         throw new Error('Thiếu thông tin gói thanh toán');
@@ -34,11 +34,11 @@ export const paymentAPI = {
         Package: String(packageData.Package).trim()
       };
 
-      console.log('📤 Sending payment request:', sanitizedData);
+      // console.log('📤 Sending payment request:', sanitizedData);
 
       const response = await api.post('/payment/topup', sanitizedData);
       
-      console.log('💳 Raw payment response:', response.data);
+      // console.log('💳 Raw payment response:', response.data);
 
       // Validate response structure
       if (!response.data) {
@@ -74,11 +74,11 @@ export const paymentAPI = {
           createdAt: data.createdAt
         };
 
-        console.log('📋 Extracted payment data:', {
-          hasCheckoutUrl: !!checkoutUrl,
-          orderCode: data.orderCode,
-          paymentAmount: data.paymentAmount
-        });
+        // console.log('📋 Extracted payment data:', {
+        //   hasCheckoutUrl: !!checkoutUrl,
+        //   orderCode: data.orderCode,
+        //   paymentAmount: data.paymentAmount
+        // });
       }
 
       // Validate checkout URL if provided
@@ -111,11 +111,11 @@ export const paymentAPI = {
       if (error.response) {
         const { status, data } = error.response;
         
-        console.log('❌ Error response details:', {
-          status,
-          data,
-          message: data?.message
-        });
+        // console.log('❌ Error response details:', {
+        //   status,
+        //   data,
+        //   message: data?.message
+        // });
         
         switch (status) {
           case 400:
@@ -174,10 +174,10 @@ export const paymentAPI = {
   // ===== ENHANCED: getTopUpPackages with better mock data =====
   getTopUpPackages: async () => {
     try {
-      console.log('🔄 Fetching payment packages...');
+      // console.log('🔄 Fetching payment packages...');
       const response = await api.get('/payment/packages');
       
-      console.log('📦 Packages response:', response.data);
+      // console.log('📦 Packages response:', response.data);
 
       if (!response.data) {
         throw new Error('Phản hồi không hợp lệ từ server');
@@ -270,7 +270,7 @@ export const paymentAPI = {
           }
         ];
         
-        console.log('🎭 Using mock packages for development');
+        // console.log('🎭 Using mock packages for development');
         return {
           success: true,
           data: mockPackages,
@@ -322,10 +322,10 @@ export const paymentAPI = {
   // ===== ENHANCED: getWalletBalance =====
   getWalletBalance: async () => {
     try {
-      console.log('🔄 Fetching wallet balance...');
+      // console.log('🔄 Fetching wallet balance...');
       const response = await api.get('/payment/wallet/balance');
       
-      console.log('💰 Wallet balance response:', response.data);
+      // console.log('💰 Wallet balance response:', response.data);
 
       if (!response.data) {
         throw new Error('Phản hồi không hợp lệ từ server');
@@ -367,7 +367,7 @@ export const paymentAPI = {
   // ===== NEW: Payment verification function =====
   verifyTransaction: async (transactionId) => {
     try {
-      console.log('🔍 Verifying transaction:', transactionId);
+      // console.log('🔍 Verifying transaction:', transactionId);
       
       if (!transactionId) {
         throw new Error('ID giao dịch không hợp lệ');
@@ -378,7 +378,7 @@ export const paymentAPI = {
         orderCode: transactionId.toString() // Send both formats
       });
       
-      console.log('✅ Transaction verification response:', response.data);
+      // console.log('✅ Transaction verification response:', response.data);
 
       return {
         success: response.data.isSuccess !== false,
@@ -407,11 +407,11 @@ export const paymentAPI = {
   // ===== NEW: Alternative balance refresh method =====
   refreshBalance: async () => {
     try {
-      console.log('🔄 Refreshing balance...');
+      // console.log('🔄 Refreshing balance...');
       
       const response = await api.post('/payment/refresh-balance');
       
-      console.log('💰 Balance refresh response:', response.data);
+      // console.log('💰 Balance refresh response:', response.data);
 
       return {
         success: response.data.isSuccess !== false,

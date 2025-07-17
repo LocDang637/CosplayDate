@@ -59,7 +59,7 @@ const CosplayersPage = () => {
     tags: [],
     isAvailable: null
   });
-  const [sortBy, setSortBy] = useState('rating');
+  const [sortBy, setSortBy] = useState('price');
   const [sortOrder, setSortOrder] = useState('desc');
 
   // Static tags data (handled on frontend)
@@ -121,7 +121,7 @@ const CosplayersPage = () => {
       try {
         const parsedUser = JSON.parse(storedUser);
         setUser(parsedUser);
-        console.log('CosplayersPage - User loaded:', parsedUser);
+        // console.log('CosplayersPage - User loaded:', parsedUser);
       } catch (error) {
         console.error('Error parsing stored user:', error);
       }
@@ -169,8 +169,8 @@ const CosplayersPage = () => {
         ...(filters.isAvailable !== null && { isAvailable: filters.isAvailable })
       };
 
-      console.log('API Query Params:', queryParams);
-      console.log('Selected tags filter:', filters.tags);
+      // console.log('API Query Params:', queryParams);
+      // console.log('Selected tags filter:', filters.tags);
 
       const result = await cosplayerAPI.getCosplayers(queryParams);
 
@@ -212,8 +212,8 @@ const CosplayersPage = () => {
           setAvailableCategories(data.availableCategories);
         }
 
-        console.log('Available tags (static):', staticTags);
-        console.log('Current filters:', filters);
+        // console.log('Available tags (static):', staticTags);
+        // console.log('Current filters:', filters);
       } else {
         setError(result.message);
         setCosplayers([]);
@@ -599,13 +599,13 @@ const CosplayersPage = () => {
               {loading ? (
                 // Loading skeletons
                 Array.from(new Array(6)).map((_, index) => (
-                  <Grid item key={index}>
+                  <Grid size="auto" key={index}>
                     <CosplayerSkeleton />
                   </Grid>
                 ))
               ) : cosplayers.length > 0 ? (
                 cosplayers.map((cosplayer) => (
-                  <Grid item key={cosplayer.id}>
+                  <Grid size="auto" key={cosplayer.id}>
                     <CosplayerCard
                       cosplayer={cosplayer}
                       currentUser={user}  // Pass the current user properly
@@ -617,7 +617,7 @@ const CosplayersPage = () => {
                   </Grid>
                 ))
               ) : (
-                <Grid item xs={12}>
+                <Grid size={12}>
                   <Alert severity="info" sx={{ borderRadius: '12px' }}>
                     Không tìm thấy cosplayer nào phù hợp với tiêu chí tìm kiếm.
                   </Alert>

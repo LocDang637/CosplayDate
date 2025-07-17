@@ -94,14 +94,14 @@ const AdminDashboard = () => {
       });
 
       // Call your actual admin dashboard API endpoint
-      console.log('🔄 Fetching dashboard statistics...');
+      // console.log('🔄 Fetching dashboard statistics...');
       const response = await api.get('/admin/dashboard/stats');
 
-      console.log('✅ Dashboard API Response:', {
-        status: response.status,
-        isSuccess: response.data?.isSuccess,
-        hasData: !!response.data?.data
-      });
+      // console.log('✅ Dashboard API Response:', {
+      //   status: response.status,
+      //   isSuccess: response.data?.isSuccess,
+      //   hasData: !!response.data?.data
+      // });
 
       // Handle the response structure from your AdminAnalyticsService
       if (response.data?.isSuccess && response.data?.data) {

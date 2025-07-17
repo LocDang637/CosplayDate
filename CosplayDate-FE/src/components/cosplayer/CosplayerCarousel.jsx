@@ -45,7 +45,7 @@ const CosplayerCarousel = ({
   })();
 
   useEffect(() => {
-    console.log('CosplayerCarousel - Current user:', user);
+    // console.log('CosplayerCarousel - Current user:', user);
   }, [user]);
 
   const handleNext = () => {

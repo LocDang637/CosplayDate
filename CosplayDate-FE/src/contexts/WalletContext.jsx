@@ -38,7 +38,7 @@ export const WalletProvider = ({ children }) => {
     setError('');
     
     try {
-      console.log('🔄 Refreshing wallet balance...');
+      // console.log('🔄 Refreshing wallet balance...');
       const result = await paymentAPI.getWalletBalance();
       
       if (result.success) {
@@ -54,7 +54,7 @@ export const WalletProvider = ({ children }) => {
         };
         localStorage.setItem('user', JSON.stringify(updatedUser));
         
-        console.log('✅ Wallet balance updated:', newBalance);
+        // console.log('✅ Wallet balance updated:', newBalance);
         return newBalance;
       } else {
         setError(result.message || 'Không thể cập nhật số dư');
@@ -74,12 +74,12 @@ export const WalletProvider = ({ children }) => {
     setLoading(true);
     
     try {
-      console.log('🔄 Loading transaction history...');
+      // console.log('🔄 Loading transaction history...');
       const result = await paymentAPI.getTransactionHistory(params);
       
       if (result.success) {
         setTransactions(result.data || []);
-        console.log('✅ Transactions loaded:', result.data?.length || 0);
+        // console.log('✅ Transactions loaded:', result.data?.length || 0);
         return result.data;
       } else {
         setError(result.message || 'Không thể tải lịch sử giao dịch');

@@ -215,7 +215,7 @@ const BookingPage = () => {
     let pollCount = 0;
     const maxPolls = 288; // 24 hours with 5-second intervals
 
-    console.log('Starting status polling for booking:', bookingIdToUse);
+    // console.log('Starting status polling for booking:', bookingIdToUse);
 
     // Poll every 5 seconds
     pollingIntervalRef.current = setInterval(async () => {

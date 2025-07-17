@@ -321,7 +321,7 @@ const BookingSchedule = ({
         return;
       }
 
-      console.log('Sending booking request data:', bookingRequestData); // Debug log
+      // console.log('Sending booking request data:', bookingRequestData); // Debug log
 
       const result = await bookingAPI.createBooking(bookingRequestData);
 

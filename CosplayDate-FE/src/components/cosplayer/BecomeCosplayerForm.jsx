@@ -137,12 +137,12 @@ const BecomeCosplayerForm = ({ user, onSuccess }) => {
       const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
       const currentToken = localStorage.getItem('token');
 
-      console.log('🔍 Debug - Current user:', {
-        id: currentUser.id,
-        email: currentUser.email,
-        userType: currentUser.userType,
-        hasToken: !!currentToken
-      });
+      // console.log('🔍 Debug - Current user:', {
+      //   id: currentUser.id,
+      //   email: currentUser.email,
+      //   userType: currentUser.userType,
+      //   hasToken: !!currentToken
+      // });
 
       // FIXED: Prepare data to match backend DTO exactly
       const becomeCosplayerData = {
@@ -158,15 +158,15 @@ const BecomeCosplayerForm = ({ user, onSuccess }) => {
         AcceptCosplayerTerms: formData.acceptCosplayerTerms
       };
 
-      console.log('🔄 Submitting become cosplayer data:', becomeCosplayerData);
+      // console.log('🔄 Submitting become cosplayer data:', becomeCosplayerData);
 
       const result = await cosplayerAPI.becomeCosplayer(becomeCosplayerData);
 
-      console.log('📋 API result:', result);
+      // console.log('📋 API result:', result);
 
       if (result.success) {
         // SUCCESS: Clear the old token and user data
-        console.log('✅ Successfully became cosplayer! Logging out for new token...');
+        // console.log('✅ Successfully became cosplayer! Logging out for new token...');
 
         // Clear localStorage
         localStorage.removeItem('token');

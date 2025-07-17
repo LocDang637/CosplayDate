@@ -246,7 +246,7 @@ const MediaUploadDialog = ({
           window.URL.revokeObjectURL(video.src);
           const duration = Math.round(video.duration);
           setFormData(prev => ({ ...prev, duration }));
-          console.log('Video duration detected:', duration, 'seconds');
+          // console.log('Video duration detected:', duration, 'seconds');
         };
         video.src = URL.createObjectURL(file);
         setPreview(null);
@@ -301,7 +301,7 @@ const MediaUploadDialog = ({
     
     // Create a unique upload identifier to prevent duplicates
     const uploadId = Date.now() + '-' + Math.random().toString(36).substr(2, 9);
-    console.log('Starting upload with ID:', uploadId);
+    // console.log('Starting upload with ID:', uploadId);
     
     // Simulate upload progress
     const progressInterval = setInterval(() => {
@@ -339,7 +339,7 @@ const MediaUploadDialog = ({
         });
       }
 
-      console.log('Upload completed for ID:', uploadId, 'Result:', result);
+      // console.log('Upload completed for ID:', uploadId, 'Result:', result);
 
       clearInterval(progressInterval);
       setUploadProgress(100);
@@ -602,7 +602,7 @@ const MediaUploadDialog = ({
         return (
           <Box sx={{ py: 2 }}>
             <Grid container spacing={3}>
-              <Grid item xs={12}>
+              <Grid size={{ xs: 12 }}>
                 <TextField
                   fullWidth
                   label="Tiêu đề"
@@ -620,13 +620,13 @@ const MediaUploadDialog = ({
               </Grid>
 
               {/* Category Selection with Visual Cards */}
-              <Grid item xs={12}>
+              <Grid size={{ xs: 12 }}>
                 <Typography variant="subtitle1" fontWeight={600} sx={{ mb: 2 }}>
                   Danh mục <span style={{ color: 'red' }}>*</span>
                 </Typography>
                 <Grid container spacing={2}>
                   {categories.map(cat => (
-                    <Grid item xs={6} sm={4} md={3} key={cat.value}>
+                    <Grid size={{ xs: 6, sm: 4, md: 3 }} key={cat.value}>
                       <Card
                         sx={{
                           cursor: (loading || isUploading) ? 'not-allowed' : 'pointer',
@@ -659,7 +659,7 @@ const MediaUploadDialog = ({
                 )}
               </Grid>
 
-              <Grid item xs={12}>
+              <Grid size={{ xs: 12 }}>
                 <TextField
                   fullWidth
                   label="Mô tả"
@@ -677,7 +677,7 @@ const MediaUploadDialog = ({
 
               {/* Tags Input for Photos */}
               {type === 'photo' && (
-                <Grid item xs={12}>
+                <Grid size={{ xs: 12 }}>
                   <Autocomplete
                     multiple
                     freeSolo
@@ -739,7 +739,7 @@ const MediaUploadDialog = ({
               {/* Video Thumbnail */}
               {type === 'video' && (
                 <>
-                  <Grid item xs={12}>
+                  <Grid size={{ xs: 12 }}>
                     <Paper 
                       elevation={0} 
                       sx={{ 
@@ -790,7 +790,7 @@ const MediaUploadDialog = ({
 
                   {/* Video Duration Display */}
                   {formData.duration > 0 && (
-                    <Grid item xs={12} sm={6}>
+                    <Grid size={{ xs: 12, sm: 6 }}>
                       <TextField
                         fullWidth
                         label="Thời lượng (giây)"
@@ -856,7 +856,7 @@ const MediaUploadDialog = ({
 
             <Grid container spacing={3}>
               {/* File Preview */}
-              <Grid item xs={12} md={5}>
+              <Grid size={{ xs: 12, md: 5 }}>
                 <Card sx={{ borderRadius: '16px', overflow: 'hidden' }}>
                   {preview ? (
                     <img 
@@ -909,7 +909,7 @@ const MediaUploadDialog = ({
               </Grid>
 
               {/* Details */}
-              <Grid item xs={12} md={7}>
+              <Grid size={{ xs: 12, md: 7 }}>
                 <Box sx={{ pl: { md: 2 } }}>
                   <Typography variant="h5" fontWeight={700} sx={{ mb: 2 }}>
                     {formData.title}
