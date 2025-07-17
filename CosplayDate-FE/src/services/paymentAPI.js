@@ -75,10 +75,10 @@ export const paymentAPI = {
         };
 
         // console.log('📋 Extracted payment data:', {
-          hasCheckoutUrl: !!checkoutUrl,
-          orderCode: data.orderCode,
-          paymentAmount: data.paymentAmount
-        });
+        //   hasCheckoutUrl: !!checkoutUrl,
+        //   orderCode: data.orderCode,
+        //   paymentAmount: data.paymentAmount
+        // });
       }
 
       // Validate checkout URL if provided
@@ -112,10 +112,10 @@ export const paymentAPI = {
         const { status, data } = error.response;
         
         // console.log('❌ Error response details:', {
-          status,
-          data,
-          message: data?.message
-        });
+        //   status,
+        //   data,
+        //   message: data?.message
+        // });
         
         switch (status) {
           case 400:

@@ -9,10 +9,10 @@ const ProtectedRoute = ({ children }) => {
   const isAuthenticated = user || storedUser;
   
   // console.log('🛡️ ProtectedRoute Check:', {
-    contextUser: !!user,
-    storedUser: !!storedUser,
-    isAuthenticated: !!isAuthenticated
-  });
+  //   contextUser: !!user,
+  //   storedUser: !!storedUser,
+  //   isAuthenticated: !!isAuthenticated
+  // });
 
   if (!isAuthenticated) {
     // console.log('❌ ProtectedRoute: No authentication found, redirecting to login');

@@ -96,10 +96,10 @@ const AdminDashboard = () => {
       const response = await api.get('/admin/dashboard/stats');
 
       // console.log('✅ Dashboard API Response:', {
-        status: response.status,
-        isSuccess: response.data?.isSuccess,
-        hasData: !!response.data?.data
-      });
+      //   status: response.status,
+      //   isSuccess: response.data?.isSuccess,
+      //   hasData: !!response.data?.data
+      // });
 
       // Handle the response structure from your AdminAnalyticsService
       if (response.data?.isSuccess && response.data?.data) {
@@ -116,11 +116,11 @@ const AdminDashboard = () => {
         };
 
         // console.log('✅ Dashboard data loaded:', {
-          totalUsers: dashboardData.userStats.totalUsers,
-          totalBookings: dashboardData.bookingStats.totalBookings,
-          totalRevenue: dashboardData.revenueStats.totalRevenue,
-          trendsCount: dashboardData.dailyTrends.length
-        });
+        //   totalUsers: dashboardData.userStats.totalUsers,
+        //   totalBookings: dashboardData.bookingStats.totalBookings,
+        //   totalRevenue: dashboardData.revenueStats.totalRevenue,
+        //   trendsCount: dashboardData.dailyTrends.length
+        // });
 
         setDashboardData(dashboardData);
       } else {

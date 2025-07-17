@@ -86,10 +86,10 @@ const Header = ({ user = null, onLogout }) => {
     const userType = (user.userType || user.role || '').toLowerCase();
 
     // console.log('🔍 Header Profile Path Debug:', {
-      userId: userId,
-      userType: userType,
-      fullUser: user
-    });
+    //   userId: userId,
+    //   userType: userType,
+    //   fullUser: user
+    // });
 
     // ✅ FIXED: Correct routing logic using USER ID
     if (userType === 'cosplayer') {

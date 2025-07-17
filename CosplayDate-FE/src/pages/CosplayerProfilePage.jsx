@@ -155,10 +155,10 @@ const CosplayerProfilePage = () => {
         setUserDataLoaded(true);
 
         // console.log('👤 User loaded:', {
-          id: parsedUser.id || parsedUser.userId,
-          userType: parsedUser.userType,
-          urlUserId: userId
-        });
+        //   id: parsedUser.id || parsedUser.userId,
+        //   userType: parsedUser.userType,
+        //   urlUserId: userId
+        // });
 
         // Handle route corrections for own profile without userId
         if (!userId && parsedUser.userType === 'Cosplayer' && (parsedUser.id || parsedUser.userId)) {
@@ -323,11 +323,11 @@ const CosplayerProfilePage = () => {
         const userProfileResult = await userAPI.getUserProfile(targetUserId);
 
         // console.log('👤 User Profile API Result:', {
-          success: userProfileResult.success,
-          isOwnProfile: userProfileResult.data?.isOwnProfile,
-          userType: userProfileResult.data?.userType,
-          isFollowing: userProfileResult.data?.isFollowing // Log this
-        });
+        //   success: userProfileResult.success,
+        //   isOwnProfile: userProfileResult.data?.isOwnProfile,
+        //   userType: userProfileResult.data?.userType,
+        //   isFollowing: userProfileResult.data?.isFollowing // Log this
+        // });
 
         if (userProfileResult.success && userProfileResult.data) {
           const { isOwnProfile: apiIsOwnProfile, userType, isFollowing: apiIsFollowing } = userProfileResult.data;
@@ -341,9 +341,9 @@ const CosplayerProfilePage = () => {
           }
 
           // console.log('✅ States set from API:', {
-            isOwnProfile: apiIsOwnProfile,
-            isFollowing: apiIsFollowing
-          });
+          //   isOwnProfile: apiIsOwnProfile,
+          //   isFollowing: apiIsFollowing
+          // });
 
           // Handle non-cosplayer users
           if (userType !== 'Cosplayer') {
@@ -382,10 +382,10 @@ const CosplayerProfilePage = () => {
   const loadCosplayerProfile = async (targetUserId, apiIsOwnProfile, userType) => {
     try {
       // console.log('🎭 Loading cosplayer profile for:', {
-        targetUserId,
-        isOwnProfile: apiIsOwnProfile,
-        userType
-      });
+      //   targetUserId,
+      //   isOwnProfile: apiIsOwnProfile,
+      //   userType
+      // });
 
       // Load cosplayer details and current profile data in parallel
       const promises = [
@@ -400,20 +400,20 @@ const CosplayerProfilePage = () => {
       const [result, currentProfileResult] = await Promise.all(promises);
 
       // console.log('📊 Cosplayer API Result:', {
-        success: result.success,
-        hasData: !!result.data,
-        error: result.message,
-        errorStatus: result.errors?.status
-      });
+      //   success: result.success,
+      //   hasData: !!result.data,
+      //   error: result.message,
+      //   errorStatus: result.errors?.status
+      // });
 
       if (currentProfileResult) {
         // console.log('📊 Current Profile API Result:', {
-          success: currentProfileResult.success,
-          hasData: !!currentProfileResult.data,
-          membershipTier: currentProfileResult.data?.membershipTier,
-          loyaltyPoints: currentProfileResult.data?.loyaltyPoints,
-          walletBalance: currentProfileResult.data?.walletBalance
-        });
+        //   success: currentProfileResult.success,
+        //   hasData: !!currentProfileResult.data,
+        //   membershipTier: currentProfileResult.data?.membershipTier,
+        //   loyaltyPoints: currentProfileResult.data?.loyaltyPoints,
+        //   walletBalance: currentProfileResult.data?.walletBalance
+        // });
 
         if (currentProfileResult.success && currentProfileResult.data) {
           setCurrentProfile(currentProfileResult.data);
@@ -443,9 +443,9 @@ const CosplayerProfilePage = () => {
         }
 
         // console.log('✅ Cosplayer profile loaded successfully with additional data:', {
-          isVerified: profileData.isVerified,
-          membershipTier: profileData.membershipTier
-        });
+        //   isVerified: profileData.isVerified,
+        //   membershipTier: profileData.membershipTier
+        // });
       } else {
         // ✅ Cosplayer profile not found - handle different scenarios
         // console.log('❌ Cosplayer profile loading failed:', result.message);

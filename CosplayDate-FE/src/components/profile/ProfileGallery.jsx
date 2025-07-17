@@ -93,12 +93,12 @@ const ProfileGallery = ({
   const [availableTags] = useState([]);
 
   // console.log('📷 CardMediaGallery received:', {
-    photosCount: photos.length,
-    videosCount: videos.length,
-    photos: photos.slice(0, 2), // Log first 2 for debugging
-    samplePhoto: photos[0], // Log structure of first photo
-    samplePhotoKeys: photos[0] ? Object.keys(photos[0]) : []
-  });
+  //   photosCount: photos.length,
+  //   videosCount: videos.length,
+  //   photos: photos.slice(0, 2), // Log first 2 for debugging
+  //   samplePhoto: photos[0], // Log structure of first photo
+  //   samplePhotoKeys: photos[0] ? Object.keys(photos[0]) : []
+  // });
 
   // Categories for filtering - dynamic based on media type
   const categories = React.useMemo(() => {
@@ -217,11 +217,11 @@ const ProfileGallery = ({
       setError(null);
 
       // console.log('💾 Saving media with:', {
-        selectedMedia: selectedMediaForMenu,
-        mediaId: selectedMediaForMenu.id,
-        editFormData,
-        isVideo: selectedMediaForMenu.isVideo
-      });
+      //   selectedMedia: selectedMediaForMenu,
+      //   mediaId: selectedMediaForMenu.id,
+      //   editFormData,
+      //   isVideo: selectedMediaForMenu.isVideo
+      // });
 
       // Check for ID in different possible field names
       const mediaId = selectedMediaForMenu.id || selectedMediaForMenu.photoId || selectedMediaForMenu.videoId || selectedMediaForMenu.mediaId;
@@ -371,7 +371,7 @@ const ProfileGallery = ({
             position: 'relative',
             display: photo.isVideo && !photo.photoUrl ? 'none' : 'block'
           }}
-          onLoad={() => // console.log('✅ CardMedia loaded:', photo.photoUrl || photo.url)}
+          // onLoad={() => console.log('✅ CardMedia loaded:', photo.photoUrl || photo.url)}
           onError={(e) => {
             console.error('❌ CardMedia failed:', photo.photoUrl || photo.url);
             e.target.style.backgroundColor = '#f5f5f5';

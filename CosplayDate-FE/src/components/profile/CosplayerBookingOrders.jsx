@@ -840,7 +840,7 @@ const CosplayerBookingOrders = ({ isOwnProfile }) => {
                     <>
                       <Typography variant="body2" color="text.secondary">•</Typography>
                       {/* Debug: Log the review data in compact view */}
-                      {// console.log(`Compact view - Review data for booking ${booking.id}:`, bookingReviews[booking.id])}
+                      {/* {// console.log(`Compact view - Review data for booking ${booking.id}:`, bookingReviews[booking.id])} */}
                       {bookingReviews[booking.id] ? (
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
                           <Star sx={{ fontSize: 16, color: '#ffc107' }} />
@@ -954,7 +954,7 @@ const CosplayerBookingOrders = ({ isOwnProfile }) => {
                   Đánh giá của khách hàng
                 </Typography>
                 {/* Debug: Log the review data */}
-                {// console.log(`Review data for booking ${booking.id}:`, bookingReviews[booking.id])}
+                {/* {// console.log(`Review data for booking ${booking.id}:`, bookingReviews[booking.id])} */}
                 {bookingReviews[booking.id] ? (
                   <Paper sx={{ p: 2, bgcolor: 'grey.50', borderRadius: '8px' }}>
                     <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 2 }}>

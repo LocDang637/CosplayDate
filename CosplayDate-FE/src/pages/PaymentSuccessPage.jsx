@@ -58,11 +58,11 @@ const PaymentSuccessPage = () => {
     const amount = searchParams.get('amount');
 
     // console.log('🔍 Payment success parameters:', {
-      transactionId,
-      status,
-      amount,
-      allParams: Object.fromEntries(searchParams.entries())
-    });
+    //   transactionId,
+    //   status,
+    //   amount,
+    //   allParams: Object.fromEntries(searchParams.entries())
+    // });
 
     if (!transactionId) {
       setError('Không tìm thấy thông tin giao dịch');

@@ -71,10 +71,10 @@ const CustomerProfilePage = () => {
         setUserDataLoaded(true);
 
         // console.log('👤 User loaded:', {
-          id: parsedUser.id || parsedUser.userId,
-          userType: parsedUser.userType,
-          urlUserId: userId
-        });
+        //   id: parsedUser.id || parsedUser.userId,
+        //   userType: parsedUser.userType,
+        //   urlUserId: userId
+        // });
 
         // Handle route corrections for own profile without userId
         if (!userId && parsedUser.userType === 'Customer' && (parsedUser.id || parsedUser.userId)) {
@@ -170,10 +170,10 @@ const CustomerProfilePage = () => {
         const userProfileResult = await userAPI.getUserProfile(targetUserId);
 
         // console.log('👤 User Profile API Result:', {
-          success: userProfileResult.success,
-          isOwnProfile: userProfileResult.data?.isOwnProfile,
-          userType: userProfileResult.data?.userType,
-        });
+        //   success: userProfileResult.success,
+        //   isOwnProfile: userProfileResult.data?.isOwnProfile,
+        //   userType: userProfileResult.data?.userType,
+        // });
 
         if (userProfileResult.success && userProfileResult.data) {
           const { isOwnProfile: apiIsOwnProfile, userType } = userProfileResult.data;
@@ -182,9 +182,9 @@ const CustomerProfilePage = () => {
           setIsOwnProfile(apiIsOwnProfile);
 
           // console.log('✅ States set from API:', {
-            isOwnProfile: apiIsOwnProfile,
-            userType: userType
-          });
+          //   isOwnProfile: apiIsOwnProfile,
+          //   userType: userType
+          // });
 
           // Handle non-customer users
           if (userType !== 'Customer') {
@@ -223,10 +223,10 @@ const CustomerProfilePage = () => {
   const loadCustomerProfile = async (targetUserId, apiIsOwnProfile, userType) => {
     try {
       // console.log('👤 Loading customer profile for:', {
-        targetUserId,
-        isOwnProfile: apiIsOwnProfile,
-        userType
-      });
+      //   targetUserId,
+      //   isOwnProfile: apiIsOwnProfile,
+      //   userType
+      // });
 
       // Load customer details and current profile data in parallel
       const promises = [
@@ -241,10 +241,10 @@ const CustomerProfilePage = () => {
       const [result, currentProfileResult] = await Promise.all(promises);
 
       // console.log('📊 Customer API Result:', {
-        success: result.success,
-        hasData: !!result.data,
-        error: result.message
-      });
+      //   success: result.success,
+      //   hasData: !!result.data,
+      //   error: result.message
+      // });
 
       if (result.success && result.data) {
         // ✅ FIX: Ensure the profile data has both avatar fields

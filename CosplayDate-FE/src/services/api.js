@@ -423,10 +423,10 @@ export const authAPI = {
       };
 
       // console.log("🔄 Sending reset password request:", {
-        email: requestData.email,
-        code: requestData.code,
-        newPassword: "[HIDDEN]",
-      });
+      //   email: requestData.email,
+      //   code: requestData.code,
+      //   newPassword: "[HIDDEN]",
+      // });
 
       const response = await api.post("/auth/reset-password", requestData);
 
@@ -444,10 +444,10 @@ export const authAPI = {
         const { status, data } = error.response;
 
         // console.log("❌ Error response:", {
-          status,
-          data,
-          message: data?.message,
-        });
+        //   status,
+        //   data,
+        //   message: data?.message,
+        // });
 
         switch (status) {
           case 400:

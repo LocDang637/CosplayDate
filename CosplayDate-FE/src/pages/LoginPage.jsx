@@ -60,10 +60,10 @@ const LoginPage = () => {
     const userType = userData.userType || userData.role;
     
     // console.log('🔍 Determining redirect path for user:', {
-      userType,
-      email: userData.email,
-      firstName: userData.firstName
-    });
+    //   userType,
+    //   email: userData.email,
+    //   firstName: userData.firstName
+    // });
     
     switch (userType) {
       case 'Admin':
@@ -100,10 +100,10 @@ const LoginPage = () => {
 
   const handleSuccessfulLogin = (userData, token = null) => {
     // console.log('✅ Login successful!', {
-      user: userData,
-      userType: userData.userType || userData.role,
-      hasToken: !!token
-    });
+    //   user: userData,
+    //   userType: userData.userType || userData.role,
+    //   hasToken: !!token
+    // });
     
     // Store user data and token
     localStorage.setItem('user', JSON.stringify(userData));
@@ -168,24 +168,24 @@ const LoginPage = () => {
       const result = await authAPI.login(credentials);
 
       // console.log('Login API result:', {
-        success: result.success,
-        message: result.message,
-        hasUser: !!result.data?.user,
-        hasToken: !!result.data?.token,
-        isVerified: result.data?.isVerified,
-        userEmail: result.data?.user?.email,
-        userType: result.data?.user?.userType || result.data?.user?.role // NEW: Log user type
-      });
+      //   success: result.success,
+      //   message: result.message,
+      //   hasUser: !!result.data?.user,
+      //   hasToken: !!result.data?.token,
+      //   isVerified: result.data?.isVerified,
+      //   userEmail: result.data?.user?.email,
+      //   userType: result.data?.user?.userType || result.data?.user?.role // NEW: Log user type
+      // });
 
       if (result.success) {
         const { user, token, isVerified } = result.data;
 
         // console.log('Processing successful result:', {
-          isVerified,
-          hasToken: !!token,
-          userEmail: user?.email,
-          userType: user?.userType || user?.role // NEW: Log user type
-        });
+        //   isVerified,
+        //   hasToken: !!token,
+        //   userEmail: user?.email,
+        //   userType: user?.userType || user?.role // NEW: Log user type
+        // });
 
         if (isVerified && token) {
           // Case 1: Login successful and verified

@@ -64,12 +64,12 @@ const HomePage = () => {
       });
 
       // console.log('HomePage - API Result:', {
-        success: result.success,
-        dataType: typeof result.data,
-        hasCosplayers: !!result.data?.cosplayers,
-        cosplayersLength: result.data?.cosplayers?.length || 0,
-        data: result.data
-      });
+      //   success: result.success,
+      //   dataType: typeof result.data,
+      //   hasCosplayers: !!result.data?.cosplayers,
+      //   cosplayersLength: result.data?.cosplayers?.length || 0,
+      //   data: result.data
+      // });
 
       if (result.success && result.data && result.data.cosplayers) {
         // The API now returns structured data with cosplayers array

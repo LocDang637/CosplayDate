@@ -138,11 +138,11 @@ const BecomeCosplayerForm = ({ user, onSuccess }) => {
       const currentToken = localStorage.getItem('token');
 
       // console.log('🔍 Debug - Current user:', {
-        id: currentUser.id,
-        email: currentUser.email,
-        userType: currentUser.userType,
-        hasToken: !!currentToken
-      });
+      //   id: currentUser.id,
+      //   email: currentUser.email,
+      //   userType: currentUser.userType,
+      //   hasToken: !!currentToken
+      // });
 
       // FIXED: Prepare data to match backend DTO exactly
       const becomeCosplayerData = {

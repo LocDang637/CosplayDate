@@ -66,17 +66,17 @@ export const cosplayerAPI = {
       const response = await api.get(`/cosplayers?${queryParams}`);
 
       // console.log('API Response structure:', {
-        hasData: !!response.data,
-        hasDataData: !!response.data?.data,
-        hasCosplayers: !!response.data?.data?.cosplayers,
-        cosplayersCount: response.data?.data?.cosplayers?.length || 0,
-        hasAvailableCategories: !!response.data?.data?.availableCategories,
-        hasAvailableSpecialties: !!response.data?.data?.availableSpecialties,
-        hasAvailableTags: !!response.data?.data?.availableTags,
-        categoriesCount: response.data?.data?.availableCategories?.length || 0,
-        specialtiesCount: response.data?.data?.availableSpecialties?.length || 0,
-        tagsCount: response.data?.data?.availableTags?.length || 0
-      });
+      //   hasData: !!response.data,
+      //   hasDataData: !!response.data?.data,
+      //   hasCosplayers: !!response.data?.data?.cosplayers,
+      //   cosplayersCount: response.data?.data?.cosplayers?.length || 0,
+      //   hasAvailableCategories: !!response.data?.data?.availableCategories,
+      //   hasAvailableSpecialties: !!response.data?.data?.availableSpecialties,
+      //   hasAvailableTags: !!response.data?.data?.availableTags,
+      //   categoriesCount: response.data?.data?.availableCategories?.length || 0,
+      //   specialtiesCount: response.data?.data?.availableSpecialties?.length || 0,
+      //   tagsCount: response.data?.data?.availableTags?.length || 0
+      // });
 
       // Fixed: Extract cosplayers from the nested structure
       let cosplayersArray = [];
@@ -146,14 +146,14 @@ export const cosplayerAPI = {
       const response = await api.get(`/cosplayers/${id}`);
 
       // console.log('✅ API: Raw response:', {
-        status: response.status,
-        data: response.data,
-        dataStructure: {
-          isSuccess: response.data?.isSuccess,
-          hasData: !!response.data?.data,
-          dataKeys: response.data?.data ? Object.keys(response.data.data) : 'no data keys'
-        }
-      });
+      //   status: response.status,
+      //   data: response.data,
+      //   dataStructure: {
+      //     isSuccess: response.data?.isSuccess,
+      //     hasData: !!response.data?.data,
+      //     dataKeys: response.data?.data ? Object.keys(response.data.data) : 'no data keys'
+      //   }
+      // });
 
       // ✅ FIXED: Handle the specific backend response format {isSuccess: true, data: {...}}
       if (response.data && response.data.isSuccess === true && response.data.data) {
@@ -257,9 +257,9 @@ export const cosplayerAPI = {
       const response = await api.get(`/cosplayers/${userId}`);
 
       // console.log('✅ API: Current cosplayer profile response:', {
-        status: response.status,
-        hasData: !!response.data
-      });
+      //   status: response.status,
+      //   hasData: !!response.data
+      // });
 
       return {
         success: true,
@@ -348,10 +348,10 @@ export const cosplayerAPI = {
       const response = await api.post('/cosplayers/become-cosplayer', cosplayerData);
 
       // console.log('✅ API: Become cosplayer response:', {
-        status: response.status,
-        data: response.data,
-        isSuccess: response.data?.isSuccess
-      });
+      //   status: response.status,
+      //   data: response.data,
+      //   isSuccess: response.data?.isSuccess
+      // });
 
       if (response.status === 200 || response.status === 201) {
         if (response.data?.isSuccess === true) {

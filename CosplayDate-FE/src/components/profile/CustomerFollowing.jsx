@@ -58,10 +58,10 @@ const CustomerFollowing = ({ customerId, isOwnProfile }) => {
         setCurrentPage(current || 1);
         
         // console.log('✅ Following loaded successfully:', {
-          count: followingData?.length || 0,
-          totalCount: total,
-          totalPages: pages
-        });
+        //   count: followingData?.length || 0,
+        //   totalCount: total,
+        //   totalPages: pages
+        // });
       } else {
         // console.log('❌ Following loading failed:', result.message);
         setError(result.message || 'Failed to load following');

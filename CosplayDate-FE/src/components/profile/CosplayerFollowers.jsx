@@ -58,10 +58,10 @@ const CosplayerFollowers = ({ cosplayerId, isOwnProfile }) => {
         setCurrentPage(current || 1);
         
         // console.log('✅ Followers loaded successfully:', {
-          count: followersData?.length || 0,
-          totalCount: total,
-          totalPages: pages
-        });
+        //   count: followersData?.length || 0,
+        //   totalCount: total,
+        //   totalPages: pages
+        // });
       } else {
         // console.log('❌ Followers loading failed:', result.message);
         setError(result.message || 'Failed to load followers');

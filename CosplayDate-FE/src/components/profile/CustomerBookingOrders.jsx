@@ -605,7 +605,7 @@ const CustomerBookingOrders = () => {
                 {/* Line 4: Review (compact view) - Only show for completed bookings */}
                 {booking.status === 'Completed' && (
                   <Box sx={{ mt: 0.5 }}>
-                    {// console.log(`Compact view - Review data for booking ${booking.id}:`, bookingReviews[booking.id])}
+                    {/* Compact view - Review data for booking */}
                     {bookingReviews[booking.id] ? (
                       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                         <Typography variant="body2" color="text.secondary">
@@ -749,7 +749,7 @@ const CustomerBookingOrders = () => {
                 <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1 }}>
                   Đánh giá của bạn
                 </Typography>
-                {// console.log(`Review data for booking ${booking.id}:`, bookingReviews[booking.id])}
+                {/* Review data for booking */}
                 {bookingReviews[booking.id] ? (
                   <Paper sx={{ p: 2, bgcolor: 'rgba(233, 30, 99, 0.02)', borderRadius: '8px' }}>
                     <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 2 }}>
