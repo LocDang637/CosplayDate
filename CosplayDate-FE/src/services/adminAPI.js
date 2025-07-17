@@ -93,6 +93,24 @@ export const adminAPI = {
     }
   },
 
+  // Get review statistics
+  getReviewStats: async () => {
+    try {
+      const response = await api.get('/admin/dashboard/reviews/stats');
+      return {
+        success: response.data.isSuccess,
+        data: response.data.data,
+        message: response.data.message || 'Review statistics retrieved successfully'
+      };
+    } catch (error) {
+      return {
+        success: false,
+        message: error.response?.data?.message || 'Failed to load review statistics',
+        errors: error.response?.data?.errors || {}
+      };
+    }
+  },
+
   // Get daily trends
   getDailyTrends: async (fromDate = null, toDate = null) => {
     try {
@@ -110,24 +128,6 @@ export const adminAPI = {
       return {
         success: false,
         message: error.response?.data?.message || 'Failed to load daily trends',
-        errors: error.response?.data?.errors || {}
-      };
-    }
-  },
-
-  // Get system health
-  getSystemHealth: async () => {
-    try {
-      const response = await api.get('/admin/dashboard/system/health');
-      return {
-        success: response.data.isSuccess,
-        data: response.data.data,
-        message: response.data.message || 'System health retrieved successfully'
-      };
-    } catch (error) {
-      return {
-        success: false,
-        message: error.response?.data?.message || 'Failed to load system health',
         errors: error.response?.data?.errors || {}
       };
     }

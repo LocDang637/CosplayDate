@@ -2,8 +2,6 @@
 using CosplayDate.Shared.Models;
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 
 namespace CosplayDate.Application.Services.Interfaces
@@ -14,7 +12,7 @@ namespace CosplayDate.Application.Services.Interfaces
         Task<ApiResponse<UserStatsDto>> GetUserStatsAsync();
         Task<ApiResponse<BookingStatsDto>> GetBookingStatsAsync();
         Task<ApiResponse<RevenueStatsDto>> GetRevenueStatsAsync();
+        Task<ApiResponse<ReviewStatsDto>> GetReviewStatsAsync();
         Task<ApiResponse<List<DailyStatsDto>>> GetDailyTrendsAsync(DateTime? fromDate = null, DateTime? toDate = null);
-        Task<ApiResponse<SystemHealthDto>> GetSystemHealthAsync();
     }
 }

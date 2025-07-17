@@ -3,7 +3,6 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 
-
 //Admin account: admin@cosplaydate.com    //Admin@123
 
 namespace CosplayDate.API.Controllers
@@ -95,6 +94,24 @@ namespace CosplayDate.API.Controllers
         }
 
         /// <summary>
+        /// Get review statistics only
+        /// </summary>
+        [HttpGet("reviews/stats")]
+        public async Task<IActionResult> GetReviewStats()
+        {
+            try
+            {
+                var result = await _analyticsService.GetReviewStatsAsync();
+                return result.IsSuccess ? Ok(result) : BadRequest(result);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error retrieving review stats");
+                return StatusCode(500, new { message = "Failed to retrieve review statistics" });
+            }
+        }
+
+        /// <summary>
         /// Get daily trends for specified date range
         /// </summary>
         [HttpGet("trends/daily")]
@@ -114,22 +131,23 @@ namespace CosplayDate.API.Controllers
             }
         }
 
-        /// <summary>
-        /// Get system health metrics
-        /// </summary>
-        [HttpGet("system/health")]
-        public async Task<IActionResult> GetSystemHealth()
-        {
-            try
-            {
-                var result = await _analyticsService.GetSystemHealthAsync();
-                return result.IsSuccess ? Ok(result) : BadRequest(result);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error retrieving system health");
-                return StatusCode(500, new { message = "Failed to retrieve system health" });
-            }
-        }
+        ///// <summary>
+        ///// Get system health metrics (deprecated - use reviews/stats instead)
+        ///// </summary>
+        //[HttpGet("system/health")]
+        //[Obsolete("Use reviews/stats endpoint instead")]
+        //public async Task<IActionResult> GetSystemHealth()
+        //{
+        //    try
+        //    {
+        //        var result = await _analyticsService.GetSystemHealthAsync();
+        //        return result.IsSuccess ? Ok(result) : BadRequest(result);
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        _logger.LogError(ex, "Error retrieving system health");
+        //        return StatusCode(500, new { message = "Failed to retrieve system health" });
+        //    }
+        //}
     }
 }
