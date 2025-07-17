@@ -590,7 +590,7 @@ const ProfileGallery = ({
         </Typography>
         <Grid container spacing={2}>
           {Array.from({ length: 8 }).map((_, index) => (
-            <Grid item xs={12} sm={6} md={4} lg={3} key={index}>
+            <Grid size={{ xs: 12, sm: 6, md: 4, lg: 3 }} key={index}>
               <LoadingSkeleton />
             </Grid>
           ))}
@@ -839,7 +839,7 @@ const ProfileGallery = ({
       {loading ? (
         <Grid container spacing={2}>
           {Array.from({ length: 12 }).map((_, index) => (
-            <Grid item xs={12} sm={6} md={4} lg={3} key={index}>
+            <Grid size={{ xs: 12, sm: 6, md: 4, lg: 3 }} key={index}>
               <LoadingSkeleton />
             </Grid>
           ))}
@@ -848,11 +848,12 @@ const ProfileGallery = ({
         <Grid container spacing={2}>
           {filteredMedia.map((photo, index) => (
             <Grid
-              item
-              xs={12}
-              sm={viewMode === 'grid' ? 6 : 12}
-              md={viewMode === 'grid' ? 4 : 12}
-              lg={viewMode === 'grid' ? 3 : 12}
+              size={{
+                xs: 12,
+                sm: viewMode === 'grid' ? 6 : 12,
+                md: viewMode === 'grid' ? 4 : 12,
+                lg: viewMode === 'grid' ? 3 : 12
+              }}
               key={photo.id || index}
             >
               <MediaCard photo={photo} index={index} />

@@ -60,6 +60,11 @@ const CustomerProfilePage = () => {
     return user.id || user.userId;
   }, [user?.id, user?.userId]);
 
+  // Reset anchorEl when user or profile ownership changes to prevent menu anchoring issues
+  useEffect(() => {
+    setAnchorEl(null);
+  }, [user, isOwnProfile]);
+
   // ✅ FIXED: Initialize user data only once
   useEffect(() => {
     const storedUser = localStorage.getItem("user");
@@ -164,17 +169,17 @@ const CustomerProfilePage = () => {
           return;
         }
 
-        console.log('🔍 Loading user profile for:', targetUserId);
+        // console.log('🔍 Loading user profile for:', targetUserId);
 
         // First get user profile to determine isOwnProfile
         const userProfileResult = await userAPI.getUserProfile(targetUserId);
 
-        console.log('👤 User Profile API Result:', {
-          success: userProfileResult.success,
-          isOwnProfile: userProfileResult.data?.isOwnProfile,
-          userType: userProfileResult.data?.userType,
-          fullData: userProfileResult.data,
-        });
+        // console.log('👤 User Profile API Result:', {
+        //   success: userProfileResult.success,
+        //   isOwnProfile: userProfileResult.data?.isOwnProfile,
+        //   userType: userProfileResult.data?.userType,
+        //   fullData: userProfileResult.data,
+        // });
 
         if (userProfileResult.success && userProfileResult.data) {
           const { isOwnProfile: apiIsOwnProfile, userType } = userProfileResult.data;
@@ -182,13 +187,13 @@ const CustomerProfilePage = () => {
           // Set isOwnProfile from API response
           setIsOwnProfile(apiIsOwnProfile);
 
-          console.log('✅ States set from API:', {
-            isOwnProfile: apiIsOwnProfile,
-            userType: userType
-          });
+          // console.log('✅ States set from API:', {
+          //   isOwnProfile: apiIsOwnProfile,
+          //   userType: userType
+          // });
 
           // Handle non-customer users
-          console.log('🔍 Checking user type:', userType, 'Expected: Customer');
+          // console.log('🔍 Checking user type:', userType, 'Expected: Customer');
           if (userType !== 'Customer') {
             if (apiIsOwnProfile) {
               // console.log('🎭 Own profile but not customer, redirecting to cosplayer profile');
@@ -320,7 +325,10 @@ const CustomerProfilePage = () => {
 
   // Avatar menu handlers
   const handleAvatarClick = (event) => {
-    setAnchorEl(event.currentTarget);
+    // Ensure the event target is valid before setting anchorEl
+    if (event?.currentTarget && document.contains(event.currentTarget)) {
+      setAnchorEl(event.currentTarget);
+    }
   };
 
   const handleMenuClose = () => {
@@ -614,7 +622,7 @@ const CustomerProfilePage = () => {
           {isOwnProfile && (
             <Menu
               anchorEl={anchorEl}
-              open={Boolean(anchorEl)}
+              open={Boolean(anchorEl) && isOwnProfile}
               onClose={handleMenuClose}
               anchorOrigin={{
                 vertical: 'bottom',
@@ -624,6 +632,8 @@ const CustomerProfilePage = () => {
                 vertical: 'top',
                 horizontal: 'center',
               }}
+              disableAutoFocus
+              disableRestoreFocus
               MenuListProps={{
                 'aria-labelledby': 'avatar-menu',
               }}

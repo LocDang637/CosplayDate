@@ -717,7 +717,9 @@ const WalletTab = ({
         }}
       >
         {/* Wallet Card */}
-        <Grid item xs={12} lg={6}>
+        <Grid
+          size={{ xs: 12, lg: 6 }}
+        >
           <Card
             sx={{
               display: "flex",
@@ -801,7 +803,9 @@ const WalletTab = ({
         </Grid>
 
         {/* Filter Controls Card */}
-        <Grid item xs={12} lg={6}>
+        <Grid
+          size={{ xs: 12, lg: 6 }}
+        >
           <Card
             sx={{
               display: "flex",
@@ -946,7 +950,9 @@ const WalletTab = ({
           </Box>
           <Grid container spacing={3}>
             {/* Date Range */}
-            <Grid item xs={12} md={6}>
+            <Grid
+              size={{ xs: 12, md: 6 }}
+            >
               <Typography variant="subtitle2" sx={{ mb: 2, fontWeight: 600 }}>
                 Khoảng thời gian
               </Typography>
@@ -986,7 +992,9 @@ const WalletTab = ({
             </Grid>
 
             {/* Amount Range */}
-            <Grid item xs={12} md={6}>
+            <Grid
+              size={{ xs: 12, md: 6 }}
+            >
               <Typography variant="subtitle2" sx={{ mb: 2, fontWeight: 600 }}>
                 Khoảng số tiền (VND)
               </Typography>
@@ -1114,8 +1122,8 @@ const WalletTab = ({
 
                     <ListItemText
                       primary={
-                        <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 1 }}>
-                          <Typography variant="h6" sx={{ fontWeight: 600, color: "text.primary" }}>
+                        <Box component="div" sx={{ display: "flex", alignItems: "center", gap: 1, mb: 1 }}>
+                          <Typography variant="h6" component="span" sx={{ fontWeight: 600, color: "text.primary" }}>
                             {transaction.description}
                           </Typography>
                           <Chip
@@ -1136,9 +1144,10 @@ const WalletTab = ({
                         </Box>
                       }
                       secondary={
-                        <Box>
+                        <Box component="div">
                           <Typography
                             variant="body1"
+                            component="div"
                             sx={{ color: "text.secondary", mb: 0.5 }}
                           >
                             📅 {new Date(transaction.date).toLocaleString("vi-VN")}
@@ -1146,6 +1155,7 @@ const WalletTab = ({
                           {transaction.cosplayer && (
                             <Typography
                               variant="body2"
+                              component="div"
                               sx={{ color: "primary.main", fontSize: "13px", mb: 0.5 }}
                             >
                               👤 {transaction.cosplayer}
@@ -1153,12 +1163,16 @@ const WalletTab = ({
                           )}
                           <Typography
                             variant="body2"
+                            component="div"
                             sx={{ color: "text.secondary", fontSize: "12px" }}
                           >
                             🏷️ Mã: {transaction.reference}
                           </Typography>
                         </Box>
                       }
+                      secondaryTypographyProps={{
+                        component: "div"
+                      }}
                     />
 
                     <ListItemSecondaryAction>
@@ -1317,7 +1331,10 @@ const WalletTab = ({
               {/* Package Grid */}
               <Grid container spacing={2} sx={{ mb: 4 }}>
                 {packages.map((pkg) => (
-                  <Grid item xs={6} sm={4} md={4} key={pkg.Package}>
+                  <Grid
+                    size={{ xs: 6, sm: 4, md: 4 }}
+                    key={pkg.Package}
+                  >
                     <PackageCard
                       pkg={pkg}
                       isSelected={selectedPackage?.Package === pkg.Package}
@@ -1346,9 +1363,13 @@ const WalletTab = ({
                   </Typography>
 
                   <Grid container spacing={2} alignItems="center">
-                    <Grid item xs={12} sm={8}>
+                    <Grid
+                      size={{ xs: 12, sm: 8 }}
+                    >
                       <Grid container spacing={2}>
-                        <Grid item xs={6}>
+                        <Grid
+                          size={{ xs: 6 }}
+                        >
                           <Box sx={{ textAlign: "center" }}>
                             <Typography
                               variant="body2"
@@ -1365,7 +1386,9 @@ const WalletTab = ({
                           </Box>
                         </Grid>
 
-                        <Grid item xs={6}>
+                        <Grid
+                          size={{ xs: 6 }}
+                        >
                           <Box sx={{ textAlign: "center" }}>
                             <Typography
                               variant="body2"
@@ -1404,7 +1427,9 @@ const WalletTab = ({
                       </Box>
                     </Grid>
 
-                    <Grid item xs={12} sm={4}>
+                    <Grid
+                      size={{ xs: 12, sm: 4 }}
+                    >
                       <Button
                         variant="contained"
                         onClick={handleProceedToPayment}

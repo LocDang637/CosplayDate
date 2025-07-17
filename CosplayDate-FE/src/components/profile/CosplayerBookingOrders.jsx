@@ -878,7 +878,7 @@ const CosplayerBookingOrders = ({ isOwnProfile }) => {
                 Thông tin khách hàng
               </Typography>
               <Grid container spacing={2}>
-                <Grid item xs={12} sm={6}>
+                <Grid size={{ xs: 12, sm: 6 }}>
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                     <Avatar src={booking.customer?.avatarUrl} sx={{ width: 32, height: 32 }}>
                       {booking.customer?.name?.charAt(0)}
@@ -893,14 +893,14 @@ const CosplayerBookingOrders = ({ isOwnProfile }) => {
                     </Box>
                   </Box>
                 </Grid>
-                <Grid item xs={12} sm={6}>
+                <Grid size={{ xs: 12, sm: 6 }}>
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                     <Email sx={{ fontSize: 18, color: 'text.secondary' }} />
                     <Typography variant="body2">{booking.customer?.email}</Typography>
                   </Box>
                 </Grid>
                 {booking.customer?.phone && (
-                  <Grid item xs={12} sm={6}>
+                  <Grid size={{ xs: 12, sm: 6 }}>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                       <Phone sx={{ fontSize: 18, color: 'text.secondary' }} />
                       <Typography variant="body2">{booking.customer?.phone}</Typography>
@@ -916,28 +916,28 @@ const CosplayerBookingOrders = ({ isOwnProfile }) => {
                 Chi tiết đặt lịch
               </Typography>
               <Grid container spacing={2}>
-                <Grid item xs={12} sm={6}>
+                <Grid size={{ xs: 12, sm: 6 }}>
                   <Typography variant="caption" color="text.secondary">Mã đặt lịch</Typography>
                   <Typography variant="body2">{booking.bookingCode}</Typography>
                 </Grid>
-                <Grid item xs={12} sm={6}>
+                <Grid size={{ xs: 12, sm: 6 }}>
                   <Typography variant="caption" color="text.secondary">Thời lượng</Typography>
                   <Typography variant="body2">{formatDuration(booking.duration)}</Typography>
                 </Grid>
-                <Grid item xs={12} sm={6}>
+                <Grid size={{ xs: 12, sm: 6 }}>
                   <Typography variant="caption" color="text.secondary">Ngày tạo</Typography>
                   <Typography variant="body2">
                     {format(createdDate, 'dd/MM/yyyy HH:mm')}
                   </Typography>
                 </Grid>
                 {booking.paymentMethod && (
-                  <Grid item xs={12} sm={6}>
+                  <Grid size={{ xs: 12, sm: 6 }}>
                     <Typography variant="caption" color="text.secondary">Phương thức thanh toán</Typography>
                     <Typography variant="body2">{booking.paymentMethod}</Typography>
                   </Grid>
                 )}
                 {daysUntilBooking > 0 && (
-                  <Grid item xs={12}>
+                  <Grid size={{ xs: 12 }}>
                     <Typography variant="caption" color="text.secondary">Thời gian còn lại</Typography>
                     <Typography variant="body2" color="primary">
                       Còn {daysUntilBooking} ngày
@@ -1117,7 +1117,7 @@ const CosplayerBookingOrders = ({ isOwnProfile }) => {
               <Box sx={{ mt: 2 }}>
                 {booking.status === 'Pending' && (
                   <Grid container spacing={1}>
-                    <Grid item xs={12}>
+                    <Grid size={{ xs: 12 }}>
                       <Button
                         size="small"
                         variant="outlined"
@@ -1139,7 +1139,7 @@ const CosplayerBookingOrders = ({ isOwnProfile }) => {
                         Chỉnh sửa
                       </Button>
                     </Grid>
-                    <Grid item xs={6}>
+                    <Grid size={{ xs: 6 }}>
                       <Button
                         variant="contained"
                         size="small"
@@ -1157,7 +1157,7 @@ const CosplayerBookingOrders = ({ isOwnProfile }) => {
                         Xác nhận
                       </Button>
                     </Grid>
-                    <Grid item xs={6}>
+                    <Grid size={{ xs: 6 }}>
                       <Button
                         variant="outlined"
                         size="small"
@@ -1206,7 +1206,7 @@ const CosplayerBookingOrders = ({ isOwnProfile }) => {
     <Box>
       {/* Stats Overview */}
       <Grid container spacing={2} sx={{ mb: 3 }}>
-        <Grid item xs={6} sm={3}>
+        <Grid size={{ xs: 6, sm: 3 }}>
           <Paper sx={{ p: 2, textAlign: 'center', borderRadius: '12px' }}>
             <Typography variant="h4" sx={{ fontWeight: 'bold', color: 'primary.main' }}>
               {stats.total || 0}
@@ -1216,7 +1216,7 @@ const CosplayerBookingOrders = ({ isOwnProfile }) => {
             </Typography>
           </Paper>
         </Grid>
-        <Grid item xs={6} sm={3}>
+        <Grid size={{ xs: 6, sm: 3 }}>
           <Paper sx={{ p: 2, textAlign: 'center', borderRadius: '12px' }}>
             <Typography variant="h4" sx={{ fontWeight: 'bold', color: 'warning.main' }}>
               {stats.pending || 0}
@@ -1226,7 +1226,7 @@ const CosplayerBookingOrders = ({ isOwnProfile }) => {
             </Typography>
           </Paper>
         </Grid>
-        <Grid item xs={6} sm={3}>
+        <Grid size={{ xs: 6, sm: 3 }}>
           <Paper sx={{ p: 2, textAlign: 'center', borderRadius: '12px' }}>
             <Typography variant="h4" sx={{ fontWeight: 'bold', color: 'info.main' }}>
               {stats.confirmed || 0}
@@ -1236,7 +1236,7 @@ const CosplayerBookingOrders = ({ isOwnProfile }) => {
             </Typography>
           </Paper>
         </Grid>
-        <Grid item xs={6} sm={3}>
+        <Grid size={{ xs: 6, sm: 3 }}>
           <Paper sx={{ p: 2, textAlign: 'center', borderRadius: '12px' }}>
             <Typography variant="h4" sx={{ fontWeight: 'bold', color: 'success.main' }}>
               {stats.completed || 0}
@@ -1271,7 +1271,7 @@ const CosplayerBookingOrders = ({ isOwnProfile }) => {
         </Box>
 
         <Grid container spacing={2}>
-          <Grid item xs={12} md={4}>
+          <Grid size={{ xs: 12, md: 4 }}>
             <TextField
               sx={{ width: 320 }}
               placeholder="Tìm kiếm theo tên, email, mã đặt..."
@@ -1289,7 +1289,7 @@ const CosplayerBookingOrders = ({ isOwnProfile }) => {
             />
           </Grid>
 
-          <Grid item xs={6} md={2}>
+          <Grid size={{ xs: 6, md: 2 }}>
             <FormControl fullWidth size="small">
               <InputLabel>Trạng thái</InputLabel>
               <Select
@@ -1323,7 +1323,7 @@ const CosplayerBookingOrders = ({ isOwnProfile }) => {
             </FormControl>
           </Grid>
 
-          <Grid item xs={6} md={2}>
+          <Grid size={{ xs: 6, md: 2 }}>
             <FormControl fullWidth size="small">
               <InputLabel>Thanh toán</InputLabel>
               <Select
@@ -1352,7 +1352,7 @@ const CosplayerBookingOrders = ({ isOwnProfile }) => {
             </FormControl>
           </Grid>
 
-          <Grid item xs={6} md={2}>
+          <Grid size={{ xs: 6, md: 2 }}>
             <FormControl fullWidth size="small">
               <InputLabel>Sắp xếp theo</InputLabel>
               <Select
@@ -1368,7 +1368,7 @@ const CosplayerBookingOrders = ({ isOwnProfile }) => {
             </FormControl>
           </Grid>
 
-          <Grid item xs={6} md={2}>
+          <Grid size={{ xs: 6, md: 2 }}>
             <FormControl fullWidth size="small">
               <InputLabel>Thứ tự</InputLabel>
               <Select
@@ -1720,7 +1720,7 @@ const CosplayerBookingOrders = ({ isOwnProfile }) => {
             <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={vi}>
               <Grid container spacing={2}>
                 {/* Date and Time Row */}
-                <Grid item xs={4}>
+                <Grid size={{ xs: 4 }}>
                   <DatePicker
                     label="Ngày đặt"
                     value={editDialog.formData.bookingDate}
@@ -1743,7 +1743,7 @@ const CosplayerBookingOrders = ({ isOwnProfile }) => {
                 </Grid>
 
                 {/* Start Time */}
-                <Grid item xs={4}>
+                <Grid size={{ xs: 4 }}>
                   <TextField
                     fullWidth
                     size="small"
@@ -1762,7 +1762,7 @@ const CosplayerBookingOrders = ({ isOwnProfile }) => {
                 </Grid>
 
                 {/* End Time */}
-                <Grid item xs={4}>
+                <Grid size={{ xs: 4 }}>
                   <TextField
                     fullWidth
                     size="small"
@@ -1781,7 +1781,7 @@ const CosplayerBookingOrders = ({ isOwnProfile }) => {
                 </Grid>
 
                 {/* Location - Force new row */}
-                <Grid item xs={12} sx={{ width: '100%' }}>
+                <Grid size={{ xs: 12 }} sx={{ width: '100%' }}>
                   <TextField
                     fullWidth
                     size="small"
@@ -1798,7 +1798,7 @@ const CosplayerBookingOrders = ({ isOwnProfile }) => {
                 </Grid>
 
                 {/* Special Notes - Force new row */}
-                <Grid item xs={12} sx={{ width: '100%' }}>
+                <Grid size={{ xs: 12 }} sx={{ width: '100%' }}>
                   <TextField
                     fullWidth
                     size="small"

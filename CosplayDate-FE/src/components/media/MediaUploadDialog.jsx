@@ -602,7 +602,7 @@ const MediaUploadDialog = ({
         return (
           <Box sx={{ py: 2 }}>
             <Grid container spacing={3}>
-              <Grid item xs={12}>
+              <Grid size={{ xs: 12 }}>
                 <TextField
                   fullWidth
                   label="Tiêu đề"
@@ -620,13 +620,13 @@ const MediaUploadDialog = ({
               </Grid>
 
               {/* Category Selection with Visual Cards */}
-              <Grid item xs={12}>
+              <Grid size={{ xs: 12 }}>
                 <Typography variant="subtitle1" fontWeight={600} sx={{ mb: 2 }}>
                   Danh mục <span style={{ color: 'red' }}>*</span>
                 </Typography>
                 <Grid container spacing={2}>
                   {categories.map(cat => (
-                    <Grid item xs={6} sm={4} md={3} key={cat.value}>
+                    <Grid size={{ xs: 6, sm: 4, md: 3 }} key={cat.value}>
                       <Card
                         sx={{
                           cursor: (loading || isUploading) ? 'not-allowed' : 'pointer',
@@ -659,7 +659,7 @@ const MediaUploadDialog = ({
                 )}
               </Grid>
 
-              <Grid item xs={12}>
+              <Grid size={{ xs: 12 }}>
                 <TextField
                   fullWidth
                   label="Mô tả"
@@ -677,7 +677,7 @@ const MediaUploadDialog = ({
 
               {/* Tags Input for Photos */}
               {type === 'photo' && (
-                <Grid item xs={12}>
+                <Grid size={{ xs: 12 }}>
                   <Autocomplete
                     multiple
                     freeSolo
@@ -739,7 +739,7 @@ const MediaUploadDialog = ({
               {/* Video Thumbnail */}
               {type === 'video' && (
                 <>
-                  <Grid item xs={12}>
+                  <Grid size={{ xs: 12 }}>
                     <Paper 
                       elevation={0} 
                       sx={{ 
@@ -790,7 +790,7 @@ const MediaUploadDialog = ({
 
                   {/* Video Duration Display */}
                   {formData.duration > 0 && (
-                    <Grid item xs={12} sm={6}>
+                    <Grid size={{ xs: 12, sm: 6 }}>
                       <TextField
                         fullWidth
                         label="Thời lượng (giây)"
@@ -856,7 +856,7 @@ const MediaUploadDialog = ({
 
             <Grid container spacing={3}>
               {/* File Preview */}
-              <Grid item xs={12} md={5}>
+              <Grid size={{ xs: 12, md: 5 }}>
                 <Card sx={{ borderRadius: '16px', overflow: 'hidden' }}>
                   {preview ? (
                     <img 
@@ -909,7 +909,7 @@ const MediaUploadDialog = ({
               </Grid>
 
               {/* Details */}
-              <Grid item xs={12} md={7}>
+              <Grid size={{ xs: 12, md: 7 }}>
                 <Box sx={{ pl: { md: 2 } }}>
                   <Typography variant="h5" fontWeight={700} sx={{ mb: 2 }}>
                     {formData.title}

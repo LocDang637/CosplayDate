@@ -59,7 +59,7 @@ const CosplayersPage = () => {
     tags: [],
     isAvailable: null
   });
-  const [sortBy, setSortBy] = useState('rating');
+  const [sortBy, setSortBy] = useState('price');
   const [sortOrder, setSortOrder] = useState('desc');
 
   // Static tags data (handled on frontend)
@@ -599,13 +599,13 @@ const CosplayersPage = () => {
               {loading ? (
                 // Loading skeletons
                 Array.from(new Array(6)).map((_, index) => (
-                  <Grid item key={index}>
+                  <Grid size="auto" key={index}>
                     <CosplayerSkeleton />
                   </Grid>
                 ))
               ) : cosplayers.length > 0 ? (
                 cosplayers.map((cosplayer) => (
-                  <Grid item key={cosplayer.id}>
+                  <Grid size="auto" key={cosplayer.id}>
                     <CosplayerCard
                       cosplayer={cosplayer}
                       currentUser={user}  // Pass the current user properly
@@ -617,7 +617,7 @@ const CosplayersPage = () => {
                   </Grid>
                 ))
               ) : (
-                <Grid item xs={12}>
+                <Grid size={12}>
                   <Alert severity="info" sx={{ borderRadius: '12px' }}>
                     Không tìm thấy cosplayer nào phù hợp với tiêu chí tìm kiếm.
                   </Alert>

@@ -45,6 +45,7 @@ import { format, parseISO, differenceInDays, isValid } from 'date-fns';
 import { vi } from 'date-fns/locale';
 import { bookingAPI } from '../../services/bookingAPI';
 import { reviewAPI } from '../../services/reviewAPI';
+import { cosplayerAPI } from '../../services/cosplayerAPI';
 import { useNavigate } from 'react-router-dom';
 
 const CustomerBookingOrders = () => {
@@ -653,7 +654,34 @@ const CustomerBookingOrders = () => {
                   cursor: 'pointer',
                   '&:hover': { opacity: 0.8 }
                 }}
-                onClick={() => navigate(`/profile/${booking.cosplayer?.id}`)}
+                onClick={async () => {
+                  // First get cosplayer details to obtain the correct userId
+                  const cosplayerId = booking.cosplayerId;
+                  
+                  if (!cosplayerId) {
+                    console.error('No cosplayerId found in booking data');
+                    return;
+                  }
+
+                  try {
+                    console.log('Getting cosplayer details for cosplayerId:', cosplayerId);
+                    
+                    // Call getCosplayerDetails API to get the userId
+                    const cosplayerResult = await cosplayerAPI.getCosplayerDetails(cosplayerId);
+                    
+                    if (cosplayerResult.success && cosplayerResult.data?.userId) {
+                      const userId = cosplayerResult.data.userId;
+                      console.log('Found userId from cosplayer details:', userId);
+                      
+                      // Navigate to profile page with the correct userId
+                      navigate(`/profile/${userId}`);
+                    } else {
+                      console.error('Failed to get cosplayer details or userId not found:', cosplayerResult);
+                    }
+                  } catch (error) {
+                    console.error('Error fetching cosplayer details:', error);
+                  }
+                }}
               >
                 <Avatar
                   src={booking.cosplayer?.avatarUrl || booking.cosplayer?.avatar}
@@ -685,16 +713,16 @@ const CustomerBookingOrders = () => {
                 Chi tiết đặt lịch
               </Typography>
               <Grid container spacing={2}>
-                <Grid item xs={12} sm={6}>
+                <Grid size={{ xs: 12, sm: 6 }}>
                   <Typography variant="caption" color="text.secondary">Mã đặt lịch</Typography>
                   <Typography variant="body2">{booking.bookingCode || 'N/A'}</Typography>
                 </Grid>
-                <Grid item xs={12} sm={6}>
+                <Grid size={{ xs: 12, sm: 6 }}>
                   <Typography variant="caption" color="text.secondary">Thời lượng</Typography>
                   <Typography variant="body2">{booking.duration || 'N/A'} phút</Typography>
                 </Grid>
                 {(booking.specialNotes || booking.notes) && (
-                  <Grid item xs={12}>
+                  <Grid size={{ xs: 12 }}>
                     <Typography variant="caption" color="text.secondary">Ghi chú</Typography>
                     <Typography variant="body2">{booking.specialNotes || booking.notes}</Typography>
                   </Grid>
@@ -716,19 +744,19 @@ const CustomerBookingOrders = () => {
                     mb: 1
                   }}>
                     <Grid container spacing={1}>
-                      <Grid item xs={6}>
+                      <Grid size={{ xs: 6 }}>
                         <Typography variant="caption" color="text.secondary">Mã thanh toán</Typography>
                         <Typography variant="body2">{payment.paymentCode || 'N/A'}</Typography>
                       </Grid>
-                      <Grid item xs={6}>
+                      <Grid size={{ xs: 6 }}>
                         <Typography variant="caption" color="text.secondary">Phương thức</Typography>
                         <Typography variant="body2">{payment.paymentMethod || 'N/A'}</Typography>
                       </Grid>
-                      <Grid item xs={6}>
+                      <Grid size={{ xs: 6 }}>
                         <Typography variant="caption" color="text.secondary">Trạng thái</Typography>
                         <Typography variant="body2">{payment.status || 'N/A'}</Typography>
                       </Grid>
-                      <Grid item xs={6}>
+                      <Grid size={{ xs: 6 }}>
                         <Typography variant="caption" color="text.secondary">Số tiền</Typography>
                         <Typography variant="body2">
                           {new Intl.NumberFormat('vi-VN', {
@@ -955,7 +983,7 @@ const CustomerBookingOrders = () => {
     <Box>
       {/* Stats Summary */}
       <Grid container spacing={2} sx={{ mb: 3 }}>
-        <Grid item xs={6} sm={3}>
+        <Grid size={{ xs: 6, sm: 3 }}>
           <Paper sx={{ p: 2, textAlign: 'center', borderRadius: '12px' }}>
             <Typography variant="h4" sx={{ fontWeight: 'bold', color: 'primary.main' }}>
               {stats.total || 0}
@@ -965,7 +993,7 @@ const CustomerBookingOrders = () => {
             </Typography>
           </Paper>
         </Grid>
-        <Grid item xs={6} sm={3}>
+        <Grid size={{ xs: 6, sm: 3 }}>
           <Paper sx={{ p: 2, textAlign: 'center', borderRadius: '12px' }}>
             <Typography variant="h4" sx={{ fontWeight: 'bold', color: 'warning.main' }}>
               {stats.pending || 0}
@@ -975,7 +1003,7 @@ const CustomerBookingOrders = () => {
             </Typography>
           </Paper>
         </Grid>
-        <Grid item xs={6} sm={3}>
+        <Grid size={{ xs: 6, sm: 3 }}>
           <Paper sx={{ p: 2, textAlign: 'center', borderRadius: '12px' }}>
             <Typography variant="h4" sx={{ fontWeight: 'bold', color: 'info.main' }}>
               {stats.confirmed || 0}
@@ -985,7 +1013,7 @@ const CustomerBookingOrders = () => {
             </Typography>
           </Paper>
         </Grid>
-        <Grid item xs={6} sm={3}>
+        <Grid size={{ xs: 6, sm: 3 }}>
           <Paper sx={{ p: 2, textAlign: 'center', borderRadius: '12px' }}>
             <Typography variant="h4" sx={{ fontWeight: 'bold', color: 'success.main' }}>
               {stats.completed || 0}
@@ -1020,7 +1048,7 @@ const CustomerBookingOrders = () => {
         </Box>
 
         <Grid container spacing={2}>
-          <Grid item xs={12} md={4}>
+          <Grid size={{ xs: 12, md: 4 }}>
             <TextField
               fullWidth
               placeholder="Tìm kiếm theo tên, email, mã đặt..."
@@ -1039,7 +1067,7 @@ const CustomerBookingOrders = () => {
             />
           </Grid>
 
-          <Grid item xs={6} md={2}>
+          <Grid size={{ xs: 6, md: 2 }}>
             <FormControl fullWidth size="small">
               <InputLabel>Trạng thái</InputLabel>
               <Select
@@ -1073,7 +1101,7 @@ const CustomerBookingOrders = () => {
             </FormControl>
           </Grid>
 
-          <Grid item xs={6} md={2}>
+          <Grid size={{ xs: 6, md: 2 }}>
             <FormControl fullWidth size="small">
               <InputLabel>Thanh toán</InputLabel>
               <Select
@@ -1102,7 +1130,7 @@ const CustomerBookingOrders = () => {
             </FormControl>
           </Grid>
 
-          <Grid item xs={6} md={2}>
+          <Grid size={{ xs: 6, md: 2 }}>
             <FormControl fullWidth size="small">
               <InputLabel>Sắp xếp theo</InputLabel>
               <Select
@@ -1118,7 +1146,7 @@ const CustomerBookingOrders = () => {
             </FormControl>
           </Grid>
 
-          <Grid item xs={6} md={2}>
+          <Grid size={{ xs: 6, md: 2 }}>
             <FormControl fullWidth size="small">
               <InputLabel>Thứ tự</InputLabel>
               <Select

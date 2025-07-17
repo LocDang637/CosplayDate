@@ -407,23 +407,6 @@ const LoginPage = () => {
               </Typography>
             </Typography>
           </Box>
-
-          {/* API Status Info */}
-          <Box sx={{
-            mt: 3,
-            p: 2,
-            backgroundColor: 'rgba(0,0,0,0.02)',
-            borderRadius: '8px',
-            textAlign: 'center'
-          }}>
-            <Typography variant="body2" sx={{ fontSize: '11px', color: 'text.secondary' }}>
-              🌐 API Endpoint: {import.meta.env.VITE_API_BASE_URL || 'http://localhost:5068/api'}
-            </Typography>
-            {/* NEW: Show login instructions for testing */}
-            <Typography variant="body2" sx={{ fontSize: '11px', color: 'text.secondary', mt: 1 }}>
-              👨‍💼 Admin: admin@cosplaydate.com | 🎭 Cosplayer/Customer: Use regular accounts
-            </Typography>
-          </Box>
         </Box>
       </FormContainer>
     </PageLayout>

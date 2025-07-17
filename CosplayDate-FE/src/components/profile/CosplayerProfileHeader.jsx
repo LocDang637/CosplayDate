@@ -576,29 +576,31 @@ const CosplayerProfileHeader = ({
           </MenuItem>
           
           {/* Only show these options for own profile */}
-          {isOwnProfile ? (
+          {isOwnProfile && (
             <MenuItem onClick={() => { handleMenuClose(); handleEditClick(); }}>
               <ListItemIcon>
                 <Edit fontSize="small" />
               </ListItemIcon>
               <ListItemText primary="Chỉnh sửa hồ sơ" />
             </MenuItem>
-          ) : (
-            <>
-              <MenuItem onClick={handleFollowClick} disabled={!loggedInUser}>
-                <ListItemIcon>
-                  {isFollowing ? <PersonRemove fontSize="small" /> : <PersonAdd fontSize="small" />}
-                </ListItemIcon>
-                <ListItemText primary={isFollowing ? 'Bỏ theo dõi' : 'Theo dõi'} />
-              </MenuItem>
-              
-              <MenuItem onClick={handleBookingClick}>
-                <ListItemIcon>
-                  <Event fontSize="small" />
-                </ListItemIcon>
-                <ListItemText primary="Đặt lịch ngay" />
-              </MenuItem>
-            </>
+          )}
+          
+          {!isOwnProfile && (
+            <MenuItem onClick={handleFollowClick} disabled={!loggedInUser}>
+              <ListItemIcon>
+                {isFollowing ? <PersonRemove fontSize="small" /> : <PersonAdd fontSize="small" />}
+              </ListItemIcon>
+              <ListItemText primary={isFollowing ? 'Bỏ theo dõi' : 'Theo dõi'} />
+            </MenuItem>
+          )}
+          
+          {!isOwnProfile && (
+            <MenuItem onClick={handleBookingClick}>
+              <ListItemIcon>
+                <Event fontSize="small" />
+              </ListItemIcon>
+              <ListItemText primary="Đặt lịch ngay" />
+            </MenuItem>
           )}
         </Menu>
 

@@ -1,5 +1,5 @@
 // src/components/layout/Header.jsx - FIXED PROFILE NAVIGATION
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
 import {
   AppBar,
@@ -52,8 +52,16 @@ const Header = ({ user = null, onLogout }) => {
   const isAuthenticated = !!user;
   const currentPath = location.pathname;
 
+  // Reset anchorEl when user changes to prevent menu anchoring issues
+  useEffect(() => {
+    setAnchorEl(null);
+  }, [user]);
+
   const handleProfileMenuOpen = (event) => {
-    setAnchorEl(event.currentTarget);
+    // Ensure the event target is valid before setting anchorEl
+    if (event?.currentTarget && document.contains(event.currentTarget)) {
+      setAnchorEl(event.currentTarget);
+    }
   };
 
   const handleProfileMenuClose = () => {
@@ -241,6 +249,7 @@ const Header = ({ user = null, onLogout }) => {
             sx={{ ml: 1 }}
           >
             <Avatar
+              src={user?.avatarUrl || user?.avatar}
               sx={{
                 width: 36,
                 height: 36,
@@ -357,14 +366,36 @@ const Header = ({ user = null, onLogout }) => {
           {/* Desktop Auth Section */}
           {!isMobile && <AuthButtons />}
 
-          {/* Mobile Menu Button */}
+          {/* Mobile Menu Button/Avatar */}
           {isMobile && (
-            <IconButton
-              onClick={() => setMobileMenuOpen(true)}
-              sx={{ color: 'text.primary' }}
-            >
-              <MenuIcon />
-            </IconButton>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              {isAuthenticated ? (
+                <IconButton
+                  onClick={handleProfileMenuOpen}
+                  sx={{ p: 0.5 }}
+                >
+                  <Avatar
+                    src={user?.avatarUrl || user?.avatar}
+                    sx={{
+                      width: 32,
+                      height: 32,
+                      backgroundColor: 'primary.main',
+                      fontSize: '14px',
+                      fontWeight: 600,
+                    }}
+                  >
+                    {user?.firstName?.[0] || user?.email?.[0]?.toUpperCase() || 'U'}
+                  </Avatar>
+                </IconButton>
+              ) : (
+                <IconButton
+                  onClick={() => setMobileMenuOpen(true)}
+                  sx={{ color: 'text.primary' }}
+                >
+                  <MenuIcon />
+                </IconButton>
+              )}
+            </Box>
           )}
         </Toolbar>
       </AppBar>
@@ -372,10 +403,12 @@ const Header = ({ user = null, onLogout }) => {
       {/* Profile Menu */}
       <Menu
         anchorEl={anchorEl}
-        open={Boolean(anchorEl)}
+        open={Boolean(anchorEl) && isAuthenticated}
         onClose={handleProfileMenuClose}
         transformOrigin={{ horizontal: 'right', vertical: 'top' }}
         anchorOrigin={{ horizontal: 'left', vertical: 'bottom' }}
+        disableAutoFocus
+        disableRestoreFocus
         slotProps={{
           paper: {
             sx: {
@@ -392,34 +425,33 @@ const Header = ({ user = null, onLogout }) => {
       >
         {isAuthenticated && (
           <Box sx={{ px: 2, py: 1.5, borderBottom: '1px solid rgba(0,0,0,0.05)' }}>
-            <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
-              {user?.firstName} {user?.lastName}
-            </Typography>
-            <Typography variant="body2" sx={{ color: 'text.secondary', fontSize: '12px' }}>
-              {user?.email}
-            </Typography>
-            {user?.userType && (
-              <Typography variant="body2" sx={{ color: 'primary.main', fontSize: '11px', fontWeight: 500 }}>
-                {user.userType === 'Customer' ? '👤 Khách hàng' : '🎭 Cosplayer'}
-              </Typography>
-            )}
-            {/* Enhanced debug info for development */}
-            {process.env.NODE_ENV === 'development' && (
-              <Box sx={{ mt: 0.5, p: 1, backgroundColor: 'rgba(0,0,0,0.02)', borderRadius: '4px' }}>
-                <Typography variant="body2" sx={{ color: 'text.secondary', fontSize: '10px' }}>
-                  Debug Info:
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 1 }}>
+              <Avatar
+                src={user?.avatarUrl || user?.avatar}
+                sx={{
+                  width: 40,
+                  height: 40,
+                  backgroundColor: 'primary.main',
+                  fontSize: '16px',
+                  fontWeight: 600,
+                }}
+              >
+                {user?.firstName?.[0] || user?.email?.[0]?.toUpperCase() || 'U'}
+              </Avatar>
+              <Box sx={{ flex: 1 }}>
+                <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
+                  {user?.firstName} {user?.lastName}
                 </Typography>
-                <Typography variant="body2" sx={{ color: 'text.secondary', fontSize: '10px' }}>
-                  ID: {user?.id || 'N/A'} | UserID: {user?.userId || 'N/A'}
+                <Typography variant="body2" sx={{ color: 'text.secondary', fontSize: '12px' }}>
+                  {user?.email}
                 </Typography>
-                <Typography variant="body2" sx={{ color: 'text.secondary', fontSize: '10px' }}>
-                  Type: {user?.userType || user?.role || 'N/A'}
-                </Typography>
-                <Typography variant="body2" sx={{ color: 'text.secondary', fontSize: '10px' }}>
-                  Profile Path: {getProfilePath()}
-                </Typography>
+                {user?.userType && (
+                  <Typography variant="body2" sx={{ color: 'primary.main', fontSize: '11px', fontWeight: 500 }}>
+                    {user.userType === 'Customer' ? '👤 Khách hàng' : '🎭 Cosplayer'}
+                  </Typography>
+                )}
               </Box>
-            )}
+            </Box>
           </Box>
         )}
 
@@ -514,12 +546,6 @@ const Header = ({ user = null, onLogout }) => {
               {user?.userType && (
                 <Typography variant="body2" sx={{ color: 'primary.main', fontSize: '11px', fontWeight: 500, mt: 0.5 }}>
                   {user.userType === 'Customer' ? '👤 Khách hàng' : '🎭 Cosplayer'}
-                </Typography>
-              )}
-              {/* Mobile debug info */}
-              {process.env.NODE_ENV === 'development' && (
-                <Typography variant="body2" sx={{ color: 'text.secondary', fontSize: '10px', mt: 0.5 }}>
-                  Profile: {getProfilePath()}
                 </Typography>
               )}
             </Box>

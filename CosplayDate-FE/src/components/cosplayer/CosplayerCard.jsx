@@ -100,11 +100,11 @@ const CosplayerCard = ({
   const handleViewProfile = () => {
     // Use userId instead of cosplayer.id to ensure correct user profile lookup
     const targetUserId = cosplayer.userId || cosplayer.id;
-    console.log('🔍 CosplayerCard - Navigating to profile with userId:', targetUserId, 'from cosplayer:', {
-      cosplayerId: cosplayer.id,
-      userId: cosplayer.userId,
-      displayName: cosplayer.displayName
-    });
+    // console.log('🔍 CosplayerCard - Navigating to profile with userId:', targetUserId, 'from cosplayer:', {
+    //   cosplayerId: cosplayer.id,
+    //   userId: cosplayer.userId,
+    //   displayName: cosplayer.displayName
+    // });
     navigate(`/profile/${targetUserId}`);
   };
 

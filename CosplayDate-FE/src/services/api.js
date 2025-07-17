@@ -89,8 +89,9 @@ export const authAPI = {
           firstName: userData.firstName,
           lastName: userData.lastName,
           userType: userData.userType,
-          // Add any other fields that might be missing
+          // Add consistent avatar field mapping
           avatar: userData.avatar || userData.avatarUrl || null,
+          avatarUrl: userData.avatar || userData.avatarUrl || null, // Ensure both fields are available
           isVerified: true,
           location: userData.location || null,
           bio: userData.bio || null,

@@ -611,7 +611,7 @@ const CosplayerProfileOverview = ({ user, currentProfile, isOwnProfile }) => {
             ) : services.length > 0 ? (
               <Grid container spacing={3}>
                 {services.map((service) => (
-                  <Grid item xs={12} sm={6} md={4} key={service.id}>
+                  <Grid size={{ xs: 12, sm: 6, md: 4 }} key={service.id}>
                     <Card
                       sx={{
                         height: '100%',

@@ -36,6 +36,11 @@ const HomePage = () => {
       try {
         const parsedUser = JSON.parse(storedUser);
         setUser(parsedUser);
+        
+        // Fetch updated user profile data to ensure we have the latest avatar
+        if (parsedUser.userId) {
+          loadUserProfile(parsedUser.userId);
+        }
       } catch (error) {
         console.error('Error parsing stored user:', error);
         localStorage.removeItem('user');
@@ -47,6 +52,33 @@ const HomePage = () => {
       setShowWelcomeMessage(true);
     }
   }, [location.state]);
+
+  const loadUserProfile = async (userId) => {
+    try {
+      const result = await userAPI.getUserProfile(userId);
+      if (result.success && result.data) {
+        // Update user state with fresh profile data including avatar
+        setUser(prevUser => ({
+          ...prevUser,
+          ...result.data,
+          // Ensure both avatar fields are populated
+          avatar: result.data.avatar || result.data.avatarUrl || prevUser?.avatar,
+          avatarUrl: result.data.avatar || result.data.avatarUrl || prevUser?.avatarUrl,
+        }));
+        
+        // Update localStorage with fresh data
+        const updatedUser = {
+          ...JSON.parse(localStorage.getItem('user') || '{}'),
+          ...result.data,
+          avatar: result.data.avatar || result.data.avatarUrl,
+          avatarUrl: result.data.avatar || result.data.avatarUrl,
+        };
+        localStorage.setItem('user', JSON.stringify(updatedUser));
+      }
+    } catch (error) {
+      console.error('Failed to load user profile:', error);
+    }
+  };
 
   useEffect(() => {
     loadFeaturedCosplayers();
@@ -86,12 +118,12 @@ const HomePage = () => {
                     ...cosplayer,
                     userProfile: userProfileResult.data
                   };
-                  console.log('🔍 HomePage - Enriched cosplayer data:', {
-                    cosplayerId: cosplayer.id,
-                    userId: cosplayer.userId,
-                    displayName: cosplayer.displayName,
-                    hasUserProfile: !!userProfileResult.data
-                  });
+                  // console.log('🔍 HomePage - Enriched cosplayer data:', {
+                  //   cosplayerId: cosplayer.id,
+                  //   userId: cosplayer.userId,
+                  //   displayName: cosplayer.displayName,
+                  //   hasUserProfile: !!userProfileResult.data
+                  // });
                   return enrichedCosplayer;
                 }
               }
@@ -246,7 +278,9 @@ const HomePage = () => {
                   mx: 'auto',
                   mb: 2,
                   fontSize: '24px'
-                }}>
+                }}
+                src={user?.avatarUrl || user?.avatar}
+                >
                   {user?.firstName?.[0] || 'N'}
                 </Avatar>
                 <Typography variant="h6" sx={{ fontWeight: 600, mb: 1 }}>
