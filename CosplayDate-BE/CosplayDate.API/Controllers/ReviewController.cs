@@ -92,6 +92,7 @@ namespace CosplayDate.API.Controllers
         /// Cosplayer trả lời review (owner response)
         /// </summary>
         [HttpPost("{reviewId}/owner-response")]
+        [Authorize(Policy = "RequireCosplayer")]
         public async Task<IActionResult> UpdateOwnerResponse(int reviewId, [FromBody] OwnerResponseRequestDto request)
         {
             var cosplayerId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
@@ -104,6 +105,7 @@ namespace CosplayDate.API.Controllers
         /// Cosplayer cập nhật trả lời review (owner response)
         /// </summary>
         [HttpPut("{reviewId}/owner-response")]
+        [Authorize(Policy = "RequireCosplayer")]
         public async Task<IActionResult> EditOwnerResponse(int reviewId, [FromBody] OwnerResponseRequestDto request)
         {
             var cosplayerId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
