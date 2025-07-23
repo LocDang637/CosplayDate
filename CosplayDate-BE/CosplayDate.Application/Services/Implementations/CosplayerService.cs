@@ -1,4 +1,4 @@
-﻿// CosplayDate.Application/Services/Implementations/CosplayerService.cs
+// CosplayDate.Application/Services/Implementations/CosplayerService.cs
 // FIXED: Added GetCosplayerDetailsByUserIdAsync method
 
 using CosplayDate.Application.DTOs.Cosplayer;
@@ -14,6 +14,7 @@ namespace CosplayDate.Application.Services.Implementations
     {
         private readonly IUnitOfWork _unitOfWork;
         private readonly ILogger<CosplayerService> _logger;
+        private readonly IJwtService _jwtService;
 
         // Available categories for cosplayers
         private readonly List<string> _availableCategories = new()
@@ -32,10 +33,11 @@ namespace CosplayDate.Application.Services.Implementations
             "Character Interaction", "Event Hosting", "Workshop Teaching"
         };
 
-        public CosplayerService(IUnitOfWork unitOfWork, ILogger<CosplayerService> logger)
+        public CosplayerService(IUnitOfWork unitOfWork, ILogger<CosplayerService> logger, IJwtService jwtService)
         {
             _unitOfWork = unitOfWork;
             _logger = logger;
+            _jwtService = jwtService;
         }
 
         // ... [Keep all existing methods] ...
@@ -614,13 +616,16 @@ namespace CosplayDate.Application.Services.Implementations
                     await _unitOfWork.SaveChangesAsync();
                 }
 
+                var newToken = _jwtService.GenerateToken(user);
+
                 var response = new BecomeCosplayerResponseDto
                 {
                     CosplayerId = cosplayer.Id,
                     DisplayName = cosplayer.DisplayName,
                     Message = "Congratulations! You are now a cosplayer on CosplayDate!",
                     RequiresApproval = false,
-                    CreatedAt = cosplayer.CreatedAt.GetValueOrDefault()
+                    CreatedAt = cosplayer.CreatedAt.GetValueOrDefault(),
+                    NewToken = newToken
                 };
 
                 _logger.LogInformation("User {UserId} successfully became a cosplayer with ID {CosplayerId}", userId, cosplayer.Id);

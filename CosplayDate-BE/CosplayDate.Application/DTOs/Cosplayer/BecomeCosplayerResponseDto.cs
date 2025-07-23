@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -13,5 +13,6 @@ namespace CosplayDate.Application.DTOs.Cosplayer
         public string Message { get; set; } = string.Empty;
         public bool RequiresApproval { get; set; }
         public DateTime CreatedAt { get; set; }
+        public string? NewToken { get; set; }
     }
 }

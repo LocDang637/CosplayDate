@@ -1,4 +1,4 @@
-﻿using CosplayDate.Application.Services.Implementations;
+using CosplayDate.Application.Services.Implementations;
 using CosplayDate.Application.Services.Interfaces;
 using CosplayDate.Domain.Interfaces;
 using CosplayDate.Infrastructure.Data.Context;
@@ -198,6 +198,7 @@ builder.Services.AddScoped<IUserRepository, UserRepository>();
 builder.Services.AddScoped<IEmailVerificationTokenRepository, EmailVerificationTokenRepository>();
 builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 builder.Services.AddScoped<IPasswordResetTokenRepository, PasswordResetTokenRepository>();
+builder.Services.AddScoped<IJwtService, JwtService>();
 
 // Services
 builder.Services.AddScoped<IAuthService, AuthService>();

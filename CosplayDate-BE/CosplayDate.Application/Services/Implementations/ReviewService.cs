@@ -303,7 +303,8 @@ namespace CosplayDate.Application.Services.Implementations
             var review = await _unitOfWork.Reviews.GetByIdAsync(reviewId);
             if (review == null)
                 return ApiResponse<ReviewResponseDto>.Error("Review not found");
-            if (review.CosplayerId != cosplayerId)
+            var cosplayer = await _unitOfWork.Cosplayers.FirstOrDefaultAsync(c => c.UserId == cosplayerId);
+            if (cosplayer == null || review.CosplayerId != cosplayer.Id)
                 return ApiResponse<ReviewResponseDto>.Error("You don't have permission to respond to this review");
             review.OwnerResponse = request.Response;
             review.OwnerResponseDate = DateTime.UtcNow;
