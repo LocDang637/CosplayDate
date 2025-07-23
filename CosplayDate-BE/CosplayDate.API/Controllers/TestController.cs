@@ -106,6 +106,6 @@ namespace CosplayDate.API.Controllers
             });
         }
 
-        
+
     }
 }
